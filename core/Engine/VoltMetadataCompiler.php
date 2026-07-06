@@ -10,6 +10,7 @@ use Config\Services;
 use InvalidArgumentException;
 use RuntimeException;
 use Volt\Core\Database\VoltDatabase;
+use Volt\Core\Validation\MetadataValidator;
 
 final class VoltMetadataCompiler
 {
@@ -19,12 +20,14 @@ final class VoltMetadataCompiler
 
     private BaseConnection $db;
     private CacheInterface $cache;
+    private MetadataValidator $validator;
     private int $cacheTtl;
 
     public function __construct(?BaseConnection $db = null, ?CacheInterface $cache = null)
     {
         $this->db = $db ?? VoltDatabase::connection();
         $this->cache = $cache ?? Services::cache();
+        $this->validator = new MetadataValidator();
         $this->cacheTtl = (int) env('volt.metadata.cacheTtl', 86400);
     }
 
@@ -35,6 +38,7 @@ final class VoltMetadataCompiler
      */
     public function compileEntity(string $entityName, ?string $role = null, bool $forceRefresh = false): array
     {
+        $entityName = $this->validator->assertEntityName($entityName);
         $cacheKey = $this->entityCacheKey($entityName, $role);
 
         if (! $forceRefresh) {
@@ -178,7 +182,7 @@ final class VoltMetadataCompiler
         $childFields = [];
 
         foreach ($fields as $field) {
-            $normalized = $this->normalizeFieldRow($field);
+            $normalized = $this->validator->normalizeFieldRow($field);
             $fieldMap[$normalized['fieldname']] = $normalized;
 
             if ($normalized['is_child_table']) {
@@ -190,57 +194,11 @@ final class VoltMetadataCompiler
         }
 
         return [
-            'entity' => $this->normalizeEntityRow($entity),
+            'entity' => $this->validator->normalizeEntityRow($entity),
             'fields' => $fieldMap,
             'field_order' => array_keys($fieldMap),
             'main_fields' => $mainFields,
             'child_fields' => $childFields,
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $field
-     *
-     * @return array<string, mixed>
-     */
-    private function normalizeFieldRow(array $field): array
-    {
-        $fieldname = (string) ($field['fieldname'] ?? '');
-        $options = (string) ($field['options'] ?? '');
-        $isChildTable = $this->isChildTable($field);
-
-        return [
-            'id' => isset($field['id']) ? (int) $field['id'] : null,
-            'parent' => (string) ($field['parent'] ?? ''),
-            'fieldname' => $fieldname,
-            'label' => (string) ($field['label'] ?? ''),
-            'fieldtype' => (string) ($field['fieldtype'] ?? ''),
-            'length' => isset($field['length']) ? (int) $field['length'] : null,
-            'options' => $options,
-            'reqd' => (int) ($field['reqd'] ?? 0),
-            'read_only' => (int) ($field['read_only'] ?? 0),
-            'hidden' => (int) ($field['hidden'] ?? 0),
-            'idx' => (int) ($field['idx'] ?? 0),
-            'is_child_table' => $isChildTable,
-            'storage_mode' => $isChildTable ? 'separate_table' : 'embedded_jsonb',
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $entity
-     *
-     * @return array<string, mixed>
-     */
-    private function normalizeEntityRow(array $entity): array
-    {
-        return [
-            'name' => (string) ($entity['name'] ?? ''),
-            'module' => (string) ($entity['module'] ?? ''),
-            'issingle' => (int) ($entity['issingle'] ?? 0),
-            'istable' => (int) ($entity['istable'] ?? 0),
-            'autoname' => (string) ($entity['autoname'] ?? ''),
-            'states' => $this->normalizeJsonValue($entity['states'] ?? []),
-            'custom_attributes' => $this->normalizeJsonValue($entity['custom_attributes'] ?? []),
         ];
     }
 
@@ -251,28 +209,7 @@ final class VoltMetadataCompiler
      */
     private function normalizeCustomMeta(mixed $customMeta): array
     {
-        return $this->normalizeJsonValue($customMeta);
-    }
-
-    /**
-     * @param mixed $value
-     *
-     * @return array<string, mixed>
-     */
-    private function normalizeJsonValue(mixed $value): array
-    {
-        if (is_array($value)) {
-            return $value;
-        }
-
-        if (is_string($value) && $value !== '') {
-            $decoded = json_decode($value, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-        }
-
-        return [];
+        return $this->validator->normalizeCustomMeta($customMeta);
     }
 
     /**
@@ -340,15 +277,6 @@ final class VoltMetadataCompiler
         }
 
         return $derived;
-    }
-
-    private function isChildTable(array $field): bool
-    {
-        if (($field['fieldtype'] ?? null) !== 'Table') {
-            return false;
-        }
-
-        return str_contains((string) ($field['options'] ?? ''), 'separate');
     }
 
     private function entityCacheKey(string $entityName, ?string $role = null): string

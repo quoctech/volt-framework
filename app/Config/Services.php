@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Engine\VoltMetadataCompiler;
+use Volt\Core\Security\PermissionResolver;
+use Volt\Core\Validation\MetadataValidator;
 
 /**
  * Services Configuration file.
@@ -50,5 +53,32 @@ class Services extends BaseService
         }
 
         return new AuthService();
+    }
+
+    public static function voltMetadataValidator(?bool $getShared = true): MetadataValidator
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltMetadataValidator');
+        }
+
+        return new MetadataValidator();
+    }
+
+    public static function voltPermissionResolver(?bool $getShared = true): PermissionResolver
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltPermissionResolver');
+        }
+
+        return new PermissionResolver();
+    }
+
+    public static function voltAuditTrailWriter(?bool $getShared = true): AuditTrailWriter
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltAuditTrailWriter');
+        }
+
+        return new AuditTrailWriter();
     }
 }

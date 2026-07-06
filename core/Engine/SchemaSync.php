@@ -6,17 +6,20 @@ namespace Volt\Core\Engine;
 
 use CodeIgniter\Database\BaseConnection;
 use Volt\Core\Database\VoltDatabase;
+use Volt\Core\Validation\MetadataValidator;
 
 class SchemaSync
 {
     protected BaseConnection $db;
     protected string $tablePrefix;
+    protected MetadataValidator $validator;
 
     public function __construct()
     {
         $this->db = VoltDatabase::connection();
         // Tận dụng trực tiếp cấu hình database.default.DBPrefix từ file .env
         $this->tablePrefix = $this->db->DBPrefix;
+        $this->validator = new MetadataValidator();
     }
 
     /**
@@ -64,6 +67,7 @@ class SchemaSync
      */
     public function syncEntity(string $entityName): array
     {
+        $entityName = $this->validator->assertEntityName($entityName);
         // Chuyển PascalCase (SalesInvoice) sang snake_case (sales_invoice) để làm tên bảng vật lý
         $cleanEntityName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $entityName));
         
@@ -76,6 +80,8 @@ class SchemaSync
                                ->orderBy('idx', 'ASC')
                                ->get()
                                ->getResultArray();
+
+        $metaFields = array_map(fn (array $field): array => $this->validator->normalizeFieldRow($field), $metaFields);
 
         if (empty($metaFields)) {
             return ['status' => 'error', 'message' => "Metadata trống cho Entity: {$entityName}"];
