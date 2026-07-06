@@ -7,7 +7,7 @@ namespace Volt\Core\Commands;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\BaseConnection;
-use Config\Database;
+use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Engine\SchemaSync;
 
 class VoltSync extends BaseCommand
@@ -46,23 +46,15 @@ class VoltSync extends BaseCommand
     /**
      * Bộ não xử lý đồng bộ cấu trúc
      */
-    private SchemaSync $engine;
+    private ?SchemaSync $engine = null;
 
     /**
      * Kết nối database lõi
      */
-    private BaseConnection $db;
+    private ?BaseConnection $db = null;
 
-    /**
-     * Khởi tạo và nạp động các dịch vụ dùng chung
-     */
     public function __construct()
     {
-        // Giữ lại cấu trúc cha của CI4 Command
-        parent::__construct();
-        
-        $this->engine = new SchemaSync();
-        $this->db     = Database::connect();
     }
 
     /**
@@ -70,16 +62,12 @@ class VoltSync extends BaseCommand
      */
     public function run(array $params): void
     {
-        // Khởi tạo dịch vụ trực tiếp tại đây để triệt tiêu lỗi parent::__construct
-        $this->engine = new SchemaSync();
-        $this->db     = Database::connect();
-        
         // Kịch bản 1: Đồng bộ tất cả thực thể (--all)
         if (CLI::getOption('all')) {
             CLI::write('🔄 Đang quét danh mục để đồng bộ toàn diện hệ thống...', 'yellow');
             
             // Tận dụng hằng số thay vì dùng chuỗi thô 'sys_entity'
-            $entities = $this->db->table(self::T_ENTITY)->select('name')->get()->getResultArray();
+            $entities = $this->db()->table(self::T_ENTITY)->select('name')->get()->getResultArray();
             
             if (empty($entities)) {
                 CLI::error('❌ Không tìm thấy bất kỳ Metadata Entity nào trong bảng ' . self::T_ENTITY . '!');
@@ -111,7 +99,7 @@ class VoltSync extends BaseCommand
     private function executeSync(string $entityName): void
     {
         CLI::write("⚡ Đang kiểm tra thực thể: {$entityName}...", 'cyan');
-        $result = $this->engine->syncEntity($entityName);
+        $result = $this->engine()->syncEntity($entityName);
 
         if ($result['status'] === 'success') {
             foreach ($result['logs'] as $log) {
@@ -120,5 +108,15 @@ class VoltSync extends BaseCommand
         } else {
             CLI::write("   ❌ Thất bại: " . $result['message'], 'red');
         }
+    }
+
+    private function engine(): SchemaSync
+    {
+        return $this->engine ??= new SchemaSync();
+    }
+
+    private function db(): BaseConnection
+    {
+        return $this->db ??= VoltDatabase::connection();
     }
 }

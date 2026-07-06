@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Config;
 
 use CodeIgniter\Cache\CacheInterface;
@@ -22,7 +24,7 @@ class Cache extends BaseConfig
      * The name of the preferred handler that should be used. If for some reason
      * it is not available, the $backupHandler will be used in its place.
      */
-    public string $handler = 'file';
+    public string $handler = 'redis';
 
     /**
      * --------------------------------------------------------------------------
@@ -33,7 +35,7 @@ class Cache extends BaseConfig
      * unreachable. Often, 'file' is used here since the filesystem is
      * always available, though that's not always practical for the app.
      */
-    public string $backupHandler = 'dummy';
+    public string $backupHandler = 'file';
 
     /**
      * --------------------------------------------------------------------------
@@ -43,7 +45,7 @@ class Cache extends BaseConfig
      * This string is added to all cache item names to help avoid collisions
      * if you run multiple applications with the same cache engine.
      */
-    public string $prefix = '';
+    public string $prefix = 'volt_';
 
     /**
      * --------------------------------------------------------------------------
@@ -56,7 +58,7 @@ class Cache extends BaseConfig
      * hard-coded, but may be useful to projects and modules. This will replace
      * the hard-coded value in a future release.
      */
-    public int $ttl = 60;
+    public int $ttl = 86400;
 
     /**
      * --------------------------------------------------------------------------
@@ -130,7 +132,7 @@ class Cache extends BaseConfig
         'timeout'    => 0,
         'async'      => false, // specific to Predis and ignored by the native Redis extension
         'persistent' => false,
-        'database'   => 0,
+        'database'   => 1,
     ];
 
     /**
@@ -195,4 +197,24 @@ class Cache extends BaseConfig
      * @var list<int>
      */
     public array $cacheStatusCodes = [];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->handler       = (string) env('cache.handler', $this->handler);
+        $this->backupHandler = (string) env('cache.backupHandler', $this->backupHandler);
+        $this->prefix        = (string) env('cache.prefix', $this->prefix);
+        $this->ttl           = (int) env('cache.ttl', $this->ttl);
+
+        $this->redis = [
+            'host'       => (string) env('cache.redis.host', $this->redis['host']),
+            'password'   => env('cache.redis.password', $this->redis['password']),
+            'port'       => (int) env('cache.redis.port', $this->redis['port']),
+            'timeout'    => (int) env('cache.redis.timeout', $this->redis['timeout']),
+            'async'      => filter_var(env('cache.redis.async', $this->redis['async']), FILTER_VALIDATE_BOOL),
+            'persistent' => filter_var(env('cache.redis.persistent', $this->redis['persistent']), FILTER_VALIDATE_BOOL),
+            'database'   => (int) env('cache.redis.database', $this->redis['database']),
+        ];
+    }
 }

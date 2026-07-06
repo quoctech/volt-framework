@@ -1,57 +1,225 @@
-# ⚡ VOLT FRAMEWORK - ARCHITECTURE & CODING RULES
+# VOLT Framework Rules
 
-Tài liệu này quy định các nguyên tắc thiết kế hệ thống, an ninh dữ liệu và quy chuẩn mã nguồn tối cao bắt buộc phải tuân thủ khi phát triển hoặc mở rộng bộ lõi (Core Engine) cũng như các Module nghiệp vụ trên Volt Framework.
+## Mục đích
 
----
+Đây là file quy chuẩn bắt buộc cho mọi lần viết, sửa, review hoặc sinh code bằng AI trong dự án Volt Framework.
 
-## 🔐 1. NGUYÊN TẮC BẢO MẬT TỐI CAO (SECURITY FIRST)
+Mục tiêu của file này:
 
-*   **Tuyệt đối không Hard-code thông tin nhạy cảm:** Mọi thông tin cấu hình môi trường, tài khoản, mật khẩu kết nối Database, khóa bí mật (Secret Key), cổng dịch vụ (Port) bắt buộc phải nằm trong file `.env` và được nạp động thông qua cấu hình hệ thống.
-*   **Chống SQL Injection tuyệt đối:** 
-    *   Tất cả các câu lệnh truy vấn thô (`$this->db->query()`) bắt buộc phải sử dụng cơ chế Binding Parameter (dạng `?` hoặc đặt tên biến `:name:`).
-    *   Không bao giờ được phép cộng chuỗi trực tiếp từ biến đầu vào (Input) vào câu lệnh SQL.
-*   **Xác thực và phân quyền đa tầng:**
-    *   Mọi Request đi vào hệ thống bắt buộc phải đi qua tầng Middleware để kiểm tra danh tính dựa trên bảng `sys_user`.
-    *   Trước khi thực thi bất kỳ lệnh đọc/ghi nào xuống các bảng vật lý (`db_`), hệ thống phải kiểm tra ma trận quyền động tại bảng `sys_permission` dựa theo đúng Trạng thái (`state`) hiện tại của chứng từ.
+- ép mọi thay đổi phải bám đúng kiến trúc Volt
+- ưu tiên bảo mật và hiệu suất trước tính tiện
+- tận dụng tối đa built-in của CodeIgniter 4
+- giữ frontend nhẹ, ít phụ thuộc, dùng `Alpine.js`
+- giảm drift giữa ý tưởng, code và tài liệu
 
----
+## Quy trình bắt buộc cho AI và developer
 
-## 🧼 2. TIÊU CHUẨN MÃ NGUỒN SẠCH (CLEAN CODE PHP NATIVE)
+Trước khi viết code, AI hoặc developer phải thực hiện theo thứ tự sau:
 
-*   **Tuân thủ nghiêm ngặt chuẩn PSR:** Toàn bộ mã nguồn phải viết đúng theo tiêu chuẩn PSR-12 (Coding Style) và PSR-4 (Autoloading Namespace).
-*   **Khai báo kiểu dữ liệu tường minh (Strict Typing):** 
-    *   Bắt buộc khai báo `declare(strict_types=1);` ở đầu mọi file PHP để kiểm soát chặt chẽ kiểu dữ liệu, tránh lỗi ép kiểu ngầm.
-    *   Mọi thuộc tính của Class, tham số đầu vào và giá trị trả về của Function bắt buộc phải định nghĩa kiểu dữ liệu (Type Hinting) rõ ràng (Ví dụ: `public function syncEntity(string $entityName): array`).
-*   **Đặt tên có nghĩa (Meaningful Names):** 
-    *   Tên Class và Namespace dùng `PascalCase` (Ví dụ: `SchemaSync`, `VoltModel`).
-    *   Tên Function và Biến dùng `camelCase` (Ví dụ: `getPostgresSchema`, `tableName`).
-    *   Tên trường dữ liệu và tên bảng vật lý dùng `snake_case` (Ví dụ: `product_name`, `sys_entity_field`).
-*   **Triệt tiêu hoàn toàn vấn nạn N+1 Query:** 
-    *   Tuyệt đối không được phép đặt câu lệnh truy vấn SQL (`SELECT`, `query()`) bên trong vòng lặp (`foreach`, `while`, `for`) để bốc dữ liệu liên quan.
-    *   **Giải pháp bắt buộc:** Sử dụng giải pháp gom mảng ID (`whereIn()`), nạp trước dữ liệu liên quan (Eager Loading), hoặc tận dụng các trường lưu trữ mảng lồng cấu trúc `JSONB` của Postgres để bốc toàn bộ dữ liệu chỉ trong **1 câu lệnh SQL duy nhất**, giải phóng băng thông kết nối cho Database Server.
+1. Đọc file này trước.
+2. Đọc [`architecture.md`](/home/quoctk/Desktop/volt-project/architecture.md) để hiểu kiến trúc tổng thể.
+3. Đọc [`roadmap.md`](/home/quoctk/Desktop/volt-project/roadmap.md) để biết ưu tiên triển khai hiện tại.
+4. Đọc code liên quan trước khi sửa.
+5. Chỉ bắt đầu code khi thay đổi không vi phạm các quy tắc bên dưới.
 
----
+Nếu có xung đột:
 
-## 💎 3. QUẢN LÝ HẰNG SỐ - TUYỆT ĐỐI KHÔNG HARD-CODE (NO MAGIC STRINGS)
+1. `Security`
+2. `Performance`
+3. `Correctness`
+4. `Maintainability`
+5. `Convenience`
 
-*   **Định nghĩa hằng số cho giá trị lặp lại:** Khi một giá trị chuỗi (String) hoặc số (Integer) xuất hiện từ 2 lần trở lên trong cùng một Class hoặc có tính chất đại diện hệ thống, bắt buộc phải định nghĩa nó thành hằng số (`const`).
-*   **Áp dụng triệt để cho tên bảng và trạng thái:** 
-    *   Tên các bảng hệ thống bắt buộc phải quản lý bằng hằng số ở đầu Class để khi cần bảo trì chỉ sửa đúng một chỗ.
-    ```php
-    const T_ENTITY = 'sys_entity';
-    const T_FIELD  = 'sys_entity_field';
-    ```
-    *   Các trạng thái cốt lõi của hệ thống cũng phải dùng hằng số:
-    ```php
-    const DOC_DRAFT     = 0;
-    const DOC_SUBMITTED = 1;
-    const DOC_CANCELLED = 2;
-    ```
+## Nguyên tắc cốt lõi
 
----
+### 1. Security first
 
-## 🔄 4. TÁI SỬ DỤNG MÃ NGUỒN (DRY - DON'T REPEAT YOURSELF)
+- Không hard-code mật khẩu, token, secret, DSN, API key, salt, private key.
+- Mọi cấu hình nhạy cảm phải đi qua `.env` và lớp config của CI4.
+- Mọi input từ request, CLI, file import, queue payload, webhook đều là `untrusted input`.
+- Không trust metadata do người dùng khai báo nếu chưa validate.
+- Không render thẳng dữ liệu người dùng ra HTML nếu chưa escape.
+- Không dùng raw SQL nếu Query Builder hoặc binding của CI4 đáp ứng được.
+- Nếu buộc phải dùng raw SQL thì phải bind parameter. Không nối chuỗi trực tiếp với input.
+- Mọi hành vi đọc/ghi dữ liệu nghiệp vụ phải đi qua tầng authz và kiểm tra permission.
+- Audit trail là yêu cầu mặc định cho thay đổi dữ liệu quan trọng.
 
-*   **Tái sử dụng cấu hình môi trường:** Tận dụng tối đa các thuộc tính và hàm có sẵn của Framework gốc (CodeIgniter 4) thay vì viết lại các hàm tiện ích trùng lặp. Ví dụ: Sử dụng `$this->db->DBPrefix` để lấy tiền tố bảng động từ `.env`.
-*   **Phân rã Function đơn nhiệm (Single Responsibility):** Một hàm chỉ làm đúng một việc duy nhất và không dài quá 50 dòng code. Nếu phát hiện một đoạn logic tính toán (như map kiểu dữ liệu, định dạng chuỗi) lặp lại ở nhiều nơi, bắt buộc phải tách ra thành một hàm dùng chung (Helper/Utility Function).
-*   **Tập trung hóa xử lý dữ liệu:** Mọi hành động tương tác với dữ liệu (Đọc, ghi, kiểm tra hợp lệ, ghi vết thanh tra Audit Trail) bắt buộc phải đi qua Model lõi tập trung `VoltModel`, không viết logic nghiệp vụ (Business Logic) rải rác ở tầng Controller.
+### 2. Performance first
+
+- Không chấp nhận thay đổi tạo ra `N+1 query`.
+- Ưu tiên batch query, preload metadata, cache lookup và giảm round-trip tới database.
+- Chỉ lấy các cột cần dùng, không `SELECT *` nếu không có lý do rõ ràng.
+- Ưu tiên index đúng cho khóa tra cứu, join, sort và filter.
+- Với dữ liệu metadata ít thay đổi, ưu tiên cache ở layer phù hợp.
+- Giảm parse và bootstrap không cần thiết ở request path nóng.
+- Frontend phải nhẹ, tránh bundle JS lớn khi `Alpine.js` là đủ.
+
+### 3. Built-in first
+
+Ưu tiên dùng sẵn của CodeIgniter 4 trước khi tự viết:
+
+- `Model`, `BaseModel`, `Entity`, `Validation`
+- `Filters` cho auth/authz/cors/throttle
+- `Query Builder`
+- `Migrations`, `Seeds`
+- `Cache`
+- `Events`
+- `Logger`
+- `Exceptions`
+- `Security`, `CSRF`, `ContentSecurityPolicy`
+- `Request`, `Response`, `API Response Trait`
+- `Commands` qua `spark`
+- `Pager`, `Localization`, `Email` nếu phù hợp
+
+Chỉ tự xây lại khi built-in không đáp ứng được yêu cầu kiến trúc của Volt. Nếu không dùng built-in, phải có lý do kỹ thuật rõ ràng.
+
+### 4. Metadata-driven nhưng có kiểm soát
+
+- Volt là framework `configuration-driven`, nhưng metadata không được phép bypass guardrail kỹ thuật.
+- Mọi metadata entity/field/permission phải được validate bằng schema nội bộ trước khi lưu và trước khi sync.
+- Không cho phép metadata sinh ra SQL nguy hiểm, tên cột không hợp lệ, hoặc kiểu dữ liệu không nằm trong whitelist.
+- Sync schema phải idempotent, có log, có khả năng kiểm tra trước khi apply nếu luồng đó được bổ sung sau.
+- Metadata runtime phải đi qua `VoltMetadataCompiler` và cache vào Redis thay vì đọc trực tiếp 3 bảng `sys_*` trên path nóng.
+
+## Quy tắc backend
+
+### 1. Kiến trúc lớp
+
+- `Controller` chỉ nhận request, gọi service/use case, trả response.
+- Không đặt business logic trong controller.
+- Logic metadata, schema sync, naming, permission, audit, queue phải ở `core/`.
+- Truy cập dữ liệu nghiệp vụ phải đi qua model hoặc service tập trung.
+- Mỗi class chỉ nên có một trách nhiệm chính.
+
+### 2. Chuẩn mã nguồn PHP
+
+- Dùng `declare(strict_types=1);` cho file PHP mới.
+- Tuân thủ `PSR-12`, `PSR-4`.
+- Class và namespace dùng `PascalCase`.
+- Method và variable dùng `camelCase`.
+- Tên bảng, cột, key dữ liệu dùng `snake_case`.
+- Không dùng magic string lặp lại; chuyển thành `const`.
+- Không tạo helper rác hoặc abstraction vô ích.
+
+### 3. Database và PostgreSQL
+
+- Tên bảng nghiệp vụ sinh từ entity phải deterministic và sanitize được.
+- Tên cột sinh từ metadata phải qua whitelist regex.
+- Dùng transaction cho các thao tác ghi nhiều bước cần tính nhất quán.
+- Với JSONB:
+  - chỉ dùng khi phù hợp với đặc tính dữ liệu
+  - không lạm dụng JSONB để né thiết kế quan hệ
+- Tạo index cho cột lookup chính, foreign key logic, audit lookup và queue status.
+- Khi thay đổi schema, phải cân nhắc lock, downtime và backward compatibility.
+
+### 4. Validation và permission
+
+- Validate ở cả metadata layer lẫn document data layer.
+- `reqd`, `read_only`, `hidden`, `fieldtype`, `options`, `state` phải có quy tắc xử lý rõ.
+- Permission phải check theo:
+  - user
+  - roles
+  - entity
+  - document state
+  - action
+- Không check permission ở frontend rồi xem như đủ.
+
+### 5. Logging, audit và lỗi
+
+- Mọi lỗi hệ thống phải được log qua logger của CI4.
+- Không lộ stack trace hoặc SQL nhạy cảm ra response production.
+- Thao tác dữ liệu quan trọng phải có audit trail.
+- Audit phải lưu đủ:
+  - actor
+  - entity
+  - document id
+  - action
+  - timestamp
+  - delta
+
+## Quy tắc frontend
+
+### 1. Frontend stack
+
+- Frontend mặc định của Volt là:
+  - server-rendered HTML từ CI4 view
+  - `Alpine.js` cho tương tác phía client
+- `Tailwind CSS` được vendored trong repo để dễ nâng version và giảm phụ thuộc CDN
+- Không mặc định kéo React/Vue/SPA nếu chưa có lý do rõ ràng.
+- Alpine.js được dùng cho:
+  - toggle UI
+  - modal
+  - dropdown
+  - inline validation state
+  - small component state
+  - async interaction nhẹ
+
+### 2. Frontend security
+
+- Escape output theo cơ chế view của CI4.
+- Không chèn HTML từ dữ liệu người dùng nếu chưa sanitize rõ ràng.
+- Form ghi dữ liệu phải đi qua CSRF protection của CI4 khi phù hợp.
+- Không lưu token nhạy cảm trong localStorage nếu có lựa chọn an toàn hơn.
+
+### 3. Frontend performance
+
+- Tránh JS bundle lớn.
+- Ưu tiên progressive enhancement.
+- Không render dữ liệu thừa ra DOM.
+- CSS và JS chỉ nạp ở page cần dùng nếu có thể.
+
+## Quy tắc tận dụng built-in CodeIgniter 4
+
+### 1. Config
+
+- Cấu hình phải nằm ở `app/Config` hoặc `.env`, không rải trong code.
+- Không duplicate config mà CI4 đã có.
+
+### 2. Filters
+
+- Dùng `Filters` cho xác thực, phân quyền, rate limiting, CORS, CSRF policy.
+- Không nhúng logic cross-cutting lặp lại trong controller.
+
+### 3. Validation
+
+- Ưu tiên `Validation` của CI4 trước khi tự viết validator riêng.
+- Chỉ viết custom rule khi rule built-in không đủ.
+
+### 4. Caching
+
+- Ưu tiên cache abstraction của CI4 cho metadata và lookup hay dùng.
+- Cache key phải có namespace rõ ràng và có chiến lược invalidation.
+
+### 5. CLI
+
+- Tác vụ vận hành dùng `spark command`.
+- Không tạo script rời nếu CI4 command giải quyết được.
+
+## Danh sách cấm
+
+- Cấm hard-code secret.
+- Cấm query trong vòng lặp nếu có thể gom query.
+- Cấm business logic trong controller.
+- Cấm viết feature mới bằng raw PHP khi CI4 đã có built-in phù hợp.
+- Cấm thêm dependency frontend nặng cho tác vụ mà Alpine.js xử lý được.
+- Cấm bypass validation metadata.
+- Cấm bypass permission check ở thao tác ghi dữ liệu.
+- Cấm sửa schema production theo kiểu phá hủy dữ liệu mà không có kế hoạch rõ ràng.
+
+## Checklist trước khi merge hoặc giao AI tiếp tục code
+
+- Đã đọc file rules này.
+- Đã đối chiếu với `architecture.md`.
+- Đã đối chiếu với `roadmap.md`.
+- Không có hard-coded secret hoặc config nhạy cảm.
+- Không có `N+1 query`.
+- Đã ưu tiên built-in của CI4.
+- Frontend dùng Alpine.js nếu chỉ cần tương tác nhẹ.
+- Có validation.
+- Có permission check ở luồng ghi dữ liệu.
+- Có log và audit nếu thay đổi dữ liệu quan trọng.
+- Có đánh giá tác động hiệu suất.
+
+## Ghi chú áp dụng
+
+Nếu một yêu cầu của AI hoặc developer mâu thuẫn với file này, phải ưu tiên sửa hướng tiếp cận thay vì phá rule. Chỉ được lệch rule khi có lý do kỹ thuật rõ ràng, được ghi lại trong thay đổi tương ứng và không làm giảm security hoặc performance của hệ thống.

@@ -73,10 +73,18 @@ class CreateVoltBaseTables extends Migration
         // 4. BẢNG: sys_user
         // ==========================================
         $this->forge->addField([
-            'name'          => ['type' => 'VARCHAR', 'constraint' => 100],
-            'password'      => ['type' => 'VARCHAR', 'constraint' => 255],
-            'roles'         => ['type' => 'JSONB', 'default' => '[]'],
-            'user_metadata' => ['type' => 'JSONB', 'default' => '{}'],
+            'name'                  => ['type' => 'VARCHAR', 'constraint' => 100],
+            'password'              => ['type' => 'VARCHAR', 'constraint' => 255],
+            'roles'                 => ['type' => 'JSONB', 'default' => '[]'],
+            'user_metadata'         => ['type' => 'JSONB', 'default' => '{}'],
+            'is_active'             => ['type' => 'SMALLINT', 'default' => 1],
+            'api_token_hash'        => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => true],
+            'api_token_expires_at'   => ['type' => 'TIMESTAMP', 'null' => true],
+            'last_login_at'         => ['type' => 'TIMESTAMP', 'null' => true],
+            'failed_login_attempts'  => ['type' => 'INTEGER', 'default' => 0],
+            'locked_until'          => ['type' => 'TIMESTAMP', 'null' => true],
+            'created_at'            => ['type' => 'TIMESTAMP', 'null' => true],
+            'updated_at'            => ['type' => 'TIMESTAMP', 'null' => true],
         ]);
         $this->forge->addKey('name', true);
         $this->forge->createTable(self::T_USER, true);

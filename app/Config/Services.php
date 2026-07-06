@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
+use Volt\Core\Auth\Services\AuthService;
+use Volt\Core\Engine\VoltMetadataCompiler;
 
 /**
  * Services Configuration file.
@@ -29,4 +33,22 @@ class Services extends BaseService
      *     return new \CodeIgniter\Example();
      * }
      */
+
+    public static function voltMetadataCompiler(?bool $getShared = true): VoltMetadataCompiler
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltMetadataCompiler');
+        }
+
+        return new VoltMetadataCompiler();
+    }
+
+    public static function voltAuth(?bool $getShared = true): AuthService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltAuth');
+        }
+
+        return new AuthService();
+    }
 }

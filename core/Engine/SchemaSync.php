@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Volt\Core\Engine;
 
 use CodeIgniter\Database\BaseConnection;
-use Config\Database;
+use Volt\Core\Database\VoltDatabase;
 
 class SchemaSync
 {
@@ -12,7 +14,7 @@ class SchemaSync
 
     public function __construct()
     {
-        $this->db = Database::connect();
+        $this->db = VoltDatabase::connection();
         // Tận dụng trực tiếp cấu hình database.default.DBPrefix từ file .env
         $this->tablePrefix = $this->db->DBPrefix;
     }
