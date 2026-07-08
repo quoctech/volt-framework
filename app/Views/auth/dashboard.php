@@ -40,10 +40,12 @@ if (is_string($roles)) {
             </div>
         </div>
 
-        <div class="mt-8 flex flex-wrap gap-3">
-            <form action="<?= site_url('logout') ?>" method="post">
+        <div class="mt-8 grid gap-3 sm:grid-cols-3">
+            <a href="<?= site_url('notes') ?>" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-semibold text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10">Notes</a>
+            <a href="<?= site_url('entities/new') ?>" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-semibold text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10">Entity Builder</a>
+            <form action="<?= site_url('logout') ?>" method="post" class="sm:col-start-3">
                 <?= csrf_field() ?>
-                <button type="submit" class="rounded-2xl bg-slate-100 px-4 py-2 font-semibold text-slate-950 transition hover:bg-white">Logout</button>
+                <button type="submit" class="w-full rounded-2xl bg-slate-100 px-4 py-3 font-semibold text-slate-950 transition hover:bg-white">Logout</button>
             </form>
         </div>
     </div>
