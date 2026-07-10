@@ -4,7 +4,6 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers'], static function (RouteCollection $routes): void {
-    $routes->get('/', 'AuthController::index');
     $routes->get('login', 'AuthController::login', ['filter' => 'guest']);
     $routes->post('login', 'AuthController::authenticate', ['filter' => 'guest']);
     $routes->post('setup', 'AuthController::setup', ['filter' => 'guest']);
@@ -25,8 +24,18 @@ $routes->group('notes', ['namespace' => 'Volt\Core\Notes\Controllers', 'filter' 
     $routes->post('delete/(:num)', 'NoteController::delete/$1');
 });
 
-$routes->group('entities', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
-    $routes->get('/', 'EntityBuilderController::index');
-    $routes->get('new', 'EntityBuilderController::index');
-    $routes->post('store', 'EntityBuilderController::store');
+$routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers'], static function (RouteCollection $routes): void {
+    $routes->get('/', 'EntityBuilderController::desk');
+    $routes->get('desk', 'EntityBuilderController::desk');
+    $routes->get('desk/entity-builder', 'EntityBuilderController::index');
+    $routes->get('desk/create-module', 'EntityBuilderController::modulePage');
+    $routes->get('entity-builder', 'EntityBuilderController::index');
+    $routes->get('entities', 'EntityBuilderController::index');
+    $routes->get('entities/new', 'EntityBuilderController::index');
+});
+
+$routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Controllers'], static function (RouteCollection $routes): void {
+    $routes->get('load/(:segment)', 'EntityBuilderController::load/$1');
+    $routes->post('module/save', 'EntityBuilderController::saveModule');
+    $routes->post('save', 'EntityBuilderController::save');
 });

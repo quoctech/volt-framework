@@ -51,14 +51,26 @@ class SchemaSync
     public function mapToPostgresType(string $fieldType, ?int $length = null): string
     {
         return match ($fieldType) {
-            'Int'       => 'INTEGER',
-            'Float'     => 'NUMERIC(18, 4)', // Chuẩn xác tuyệt đối cho dữ liệu sản xuất, kho bãi, kế toán
-            'Data'      => 'VARCHAR(' . ($length ?? 255) . ')',
-            'Text'      => 'TEXT',
-            'Check'     => 'SMALLINT',       // Tối ưu dung lượng lưu trữ (0 hoặc 1)
-            'Link'      => 'VARCHAR(100)',   // Lưu chuỗi ID Naming Series của Entity liên kết
-            'Table'     => 'JSONB',          // Dùng cho chế độ bảng con embedded gắn liền
-            default     => 'TEXT'
+            'Input'      => 'VARCHAR(' . ($length ?? 255) . ')',
+            'Int'        => 'INTEGER',
+            'Float'      => 'NUMERIC(18, 4)',
+            'Currency'   => 'NUMERIC(18, 4)',
+            'Data'       => 'VARCHAR(' . ($length ?? 255) . ')',
+            'Text'       => 'TEXT',
+            'Check'      => 'SMALLINT',
+            'Date'       => 'DATE',
+            'Datetime'   => 'TIMESTAMP WITHOUT TIME ZONE',
+            'Time'       => 'TIME WITHOUT TIME ZONE',
+            'Email'      => 'VARCHAR(255)',
+            'Phone'      => 'VARCHAR(32)',
+            'URL'        => 'VARCHAR(2048)',
+            'Password'   => 'VARCHAR(255)',
+            'Select'     => 'VARCHAR(255)',
+            'MultiSelect' => 'JSONB',
+            'JSON'       => 'JSONB',
+            'Link'       => 'VARCHAR(100)',
+            'Table'      => 'JSONB',
+            default      => 'TEXT'
         };
     }
 

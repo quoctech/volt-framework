@@ -1,0 +1,106 @@
+function employeeListApp(boot) {
+    return {
+        title: boot.title || '',
+        dataUrl: boot.dataUrl || '',
+        createUrl: boot.createUrl || '',
+        editUrlBase: boot.editUrlBase || '',
+        deleteUrlBase: boot.deleteUrlBase || '',
+        csrfTokenName: boot.csrfTokenName || '',
+        csrfHash: boot.csrfHash || '',
+        columns: boot.columns || [],
+        query: '',
+        loading: false,
+        rows: [],
+        page: 1,
+        perPage: 50,
+        total: 0,
+        totalPages: 1,
+        perPageOptions: [50, 100, 200, 500, 1000, 2500],
+        async init() {
+            await this.load(1);
+        },
+        cellValue(row, fieldname) {
+            const value = row && Object.prototype.hasOwnProperty.call(row, fieldname) ? row[fieldname] : '';
+            if (value === null || value === undefined || value === '') {
+                return '-';
+            }
+
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+
+            return value;
+        },
+        paginationText() {
+            if (this.total === 0) {
+                return '0 rows';
+            }
+
+            const start = ((this.page - 1) * this.perPage) + 1;
+            const end = Math.min(this.total, this.page * this.perPage);
+            return String(start) + '-' + String(end) + ' / ' + String(this.total);
+        },
+        openEdit(name) {
+            if (!name) {
+                return;
+            }
+
+            window.location.href = this.editUrlBase + '/' + encodeURIComponent(name);
+        },
+        async deleteRow(name) {
+            if (!name || !window.confirm('Delete ' + name + '?')) {
+                return;
+            }
+
+            const response = await fetch(this.deleteUrlBase + '/' + encodeURIComponent(name), {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-CSRF-TOKEN': this.csrfHash,
+                },
+                body: new URLSearchParams({
+                    [this.csrfTokenName]: this.csrfHash,
+                }).toString(),
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                throw new Error(result.message || 'Unable to delete record.');
+            }
+
+            await this.load(this.page);
+        },
+        async load(page = 1) {
+            this.loading = true;
+            this.page = Math.max(1, page);
+            try {
+                const params = new URLSearchParams({
+                    page: String(this.page),
+                    per_page: String(this.perPage),
+                    q: this.query || '',
+                });
+                const response = await fetch(this.dataUrl + '?' + params.toString(), {
+                    headers: { Accept: 'application/json' },
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Unable to load list.');
+                }
+
+                this.rows = Array.isArray(result.rows) ? result.rows : [];
+                this.page = Number(result.pagination?.page || this.page);
+                this.perPage = Number(result.pagination?.per_page || this.perPage);
+                this.total = Number(result.pagination?.total || 0);
+                this.totalPages = Number(result.pagination?.total_pages || 1);
+                this.perPageOptions = Array.isArray(result.pagination?.options) ? result.pagination.options : this.perPageOptions;
+            } catch (error) {
+                console.error(error);
+                this.rows = [];
+                this.total = 0;
+                this.totalPages = 1;
+            } finally {
+                this.loading = false;
+            }
+        },
+    };
+}

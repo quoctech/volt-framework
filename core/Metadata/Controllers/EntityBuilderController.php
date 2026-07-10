@@ -5,76 +5,145 @@ declare(strict_types=1);
 namespace Volt\Core\Metadata\Controllers;
 
 use CodeIgniter\Controller;
+use CodeIgniter\HTTP\ResponseInterface;
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
+use Throwable;
 use Volt\Core\Metadata\EntityBuilderService;
 
 class EntityBuilderController extends Controller
 {
     private EntityBuilderService $builderService;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
         $this->builderService = new EntityBuilderService();
     }
 
-    public function index()
+    public function index(): string
     {
-        return view('entities/builder', [
-            'entities' => $this->builderService->listEntities(),
-            'error' => session()->getFlashdata('entity_error'),
-            'success' => session()->getFlashdata('entity_success'),
+        return view('Volt\\Core\\Metadata\\Views\\entity_builder', [
+            'modules'           => $this->builderService->listModules(),
+            'entities'          => $this->builderService->listEntityNames(),
+            'initialEntityName' => (string) ($this->request->getGet('entity') ?? ''),
+            'csrfTokenName'     => csrf_token(),
+            'csrfHash'          => csrf_hash(),
         ]);
     }
 
-    public function store()
+    public function desk(): string
     {
-        $payload = $this->request->getPost();
-        $fieldsJson = (string) ($payload['fields_json'] ?? '[]');
+        $moduleFilter = trim((string) ($this->request->getGet('module') ?? ''));
 
-        $entity = [
-            'name' => (string) ($payload['name'] ?? ''),
-            'module' => (string) ($payload['module'] ?? ''),
-            'issingle' => (int) (($payload['issingle'] ?? 0) === '1' || ($payload['issingle'] ?? 0) === 1),
-            'istable' => (int) (($payload['istable'] ?? 0) === '1' || ($payload['istable'] ?? 0) === 1),
-            'autoname' => (string) ($payload['autoname'] ?? 'HASH'),
-            'states' => $this->decodeJson((string) ($payload['states_json'] ?? '{}')),
-            'custom_attributes' => $this->decodeJson((string) ($payload['custom_attributes_json'] ?? '{}')),
-        ];
-
-        $fields = $this->decodeJson($fieldsJson);
-
-        try {
-            $this->builderService->createEntity($entity, is_array($fields) ? $fields : []);
-        } catch (InvalidArgumentException $exception) {
-            return view('entities/builder', [
-                'entities' => $this->builderService->listEntities(),
-                'error' => $exception->getMessage(),
-                'success' => null,
-            ]);
-        } catch (\Throwable $throwable) {
-            return view('entities/builder', [
-                'entities' => $this->builderService->listEntities(),
-                'error' => $throwable->getMessage(),
-                'success' => null,
-            ]);
-        }
-
-        return redirect()->to(site_url('entities/new'))->with('entity_success', 'Entity đã được tạo.');
+        return view('Volt\\Core\\Metadata\\Views\\desk', [
+            'moduleCount' => count($this->builderService->listModules()),
+            'entityCount' => count($this->builderService->listEntityNames()),
+            'modules' => $this->builderService->listModules(),
+            'moduleFilter' => $moduleFilter,
+            'entities' => $this->builderService->listEntities($moduleFilter !== '' ? $moduleFilter : null),
+        ]);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function decodeJson(string $value): array
+    public function modulePage(): string
     {
-        if ($value === '') {
-            return [];
+        return view('Volt\\Core\\Metadata\\Views\\create_module', [
+            'modules'       => $this->builderService->listModules(),
+            'csrfTokenName' => csrf_token(),
+            'csrfHash'      => csrf_hash(),
+        ]);
+    }
+
+    public function load(string $entityName): ResponseInterface
+    {
+        try {
+            $payload = $this->builderService->loadEntity($entityName);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data'   => $payload,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    public function save(): ResponseInterface
+    {
+        $payload = $this->request->getJSON(true);
+        if (! is_array($payload)) {
+            $payload = $this->request->getPost();
         }
 
-        $decoded = json_decode($value, true);
+        if (! is_array($payload)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => 'Invalid payload.',
+            ]);
+        }
 
-        return is_array($decoded) ? $decoded : [];
+        try {
+            $result = $this->builderService->saveEntity($payload);
+
+            return $this->response->setJSON([
+                'status'  => 'ok',
+                'message' => 'Entity saved successfully.',
+                'data'    => $result,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    public function saveModule(): ResponseInterface
+    {
+        $payload = $this->request->getJSON(true);
+        if (! is_array($payload)) {
+            $payload = $this->request->getPost();
+        }
+
+        if (! is_array($payload)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => 'Invalid payload.',
+            ]);
+        }
+
+        try {
+            $result = $this->builderService->createModule($payload);
+
+            return $this->response->setJSON([
+                'status'  => 'ok',
+                'message' => 'Module created successfully.',
+                'data'    => $result,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
     }
 }

@@ -18,6 +18,22 @@ use CodeIgniter\Config\Routing as BaseRouting;
  */
 class Routing extends BaseRouting
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        $moduleRouteFiles = glob(APPPATH . 'Modules/*/Config/Routes.php');
+        if ($moduleRouteFiles === false) {
+            $moduleRouteFiles = [];
+        }
+
+        foreach ($moduleRouteFiles as $routeFile) {
+            if (! in_array($routeFile, $this->routeFiles, true)) {
+                $this->routeFiles[] = $routeFile;
+            }
+        }
+    }
+
     /**
      * For Defined Routes.
      * An array of files that contain route definitions.

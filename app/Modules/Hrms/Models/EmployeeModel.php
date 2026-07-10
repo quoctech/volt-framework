@@ -1,0 +1,83 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Hrms\Models;
+
+use App\Modules\Hrms\DocTypes\Employee\Employee;
+use Volt\Core\Models\VoltModel;
+
+final class EmployeeModel extends VoltModel
+{
+    protected $table = 'employee';
+    protected $primaryKey = 'name';
+    protected $returnType = 'array';
+    protected $useAutoIncrement = false;
+    protected $protectFields = false;
+    protected $allowedFields = [];
+    protected $beforeInsert = ['voltBeforeInsert', 'callBeforeInsert'];
+    protected $afterInsert = ['voltAfterInsert', 'callAfterInsert'];
+    protected $beforeUpdate = ['voltBeforeUpdate', 'callBeforeUpdate'];
+    protected $afterUpdate = ['voltAfterUpdate', 'callAfterUpdate'];
+
+    private ?Employee $docType = null;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->setEntityName('Employee');
+    }
+
+    protected function callBeforeInsert(array $event): array
+    {
+        $payload = $this->extractPayload($event);
+        $payload = $this->docType()->beforeInsert($payload);
+        $payload = $this->docType()->beforeSave($payload);
+        $this->docType()->validate($payload);
+        $event['data'] = $payload;
+
+        return $event;
+    }
+
+    protected function callBeforeUpdate(array $event): array
+    {
+        $payload = $this->extractPayload($event);
+        $payload = $this->docType()->beforeSave($payload);
+        $this->docType()->validate($payload);
+        $event['data'] = $payload;
+
+        return $event;
+    }
+
+    protected function callAfterInsert(array $event): array
+    {
+        $payload = $this->extractPayload($event);
+        $this->docType()->afterInsert($payload, $event);
+        $this->docType()->afterSave($payload, $event);
+
+        return $event;
+    }
+
+    protected function callAfterUpdate(array $event): array
+    {
+        $payload = $this->extractPayload($event);
+        $this->docType()->onUpdate($payload, $event);
+        $this->docType()->afterSave($payload, $event);
+
+        return $event;
+    }
+
+    private function docType(): Employee
+    {
+        return $this->docType ??= new Employee();
+    }
+
+    /**
+     * @param array<string, mixed> $event
+     * @return array<string, mixed>
+     */
+    private function extractPayload(array $event): array
+    {
+        return isset($event['data']) && is_array($event['data']) ? $event['data'] : [];
+    }
+}

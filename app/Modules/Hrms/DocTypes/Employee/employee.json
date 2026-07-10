@@ -1,0 +1,120 @@
+{
+    "entity_name": "employee",
+    "module": "hrms",
+    "table_name": "employee",
+    "entity": {
+        "name": "employee",
+        "module": "hrms",
+        "label": "Employee",
+        "is_submittable": false,
+        "issingle": false,
+        "istable": false,
+        "autoname": "HASH",
+        "states": [],
+        "s_custom_jsonb": {
+            "layout": {
+                "sessions": [
+                    {
+                        "uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                        "title": "Primary",
+                        "description": "Main fields",
+                        "column_count": 1
+                    }
+                ]
+            }
+        }
+    },
+    "fields": [
+        {
+            "id": null,
+            "fieldname": "employee_name",
+            "label": "Tên Nhân Viên",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 1,
+            "f_custom_jsonb": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "default_value": "",
+                "placeholder": "",
+                "in_list_view": false
+            }
+        },
+        {
+            "id": null,
+            "fieldname": "employee_age",
+            "label": "Tuổi Nhân Viên",
+            "fieldtype": "Int",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 2,
+            "f_custom_jsonb": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "in_list_view": false
+            }
+        }
+    ],
+    "field_map": {
+        "employee_name": {
+            "id": null,
+            "fieldname": "employee_name",
+            "label": "Tên Nhân Viên",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 1,
+            "f_custom_jsonb": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "default_value": "",
+                "placeholder": "",
+                "in_list_view": false
+            }
+        },
+        "employee_age": {
+            "id": null,
+            "fieldname": "employee_age",
+            "label": "Tuổi Nhân Viên",
+            "fieldtype": "Int",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 2,
+            "f_custom_jsonb": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "in_list_view": false
+            }
+        }
+    },
+    "custom_patch": {
+        "fields": {
+            "employee_name": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "default_value": "",
+                "placeholder": "",
+                "in_list_view": false
+            },
+            "employee_age": {
+                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                "column": 1,
+                "in_list_view": false
+            }
+        }
+    },
+    "compiled_at": "2026-07-10T14:09:06+00:00"
+}

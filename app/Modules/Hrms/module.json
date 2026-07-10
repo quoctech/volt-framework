@@ -1,0 +1,5 @@
+{
+    "name": "hrms",
+    "label": "HRMS",
+    "namespace": "App\\Modules\\Hrms"
+}

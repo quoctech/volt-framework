@@ -8,14 +8,38 @@ use InvalidArgumentException;
 
 final class MetadataValidator
 {
-    private const ENTITY_NAME_PATTERN = '/^[A-Z][A-Za-z0-9]*$/';
+    private const ENTITY_NAME_PATTERN = '/^[A-Za-z][A-Za-z0-9_]*$/';
     private const MODULE_PATTERN = '/^[a-z][a-z0-9_]*$/';
     private const FIELD_NAME_PATTERN = '/^[a-z][a-z0-9_]*$/';
 
     /**
+     * Common field types that the metadata layer accepts.
+     *
+     * Keep this list aligned with the builder UI and schema sync mapping.
+     *
      * @var array<int, string>
      */
-    private const FIELD_TYPES = ['Int', 'Float', 'Data', 'Text', 'Check', 'Link', 'Table'];
+    private const FIELD_TYPES = [
+        'Input',
+        'Int',
+        'Float',
+        'Currency',
+        'Data',
+        'Text',
+        'Check',
+        'Date',
+        'Datetime',
+        'Time',
+        'Email',
+        'Phone',
+        'URL',
+        'Password',
+        'Select',
+        'MultiSelect',
+        'JSON',
+        'Link',
+        'Table',
+    ];
 
     public function assertEntityName(string $entityName): string
     {
