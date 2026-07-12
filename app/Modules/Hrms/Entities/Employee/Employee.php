@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Hrms\DocTypes\Employee;
+namespace App\Modules\Hrms\Entities\Employee;
 
 final class Employee
 {

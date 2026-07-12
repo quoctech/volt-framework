@@ -26,6 +26,9 @@ abstract class VoltModel extends Model
     /** @var array<string, array<string, mixed>> */
     protected array $auditSnapshots = [];
 
+    /** @var array<string, array<string, true>> */
+    private array $tableColumns = [];
+
     private ?PermissionResolver $permissionResolver = null;
     private ?AuditTrailWriter $auditTrailWriter = null;
     private ?MetadataValidator $metadataValidator = null;
@@ -56,7 +59,7 @@ abstract class VoltModel extends Model
     {
         $this->assertPermission('create');
 
-        return $this->normalizeWritePayload($data);
+        return $this->normalizeWritePayload($data, true);
     }
 
     protected function voltAfterInsert(array $data): array
@@ -71,7 +74,7 @@ abstract class VoltModel extends Model
         $this->assertPermission('write');
         $this->captureSnapshot('update', $data);
 
-        return $this->normalizeWritePayload($data);
+        return $this->normalizeWritePayload($data, false);
     }
 
     protected function voltAfterUpdate(array $data): array
@@ -132,13 +135,46 @@ abstract class VoltModel extends Model
      *
      * @return array<string, mixed>
      */
-    protected function normalizeWritePayload(array $data): array
+    protected function normalizeWritePayload(array $data, bool $isInsert): array
     {
         if (isset($data['data']) && is_array($data['data'])) {
             $data['data'] = $this->normalizeRowPayload($data['data']);
+            $data['data'] = $this->applySystemFields($data['data'], $isInsert);
         }
 
         return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    protected function applySystemFields(array $row, bool $isInsert): array
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        $actorName = $this->resolveActorName();
+
+        if ($isInsert && $this->hasColumn('owner') && (! isset($row['owner']) || trim((string) $row['owner']) === '')) {
+            $row['owner'] = $actorName;
+        }
+
+        if ($isInsert && $this->hasColumn('creation') && (! isset($row['creation']) || trim((string) $row['creation']) === '')) {
+            $row['creation'] = $timestamp;
+        }
+
+        if ($this->hasColumn('modified')) {
+            $row['modified'] = $timestamp;
+        }
+
+        if ($isInsert && $this->hasColumn('created_at') && (! isset($row['created_at']) || trim((string) $row['created_at']) === '')) {
+            $row['created_at'] = $timestamp;
+        }
+
+        if ($this->hasColumn('updated_at')) {
+            $row['updated_at'] = $timestamp;
+        }
+
+        return $row;
     }
 
     /**
@@ -241,17 +277,26 @@ abstract class VoltModel extends Model
      */
     protected function resolveDocumentId(array $data): string|int|null
     {
-        if (isset($data['id']) && $data['id'] !== '') {
-            return $data['id'];
+        if (array_key_exists('id', $data)) {
+            $id = $this->normalizeDocumentId($data['id']);
+            if ($id !== null) {
+                return $id;
+            }
         }
 
         if (isset($data['data']) && is_array($data['data'])) {
-            if (isset($data['data'][$this->primaryKey]) && $data['data'][$this->primaryKey] !== '') {
-                return $data['data'][$this->primaryKey];
+            if (array_key_exists($this->primaryKey, $data['data'])) {
+                $id = $this->normalizeDocumentId($data['data'][$this->primaryKey]);
+                if ($id !== null) {
+                    return $id;
+                }
             }
 
-            if (isset($data['data']['name']) && $data['data']['name'] !== '') {
-                return $data['data']['name'];
+            if (array_key_exists('name', $data['data'])) {
+                $id = $this->normalizeDocumentId($data['data']['name']);
+                if ($id !== null) {
+                    return $id;
+                }
             }
         }
 
@@ -311,5 +356,39 @@ abstract class VoltModel extends Model
     private function snapshotKey(string $context, string|int $id): string
     {
         return $context . ':' . (string) $id;
+    }
+
+    private function normalizeDocumentId(mixed $id): string|int|null
+    {
+        if (is_string($id)) {
+            $id = trim($id);
+
+            return $id !== '' ? $id : null;
+        }
+
+        if (is_int($id)) {
+            return $id;
+        }
+
+        if (is_array($id)) {
+            foreach ($id as $candidate) {
+                $normalized = $this->normalizeDocumentId($candidate);
+                if ($normalized !== null) {
+                    return $normalized;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function hasColumn(string $column): bool
+    {
+        if (! isset($this->tableColumns[$this->table])) {
+            $columns = $this->db->getFieldNames($this->table) ?: [];
+            $this->tableColumns[$this->table] = array_fill_keys($columns, true);
+        }
+
+        return isset($this->tableColumns[$this->table][$column]);
     }
 }

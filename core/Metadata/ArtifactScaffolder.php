@@ -5,9 +5,23 @@ declare(strict_types=1);
 namespace Volt\Core\Metadata;
 
 use RuntimeException;
+use Volt\Core\Database\TableNameResolver;
 
 final class ArtifactScaffolder
 {
+    private const DIR_CONFIG = 'Config';
+    private const DIR_CONTROLLERS = 'Controllers';
+    private const DIR_ENTITIES = 'Entities';
+    private const DIR_MODELS = 'Models';
+    private const DIR_VIEWS = 'Views';
+    private const FILE_MODULE_JSON = 'module.json';
+    private const FILE_ROUTES = 'Routes.php';
+    private const FILE_SUFFIX_LIST_SCRIPT = '_list.js';
+    private const FILE_SUFFIX_FORM_SCRIPT = '_form.js';
+    private const DEFAULT_PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
+    private const DEFAULT_SESSION_UID = 'primary';
+    private const DEFAULT_SESSION_TITLE = 'Primary';
+
     /**
      * @return array{name:string,label:string,namespace:string,module_path:string}
      */
@@ -15,24 +29,23 @@ final class ArtifactScaffolder
     {
         $moduleSnake  = $this->snake($moduleName);
         $moduleStudly = $this->studly($moduleName);
-        $modulePath   = APPPATH . 'Modules/' . $moduleStudly;
-        $namespace    = 'App\\Modules\\' . $moduleStudly;
+        $modulePath   = $this->modulePath($moduleStudly);
+        $namespace    = $this->moduleNamespace($moduleStudly);
 
         $this->ensureDir($modulePath);
-        $this->ensureDir($modulePath . '/Config');
-        $this->ensureDir($modulePath . '/Controllers');
-        $this->ensureDir($modulePath . '/DocTypes');
-        $this->ensureDir($modulePath . '/Entities');
-        $this->ensureDir($modulePath . '/Models');
-        $this->ensureDir($modulePath . '/Views');
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_CONFIG));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_CONTROLLERS));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_ENTITIES));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_MODELS));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_VIEWS));
 
         $this->writeFile(
-            $modulePath . '/Config/Routes.php',
+            $this->moduleFilePath($moduleStudly, self::DIR_CONFIG, self::FILE_ROUTES),
             $this->buildModuleRoutesFile($moduleStudly, $moduleSnake, [])
         );
 
         $this->writeIfMissing(
-            $modulePath . '/module.json',
+            $this->moduleFilePath($moduleStudly, '', self::FILE_MODULE_JSON),
             json_encode([
                 'name' => $moduleSnake,
                 'label' => $label,
@@ -59,33 +72,36 @@ final class ArtifactScaffolder
         $moduleStudly = $this->studly($moduleName);
         $entityStudly = $this->studly($entityName);
         $entitySnake  = $this->snake($entityName);
-        $docTypeDir   = APPPATH . 'Modules/' . $moduleStudly . '/DocTypes/' . $entityStudly;
-        $moduleDir    = APPPATH . 'Modules/' . $moduleStudly;
+        $entityDir    = $this->entityArtifactDir($moduleStudly, $entityStudly);
         $listUrl      = '/' . $moduleSnake . '/' . $entitySnake;
         $dataUrl      = '/' . $moduleSnake . '/api/' . $entitySnake;
         $createUrl    = '/' . $moduleSnake . '/' . $entitySnake . '/create';
         $editUrl      = '/' . $moduleSnake . '/' . $entitySnake . '/edit';
         $loadUrl      = '/' . $moduleSnake . '/api/' . $entitySnake . '/load';
         $saveUrl      = '/' . $moduleSnake . '/api/' . $entitySnake . '/save';
-        $this->ensureDir($docTypeDir);
-        $this->ensureDir($moduleDir . '/Controllers');
-        $this->ensureDir($moduleDir . '/Models');
-        $this->ensureDir($moduleDir . '/Views');
+        // Entity là đơn vị metadata chuẩn của Volt nên artifact được đặt thống nhất dưới thư mục Entities.
+        $this->ensureDir($entityDir);
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_CONTROLLERS));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_MODELS));
+        $this->ensureDir($this->moduleSubPath($moduleStudly, self::DIR_VIEWS));
 
         $jsonPayload = json_encode($compiled, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($jsonPayload === false) {
             throw new RuntimeException('Unable to encode entity JSON artifact.');
         }
 
-        $this->writeFile($docTypeDir . '/' . $entitySnake . '.json', $jsonPayload . "\n");
-        $this->writeFile($docTypeDir . '/' . $entityStudly . '.php', $this->buildDocTypeHookClass($moduleStudly, $entityStudly));
-        $this->writeFile($docTypeDir . '/' . $entitySnake . '_list.js', $this->buildEntityListScript($entitySnake));
-        $this->writeFile($docTypeDir . '/' . $entitySnake . '_form.js', $this->buildEntityFormScript($entitySnake));
-        $this->writeFile($moduleDir . '/Models/' . $entityStudly . 'Model.php', $this->buildEntityModel($moduleStudly, $entityStudly, $entitySnake));
-        $this->writeFile($moduleDir . '/Controllers/' . $entityStudly . 'Controller.php', $this->buildEntityController($moduleStudly, $entityStudly, $entitySnake, $compiled));
-        $this->writeFile($moduleDir . '/Views/' . $entitySnake . '_list.php', $this->buildEntityListView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $dataUrl, $createUrl, $editUrl, $moduleSnake));
-        $this->writeFile($moduleDir . '/Views/' . $entitySnake . '_form.php', $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl));
-        $this->writeFile($moduleDir . '/Config/Routes.php', $this->buildModuleRoutesFile($moduleStudly, $moduleSnake, $this->discoverModuleEntities($moduleDir . '/DocTypes')));
+        $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . '.json'), $jsonPayload . "\n");
+        $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entityStudly . '.php'), $this->buildEntityHookClass($moduleStudly, $entityStudly));
+        $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_LIST_SCRIPT), $this->buildEntityListScript($entitySnake));
+        $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_FORM_SCRIPT), $this->buildEntityFormScript($entitySnake));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_MODELS, $entityStudly . 'Model.php'), $this->buildEntityModel($moduleStudly, $entityStudly, $entitySnake));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'Controller.php'), $this->buildEntityController($moduleStudly, $entityStudly, $entitySnake, $compiled));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_list.php'), $this->buildEntityListView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $dataUrl, $createUrl, $editUrl, $moduleSnake));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'), $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl));
+        $this->writeFile(
+            $this->moduleFilePath($moduleStudly, self::DIR_CONFIG, self::FILE_ROUTES),
+            $this->buildModuleRoutesFile($moduleStudly, $moduleSnake, $this->discoverModuleEntities($this->moduleSubPath($moduleStudly, self::DIR_ENTITIES)))
+        );
 
         return [
             'list_url' => $listUrl,
@@ -94,14 +110,14 @@ final class ArtifactScaffolder
         ];
     }
 
-    private function buildDocTypeHookClass(string $moduleStudly, string $entityStudly): string
+    private function buildEntityHookClass(string $moduleStudly, string $entityStudly): string
     {
         return <<<PHP
 <?php
 
 declare(strict_types=1);
 
-namespace App\Modules\\{$moduleStudly}\DocTypes\\{$entityStudly};
+namespace App\Modules\\{$moduleStudly}\Entities\\{$entityStudly};
 
 final class {$entityStudly}
 {
@@ -178,20 +194,20 @@ declare(strict_types=1);
 
 namespace App\Modules\\{$moduleStudly}\Models;
 
-use App\Modules\\{$moduleStudly}\DocTypes\\{$entityStudly}\\{$entityStudly};
+use App\Modules\\{$moduleStudly}\Entities\\{$entityStudly}\\{$entityStudly};
 use Volt\Core\Models\VoltModel;
 
 final class {$entityStudly}Model extends VoltModel
 {
-    protected \$table = '{$entitySnake}';
+    protected \$table = '{$this->escapePhpSingleQuoted(TableNameResolver::entity($entitySnake))}';
     protected \$primaryKey = 'name';
     protected \$returnType = 'array';
     protected \$useAutoIncrement = false;
     protected \$protectFields = false;
     protected \$allowedFields = [];
-    protected \$beforeInsert = ['voltBeforeInsert', 'callBeforeInsert'];
+    protected \$beforeInsert = ['callBeforeInsert', 'voltBeforeInsert'];
     protected \$afterInsert = ['voltAfterInsert', 'callAfterInsert'];
-    protected \$beforeUpdate = ['voltBeforeUpdate', 'callBeforeUpdate'];
+    protected \$beforeUpdate = ['callBeforeUpdate', 'voltBeforeUpdate'];
     protected \$afterUpdate = ['voltAfterUpdate', 'callAfterUpdate'];
 
     private ?{$entityStudly} \$docType = null;
@@ -266,9 +282,14 @@ PHP;
         $viewListPath = 'App\\Modules\\' . $moduleStudly . '\\Views\\' . $entitySnake . '_list';
         $viewFormPath = 'App\\Modules\\' . $moduleStudly . '\\Views\\' . $entitySnake . '_form';
         $fields = $this->extractFormFields($compiled);
+        $sessions = $this->extractFormSessions($compiled);
         $fieldsJson = json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $sessionsJson = json_encode($sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($fieldsJson === false) {
             throw new RuntimeException('Unable to encode form fields.');
+        }
+        if ($sessionsJson === false) {
+            throw new RuntimeException('Unable to encode form sessions.');
         }
 
         return <<<PHP
@@ -280,24 +301,32 @@ namespace App\Modules\\{$moduleStudly}\Controllers;
 
 use App\Modules\\{$moduleStudly}\Models\\{$entityStudly}Model;
 use CodeIgniter\Controller;
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Database\VoltDatabase;
 
 final class {$entityStudly}Controller extends Controller
 {
-    private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
+    private const PER_PAGE_OPTIONS = [{$this->implodeIntList(self::DEFAULT_PER_PAGE_OPTIONS)}];
+    private const AUTONAME_PATTERN = '{$this->escapePhpSingleQuoted((string) (($compiled['entity']['autoname'] ?? 'HASH')))}';
 
     /** @var array<int, array<string, mixed>> */
     private array \$fields = [];
+    /** @var array<int, array<string, mixed>> */
+    private array \$sessions = [];
     private {$entityStudly}Model \$model;
+    private BaseConnection \$db;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface \$request, \CodeIgniter\HTTP\ResponseInterface \$response, LoggerInterface \$logger)
     {
         parent::initController(\$request, \$response, \$logger);
         helper(['url']);
         \$this->model = new {$entityStudly}Model();
+        \$this->db = VoltDatabase::connection();
         \$this->fields = json_decode('{$this->escapePhpSingleQuoted($fieldsJson)}', true) ?: [];
+        \$this->sessions = json_decode('{$this->escapePhpSingleQuoted($sessionsJson)}', true) ?: [];
     }
 
     public function index(): string
@@ -308,8 +337,6 @@ final class {$entityStudly}Controller extends Controller
             'createUrl' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}/create'),
             'editUrlBase' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}/edit'),
             'builderUrl' => site_url('desk/entity-builder?entity={$entitySnake}'),
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -321,9 +348,8 @@ final class {$entityStudly}Controller extends Controller
             'saveUrl' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/save'),
             'loadUrlBase' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/load'),
             'fields' => \$this->fields,
+            'sessions' => \$this->sessions,
             'recordName' => '',
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -335,9 +361,8 @@ final class {$entityStudly}Controller extends Controller
             'saveUrl' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/save'),
             'loadUrlBase' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/load'),
             'fields' => \$this->fields,
+            'sessions' => \$this->sessions,
             'recordName' => \$name,
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -405,10 +430,7 @@ final class {$entityStudly}Controller extends Controller
 
     public function save(): ResponseInterface
     {
-        \$payload = \$this->request->getJSON(true);
-        if (! is_array(\$payload)) {
-            \$payload = \$this->request->getPost();
-        }
+        \$payload = \$this->extractPayload();
 
         if (! is_array(\$payload)) {
             return \$this->response->setStatusCode(422)->setJSON([
@@ -419,15 +441,17 @@ final class {$entityStudly}Controller extends Controller
 
         \$row = \$this->normalizePayload(\$payload);
         \$name = trim((string) (\$row['name'] ?? ''));
-        if (\$name === '') {
-            return \$this->response->setStatusCode(422)->setJSON([
-                'status' => 'error',
-                'message' => 'Name is required.',
-            ]);
-        }
 
         try {
-            \$exists = is_array(\$this->model->find(\$name));
+            \$exists = \$name !== '' && is_array(\$this->model->find(\$name));
+            if (! \$exists && \$name === '') {
+                \$name = \$this->generateDocumentName();
+                \$row['name'] = \$name;
+            }
+
+            \$row = \$this->applyReadOnlyFields(\$row, \$exists ? \$name : null);
+            \$this->assertRequiredFields(\$row, \$exists ? \$name : null);
+
             if (\$exists) {
                 \$this->model->update(\$name, \$row);
             } else {
@@ -447,6 +471,75 @@ final class {$entityStudly}Controller extends Controller
                 'message' => \$throwable->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function extractPayload(): ?array
+    {
+        if (\$this->request->is('json')) {
+            \$payload = \$this->request->getJSON(true);
+            return is_array(\$payload) ? \$payload : null;
+        }
+
+        \$payload = \$this->request->getPost();
+
+        return is_array(\$payload) ? \$payload : null;
+    }
+
+    private function generateDocumentName(): string
+    {
+        \$pattern = trim(self::AUTONAME_PATTERN);
+        if (\$pattern === '' || \$pattern === 'HASH') {
+            return bin2hex(random_bytes(16));
+        }
+
+        \$resolved = strtr(\$pattern, [
+            '.YYYY.' => gmdate('Y'),
+            '.YY.' => gmdate('y'),
+            '.MM.' => gmdate('m'),
+            '.DD.' => gmdate('d'),
+        ]);
+        \$resolved = preg_replace('/([\\-\\/])\\.(#+)/', '$1$2', \$resolved) ?? \$resolved;
+
+        if (! preg_match('/#+/', \$resolved, \$matches)) {
+            return \$resolved;
+        }
+
+        \$token = \$matches[0];
+        \$sequence = \$this->nextSequenceValue(strtolower('{$entitySnake}:' . \$resolved));
+        \$serial = str_pad((string) \$sequence, strlen(\$token), '0', STR_PAD_LEFT);
+
+        return preg_replace('/#+/', \$serial, \$resolved, 1) ?? \$resolved;
+    }
+
+    private function nextSequenceValue(string \$key): int
+    {
+        \$this->db->transStart();
+
+        \$row = \$this->db->table('sys_sequence')
+            ->where('key', \$key)
+            ->get()
+            ->getRowArray();
+
+        \$current = is_array(\$row) ? (int) (\$row['current_value'] ?? 0) : 0;
+        \$next = \$current + 1;
+
+        if (is_array(\$row)) {
+            \$this->db->table('sys_sequence')
+                ->where('key', \$key)
+                ->update(['current_value' => \$next]);
+        } else {
+            \$this->db->table('sys_sequence')->insert([
+                'key' => \$key,
+                'current_value' => \$next,
+            ]);
+        }
+
+        \$this->db->transComplete();
+
+        return \$next;
     }
 
     public function delete(string \$name): ResponseInterface
@@ -497,6 +590,79 @@ final class {$entityStudly}Controller extends Controller
 
         return \$row;
     }
+
+    /**
+     * @param array<string, mixed> \$row
+     * @return array<string, mixed>
+     */
+    private function applyReadOnlyFields(array \$row, ?string \$existingName = null): array
+    {
+        if (\$existingName === null || \$existingName === '') {
+            return \$row;
+        }
+
+        \$existing = \$this->model->find(\$existingName);
+        if (! is_array(\$existing)) {
+            return \$row;
+        }
+
+        foreach (\$this->fields as \$field) {
+            if ((bool) (\$field['read_only'] ?? false) !== true) {
+                continue;
+            }
+
+            \$fieldname = (string) (\$field['fieldname'] ?? '');
+            if (\$fieldname === '' || ! array_key_exists(\$fieldname, \$existing)) {
+                continue;
+            }
+
+            \$row[\$fieldname] = \$existing[\$fieldname];
+        }
+
+        return \$row;
+    }
+
+    /**
+     * @param array<string, mixed> \$row
+     */
+    private function assertRequiredFields(array \$row, ?string \$existingName = null): void
+    {
+        \$existing = null;
+        if (\$existingName !== null && \$existingName !== '') {
+            \$existingRecord = \$this->model->find(\$existingName);
+            \$existing = is_array(\$existingRecord) ? \$existingRecord : null;
+        }
+
+        foreach (\$this->fields as \$field) {
+            if ((bool) (\$field['is_required'] ?? false) !== true) {
+                continue;
+            }
+
+            \$fieldname = (string) (\$field['fieldname'] ?? '');
+            if (\$fieldname === '') {
+                continue;
+            }
+
+            \$value = \$row[\$fieldname] ?? (\$existing[\$fieldname] ?? null);
+            if (! \$this->hasFieldValue(\$field, \$value)) {
+                \$label = (string) (\$field['label'] ?? \$fieldname);
+                throw new \InvalidArgumentException(\$label . ' is required.');
+            }
+        }
+    }
+
+    private function hasFieldValue(array \$field, mixed \$value): bool
+    {
+        if ((string) (\$field['fieldtype'] ?? '') === 'Check') {
+            return \$value !== null;
+        }
+
+        if (is_array(\$value)) {
+            return \$value !== [];
+        }
+
+        return trim((string) (\$value ?? '')) !== '';
+    }
 }
 PHP;
     }
@@ -512,7 +678,7 @@ PHP;
             throw new RuntimeException('Unable to encode list columns.');
         }
 
-        $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/DocTypes/{$entityStudly}/{$entitySnake}_list.js'";
+        $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/Entities/{$entityStudly}/{$entitySnake}_list.js'";
 
         return <<<PHP
 <?php
@@ -522,8 +688,6 @@ PHP;
 /** @var string \$createUrl */
 /** @var string \$editUrlBase */
 /** @var string \$builderUrl */
-/** @var string \$csrfTokenName */
-/** @var string \$csrfHash */
 \$columns = json_decode('{$this->escapePhpSingleQuoted($columnsJson)}', true) ?: [];
 ?>
 <!doctype html>
@@ -542,9 +706,7 @@ PHP;
             createUrl: <?= esc(json_encode(\$createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode(\$editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             deleteUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            columns: <?= esc(json_encode(\$columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfTokenName: <?= esc(json_encode(\$csrfTokenName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfHash: <?= esc(json_encode(\$csrfHash, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            columns: <?= esc(json_encode(\$columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -553,7 +715,7 @@ PHP;
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc(\$builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc(\$createUrl) ?>" class="inline-flex items-center border border-zinc-900 bg-zinc-950 px-3 py-2 font-semibold text-white hover:bg-zinc-800">Create {$entityStudly}</a>
+                <a href="<?= esc(\$createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create {$entityStudly}</a>
             </div>
         </header>
 
@@ -628,12 +790,17 @@ PHP;
     private function buildEntityFormView(string $moduleStudly, string $entityStudly, string $entitySnake, array $compiled, string $listUrl, string $saveUrl, string $loadUrl): string
     {
         $fields = $this->extractFormFields($compiled);
+        $sessions = $this->extractFormSessions($compiled);
         $fieldsJson = json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $sessionsJson = json_encode($sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($fieldsJson === false) {
             throw new RuntimeException('Unable to encode form fields.');
         }
+        if ($sessionsJson === false) {
+            throw new RuntimeException('Unable to encode form sessions.');
+        }
 
-        $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/DocTypes/{$entityStudly}/{$entitySnake}_form.js'";
+        $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/Entities/{$entityStudly}/{$entitySnake}_form.js'";
 
         return <<<PHP
 <?php
@@ -644,8 +811,7 @@ PHP;
 /** @var string \$loadUrlBase */
 /** @var string \$recordName */
 /** @var array<int, array<string, mixed>> \$fields */
-/** @var string \$csrfTokenName */
-/** @var string \$csrfHash */
+/** @var array<int, array<string, mixed>> \$sessions */
 ?>
 <!doctype html>
 <html lang="vi">
@@ -664,8 +830,7 @@ PHP;
             loadUrlBase: <?= esc(json_encode(\$loadUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             recordName: <?= esc(json_encode(\$recordName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             fields: <?= esc(json_encode(\$fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfTokenName: <?= esc(json_encode(\$csrfTokenName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfHash: <?= esc(json_encode(\$csrfHash, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            sessions: <?= esc(json_encode(\$sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -674,33 +839,53 @@ PHP;
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc(\$listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
-                <button @click="save()" type="button" class="inline-flex items-center border border-zinc-900 bg-zinc-950 px-3 py-2 font-semibold text-white hover:bg-zinc-800">Save Item</button>
+                <button @click="save()" type="button" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Save Item</button>
             </div>
         </header>
 
         <section class="border border-zinc-300 bg-white p-4">
-            <div class="grid gap-4 lg:grid-cols-2">
-                <template x-for="field in fields" :key="field.fieldname">
-                    <label class="block" :class="field.fieldtype === 'Text' || field.fieldtype === 'Code' ? 'lg:col-span-2' : ''">
-                        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="field.label"></span>
-                        <template x-if="field.fieldtype === 'Check'">
-                            <input x-model="form[field.fieldname]" type="checkbox" class="h-4 w-4 border-zinc-400">
-                        </template>
-                        <template x-if="field.fieldtype === 'Select'">
-                            <select x-model="form[field.fieldname]" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500">
-                                <option value="">Select</option>
-                                <template x-for="option in parseOptions(field.options)" :key="option">
-                                    <option :value="option" x-text="option"></option>
+            <div class="space-y-6">
+                <template x-for="session in sessions" :key="session.uid">
+                    <section class="border border-zinc-200 bg-zinc-50/40">
+                        <div class="border-b border-zinc-200 px-4 py-3">
+                            <h2 class="font-medium" x-text="session.title || 'Session'"></h2>
+                            <p x-show="session.description" class="mt-1 text-sm text-zinc-500" x-text="session.description"></p>
+                        </div>
+                        <div class="p-4">
+                            <div class="grid gap-4" :style="sessionGridStyle(session)">
+                                <template x-for="columnNumber in sessionColumnNumbers(session)" :key="session.uid + '_' + columnNumber">
+                                    <div class="space-y-4">
+                                        <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.fieldname">
+                                            <label class="block">
+                                                <span class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                                    <span x-text="field.label"></span>
+                                                    <span x-show="field.is_required" x-cloak class="text-red-600">*</span>
+                                                    <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] tracking-normal text-sky-800">Read only</span>
+                                                </span>
+                                                <template x-if="field.fieldtype === 'Check'">
+                                                    <input x-model="form[field.fieldname]" type="checkbox" class="h-4 w-4 border-zinc-400" :disabled="field.read_only">
+                                                </template>
+                                                <template x-if="field.fieldtype === 'Select'">
+                                                    <select x-model="form[field.fieldname]" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :disabled="field.read_only" :required="field.is_required">
+                                                        <option value="">Select</option>
+                                                        <template x-for="option in parseOptions(field.options)" :key="option">
+                                                            <option :value="option" x-text="option"></option>
+                                                        </template>
+                                                    </select>
+                                                </template>
+                                                <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
+                                                    <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
+                                                </template>
+                                                <template x-if="!['Check', 'Select', 'Text', 'Code'].includes(field.fieldtype)">
+                                                    <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
+                                                </template>
+                                            </label>
+                                        </template>
+                                    </div>
                                 </template>
-                            </select>
-                        </template>
-                        <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
-                            <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''"></textarea>
-                        </template>
-                        <template x-if="!['Check', 'Select', 'Text', 'Code'].includes(field.fieldtype)">
-                            <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''">
-                        </template>
-                    </label>
+                            </div>
+                        </div>
+                    </section>
                 </template>
             </div>
         </section>
@@ -722,8 +907,6 @@ function {$entitySnake}ListApp(boot) {
         createUrl: boot.createUrl || '',
         editUrlBase: boot.editUrlBase || '',
         deleteUrlBase: boot.deleteUrlBase || '',
-        csrfTokenName: boot.csrfTokenName || '',
-        csrfHash: boot.csrfHash || '',
         columns: boot.columns || [],
         query: '',
         loading: false,
@@ -733,6 +916,14 @@ function {$entitySnake}ListApp(boot) {
         total: 0,
         totalPages: 1,
         perPageOptions: [50, 100, 200, 500, 1000, 2500],
+        requestUrl(url) {
+            const resolved = new URL(String(url || ''), window.location.origin);
+            if (resolved.origin === window.location.origin) {
+                return resolved.toString();
+            }
+
+            return window.location.origin + resolved.pathname + resolved.search + resolved.hash;
+        },
         async init() {
             await this.load(1);
         },
@@ -769,16 +960,15 @@ function {$entitySnake}ListApp(boot) {
                 return;
             }
 
-            const response = await fetch(this.deleteUrlBase + '/' + encodeURIComponent(name), {
+            const response = await fetch(this.requestUrl(this.deleteUrlBase + '/' + encodeURIComponent(name)), {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'X-CSRF-TOKEN': this.csrfHash,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams({
-                    [this.csrfTokenName]: this.csrfHash,
-                }).toString(),
+                body: '',
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
@@ -796,8 +986,12 @@ function {$entitySnake}ListApp(boot) {
                     per_page: String(this.perPage),
                     q: this.query || '',
                 });
-                const response = await fetch(this.dataUrl + '?' + params.toString(), {
-                    headers: { Accept: 'application/json' },
+                const response = await fetch(this.requestUrl(this.dataUrl + '?' + params.toString()), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 });
                 const result = await response.json();
                 if (!response.ok || result.status !== 'ok') {
@@ -835,10 +1029,21 @@ function {$entitySnake}FormApp(boot) {
         loadUrlBase: boot.loadUrlBase || '',
         recordName: boot.recordName || '',
         fields: boot.fields || [],
-        csrfTokenName: boot.csrfTokenName || '',
-        csrfHash: boot.csrfHash || '',
+        sessions: boot.sessions || [],
         form: {},
+        requestUrl(url) {
+            const resolved = new URL(String(url || ''), window.location.origin);
+            if (resolved.origin === window.location.origin) {
+                return resolved.toString();
+            }
+
+            return window.location.origin + resolved.pathname + resolved.search + resolved.hash;
+        },
         init() {
+            if (!Array.isArray(this.sessions) || this.sessions.length === 0) {
+                this.sessions = [{ uid: '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_UID)}', title: '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_TITLE)}', description: '', column_count: 1 }];
+            }
+
             this.fields.forEach((field) => {
                 if (field.fieldtype === 'Check') {
                     this.form[field.fieldname] = String(field.default_value || '') === '1';
@@ -858,6 +1063,21 @@ function {$entitySnake}FormApp(boot) {
                 .map((item) => item.trim())
                 .filter(Boolean);
         },
+        sessionColumnNumbers(session) {
+            const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
+            return Array.from({ length: count }, (_, index) => index + 1);
+        },
+        sessionGridStyle(session) {
+            const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
+            return 'grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
+        },
+        sessionFieldsByColumn(sessionUid, columnNumber) {
+            return this.fields.filter((field) => {
+                const fieldSession = field.session_uid || this.sessions[0]?.uid || '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_UID)}';
+                const fieldColumn = Math.min(4, Math.max(1, Number(field.column || 1)));
+                return fieldSession === sessionUid && fieldColumn === columnNumber;
+            });
+        },
         inputType(fieldType) {
             if (fieldType === 'Int' || fieldType === 'Float') {
                 return 'number';
@@ -870,8 +1090,12 @@ function {$entitySnake}FormApp(boot) {
             return 'text';
         },
         async load() {
-            const response = await fetch(this.loadUrlBase + '/' + encodeURIComponent(this.recordName), {
-                headers: { Accept: 'application/json' },
+            const response = await fetch(this.requestUrl(this.loadUrlBase + '/' + encodeURIComponent(this.recordName)), {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
@@ -893,24 +1117,24 @@ function {$entitySnake}FormApp(boot) {
                 const value = this.form[field.fieldname];
                 payload[field.fieldname] = field.fieldtype === 'Check' ? (value ? '1' : '0') : value;
             });
+            if (this.recordName) {
+                payload.name = this.recordName;
+            }
 
-            const response = await fetch(this.saveUrl, {
+            const response = await fetch(this.requestUrl(this.saveUrl), {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': this.csrfHash,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams({
-                    ...payload,
-                    [this.csrfTokenName]: this.csrfHash,
-                }).toString(),
+                body: new URLSearchParams(payload).toString(),
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
                 throw new Error(result.message || 'Unable to save record.');
             }
-
             window.location.href = this.listUrl;
         },
     };
@@ -955,13 +1179,13 @@ PHP;
     /**
      * @return array<int, array{name:string,snake:string,studly:string}>
      */
-    private function discoverModuleEntities(string $docTypesPath): array
+    private function discoverModuleEntities(string $entityArtifactsPath): array
     {
-        if (! is_dir($docTypesPath)) {
+        if (! is_dir($entityArtifactsPath)) {
             return [];
         }
 
-        $entries = scandir($docTypesPath);
+        $entries = scandir($entityArtifactsPath);
         if ($entries === false) {
             return [];
         }
@@ -972,7 +1196,7 @@ PHP;
                 continue;
             }
 
-            if (! is_dir($docTypesPath . '/' . $entry)) {
+            if (! is_dir($entityArtifactsPath . '/' . $entry)) {
                 continue;
             }
 
@@ -1033,15 +1257,7 @@ PHP;
      */
     private function extractFormFields(array $compiled): array
     {
-        $fields = [[
-            'fieldname' => 'name',
-            'label' => 'Name',
-            'fieldtype' => 'Input',
-            'options' => '',
-            'default_value' => '',
-            'placeholder' => '',
-            'is_required' => true,
-        ]];
+        $fields = [];
 
         $source = is_array($compiled['fields'] ?? null) ? $compiled['fields'] : [];
         foreach ($source as $field) {
@@ -1049,23 +1265,70 @@ PHP;
                 continue;
             }
 
-            if (($field['hidden'] ?? false) || ($field['fieldtype'] ?? '') === 'Table') {
+            $fieldname = (string) ($field['fieldname'] ?? '');
+            if ($fieldname === 'name' || ($field['hidden'] ?? false) || ($field['fieldtype'] ?? '') === 'Table') {
                 continue;
             }
 
             $custom = is_array($field['f_custom_jsonb'] ?? null) ? $field['f_custom_jsonb'] : [];
             $fields[] = [
-                'fieldname' => (string) ($field['fieldname'] ?? ''),
+                'fieldname' => $fieldname,
                 'label' => (string) ($field['label'] ?? ''),
                 'fieldtype' => (string) ($field['fieldtype'] ?? 'Input'),
                 'options' => (string) ($field['options'] ?? ''),
                 'default_value' => $custom['default_value'] ?? '',
                 'placeholder' => (string) ($custom['placeholder'] ?? ''),
                 'is_required' => (bool) ($field['is_required'] ?? false),
+                'read_only' => (bool) ($field['read_only'] ?? false),
+                'session_uid' => (string) ($custom['session_uid'] ?? self::DEFAULT_SESSION_UID),
+                'column' => min(4, max(1, (int) ($custom['column'] ?? 1))),
+                'custom_meta' => $custom,
             ];
         }
 
         return array_values(array_filter($fields, static fn (array $field): bool => (string) ($field['fieldname'] ?? '') !== ''));
+    }
+
+    /**
+     * @param array<string, mixed> $compiled
+     * @return array<int, array{uid:string,title:string,description:string,column_count:int}>
+     */
+    private function extractFormSessions(array $compiled): array
+    {
+        $entity = is_array($compiled['entity'] ?? null) ? $compiled['entity'] : [];
+        $custom = is_array($entity['s_custom_jsonb'] ?? null) ? $entity['s_custom_jsonb'] : [];
+        $layout = is_array($custom['layout'] ?? null) ? $custom['layout'] : [];
+        $sessions = is_array($layout['sessions'] ?? null) ? $layout['sessions'] : [];
+
+        $result = [];
+        foreach ($sessions as $session) {
+            if (! is_array($session)) {
+                continue;
+            }
+
+            $uid = trim((string) ($session['uid'] ?? ''));
+            if ($uid === '') {
+                continue;
+            }
+
+            $result[] = [
+                'uid' => $uid,
+                'title' => (string) ($session['title'] ?? 'Session'),
+                'description' => (string) ($session['description'] ?? ''),
+                'column_count' => min(4, max(1, (int) ($session['column_count'] ?? 1))),
+            ];
+        }
+
+        if ($result === []) {
+            $result[] = [
+                'uid' => self::DEFAULT_SESSION_UID,
+                'title' => self::DEFAULT_SESSION_TITLE,
+                'description' => '',
+                'column_count' => 1,
+            ];
+        }
+
+        return $result;
     }
 
     private function ensureDir(string $path): void
@@ -1093,6 +1356,44 @@ PHP;
         if (file_put_contents($path, $content) === false) {
             throw new RuntimeException('Unable to write file: ' . $path);
         }
+    }
+
+    private function moduleNamespace(string $moduleStudly): string
+    {
+        return 'App\\Modules\\' . $moduleStudly;
+    }
+
+    private function modulePath(string $moduleStudly): string
+    {
+        return APPPATH . 'Modules/' . $moduleStudly;
+    }
+
+    private function moduleSubPath(string $moduleStudly, string $subdir): string
+    {
+        return rtrim($this->modulePath($moduleStudly) . ($subdir !== '' ? '/' . $subdir : ''), '/');
+    }
+
+    private function moduleFilePath(string $moduleStudly, string $subdir, string $filename): string
+    {
+        return $this->moduleSubPath($moduleStudly, $subdir) . '/' . $filename;
+    }
+
+    private function entityArtifactDir(string $moduleStudly, string $entityStudly): string
+    {
+        return $this->moduleSubPath($moduleStudly, self::DIR_ENTITIES) . '/' . $entityStudly;
+    }
+
+    private function entityArtifactFilePath(string $moduleStudly, string $entityStudly, string $filename): string
+    {
+        return $this->entityArtifactDir($moduleStudly, $entityStudly) . '/' . $filename;
+    }
+
+    /**
+     * @param array<int, int> $values
+     */
+    private function implodeIntList(array $values): string
+    {
+        return implode(', ', array_map(static fn (int $value): string => (string) $value, $values));
     }
 
     private function snake(string $value): string

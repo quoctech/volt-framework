@@ -1,10 +1,7 @@
 <?php
 
 /** @var array<int, string> $modules */
-/** @var array<int, string> $entities */
 /** @var string $initialEntityName */
-/** @var string $csrfTokenName */
-/** @var string $csrfHash */
 ?>
 <!doctype html>
 <html lang="vi">
@@ -22,12 +19,9 @@
     <div
         x-data="entityBuilderApp(<?= esc(json_encode([
             'modules' => $modules,
-            'entities' => $entities,
             'initialEntityName' => $initialEntityName,
             'loadUrl' => site_url('api/entity-builder/load'),
             'saveUrl' => site_url('api/entity-builder/save'),
-            'csrfTokenName' => $csrfTokenName,
-            'csrfHash' => $csrfHash,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         x-init="init()"
         @keydown.window.ctrl.s.prevent="save()"
@@ -42,14 +36,6 @@
                     </button>
                     <button @click="loadEntity(entity.name)" type="button" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">Load</button>
                     <button @click="save()" type="button" class="border border-zinc-900 bg-zinc-900 px-4 py-2 text-base text-white hover:bg-zinc-700">Save</button>
-                </div>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <div class="flex flex-wrap gap-2">
-                        <template x-for="name in entities" :key="name">
-                            <button @click="loadEntity(name)" type="button" class="border border-zinc-300 px-3 py-2 text-base text-zinc-600 hover:bg-zinc-50" x-text="name"></button>
-                        </template>
-                    </div>
                 </div>
 
                 <div class="mt-4 flex gap-2">
@@ -159,6 +145,14 @@
                                                                         class="w-full bg-transparent font-medium outline-none"
                                                                         placeholder="Field label"
                                                                     >
+                                                                    <div class="mt-2 flex flex-wrap gap-1 text-[11px] text-zinc-600">
+                                                                        <span class="border border-zinc-300 px-2 py-0.5 font-mono" x-text="field.fieldname || 'fieldname'"></span>
+                                                                        <span x-show="field.in_list_view" x-cloak class="border border-zinc-300 px-2 py-0.5">List</span>
+                                                                        <span x-show="field.is_required" x-cloak class="border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">Required</span>
+                                                                        <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-800">Read only</span>
+                                                                        <span x-show="field.hidden" x-cloak class="border border-zinc-400 bg-zinc-100 px-2 py-0.5 text-zinc-700">Hidden</span>
+                                                                        <span x-show="hasCustomJson(field.f_custom_jsonb_text)" x-cloak class="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">JSON</span>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="flex items-center gap-2">
                                                                     <span class="border border-zinc-300 px-2 py-1 text-base text-zinc-600" x-text="field.fieldtype"></span>
@@ -333,10 +327,12 @@
                             <div>
                                 <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Entity.s_custom_jsonb</label>
                                 <textarea x-model="entityCustomText" rows="5" class="w-full border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-500"></textarea>
+                                <p class="mt-1 text-xs text-zinc-500" x-text="jsonSummary(entityCustomText, 'Entity JSON')"></p>
                             </div>
                             <div>
                                 <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">sys_entity_custom.custom_meta</label>
                                 <textarea x-model="customPatchText" rows="5" class="w-full border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-500"></textarea>
+                                <p class="mt-1 text-xs text-zinc-500" x-text="jsonSummary(customPatchText, 'Custom meta')"></p>
                             </div>
                         </div>
                     </section>
@@ -353,11 +349,8 @@
         function entityBuilderApp(boot) {
             return {
                 modules: boot.modules || [],
-                entities: boot.entities || [],
                 loadUrl: boot.loadUrl,
                 saveUrl: boot.saveUrl,
-                csrfTokenName: boot.csrfTokenName,
-                csrfHash: boot.csrfHash,
                 entity: {
                     name: '',
                     module: '',
@@ -390,6 +383,14 @@
                     { value: 'CUSTOM', label: 'Custom series' },
                 ],
                 lastGeneratedAutoname: 'HASH',
+                requestUrl(url) {
+                    const resolved = new URL(String(url || ''), window.location.origin);
+                    if (resolved.origin === window.location.origin) {
+                        return resolved.toString();
+                    }
+
+                    return `${window.location.origin}${resolved.pathname}${resolved.search}${resolved.hash}`;
+                },
                 init() {
                     if (boot.initialEntityName) {
                         this.entity.name = this.slugify(boot.initialEntityName);
@@ -437,7 +438,7 @@
                 buildCustomNamingPattern() {
                     const parts = this.slugify(this.entity.name).split('_').filter(Boolean);
                     const acronym = (parts.map((part) => part.charAt(0)).join('') || 'DOC').toUpperCase();
-                    return `${acronym}-.YYYY.-.#####`;
+                    return `${acronym}-.YYYY.-#####`;
                 },
                 makeSession(title = 'New Session', description = '') {
                     return { uid: this.uuid(), title, description, column_count: 1 };
@@ -813,8 +814,12 @@
                     }
 
                     try {
-                        const response = await fetch(`${this.loadUrl}/${encodeURIComponent(normalized)}`, {
-                            headers: { 'Accept': 'application/json' },
+                        const response = await fetch(this.requestUrl(`${this.loadUrl}/${encodeURIComponent(normalized)}`), {
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
                         });
                         const result = await response.json();
 
@@ -874,10 +879,6 @@
                             this.modules.sort();
                         }
 
-                        if (!this.entities.includes(normalized)) {
-                            this.entities.unshift(normalized);
-                        }
-
                         history.replaceState({}, '', `?entity=${encodeURIComponent(normalized)}`);
                         this.toast('info', `Loaded ${normalized}.`);
                     } catch (error) {
@@ -904,12 +905,13 @@
                 async save() {
                     try {
                         const payload = this.buildSavePayload();
-                        const response = await fetch(this.saveUrl, {
+                        const response = await fetch(this.requestUrl(this.saveUrl), {
                             method: 'POST',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': this.csrfHash,
+                                'X-Requested-With': 'XMLHttpRequest',
                             },
                             body: JSON.stringify(payload),
                         });
@@ -920,10 +922,6 @@
                         }
 
                         const entityName = payload.entity.name;
-                        if (!this.entities.includes(entityName)) {
-                            this.entities.unshift(entityName);
-                        }
-
                         if (!this.modules.includes(payload.entity.module)) {
                             this.modules.push(payload.entity.module);
                             this.modules.sort();
@@ -1017,7 +1015,6 @@
                     this.entityCustomText = this.prettyJson(entityCustom);
 
                     return {
-                        [this.csrfTokenName]: this.csrfHash,
                         entity: {
                             name: entityName,
                             module: moduleName,
@@ -1062,6 +1059,27 @@
                 },
                 prettyJson(value) {
                     return JSON.stringify(value || {}, null, 2);
+                },
+                hasCustomJson(text) {
+                    try {
+                        const parsed = this.parseJsonObject(text, 'Field JSON is invalid.');
+                        return Object.keys(parsed).length > 0;
+                    } catch (error) {
+                        return false;
+                    }
+                },
+                jsonSummary(text, label) {
+                    try {
+                        const parsed = this.parseJsonObject(text, `${label} is invalid.`);
+                        const keys = Object.keys(parsed);
+                        if (keys.length === 0) {
+                            return `${label}: empty object`;
+                        }
+
+                        return `${label}: ${keys.length} key${keys.length > 1 ? 's' : ''}`;
+                    } catch (error) {
+                        return `${label}: invalid JSON`;
+                    }
                 },
                 slugify(value) {
                     return String(value || '')

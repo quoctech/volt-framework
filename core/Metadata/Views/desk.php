@@ -32,7 +32,7 @@
             <a href="<?= site_url('desk/entity-builder') ?>" class="border border-zinc-300 bg-white p-5 transition hover:border-zinc-500">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Entity Builder</p>
                 <h2 class="mt-2 text-xl font-semibold">Tạo entity</h2>
-                <p class="mt-2 text-sm text-zinc-600">Chọn module có sẵn, cấu hình session, field và sinh file DocType JSON/PHP.</p>
+                <p class="mt-2 text-sm text-zinc-600">Chọn module có sẵn, cấu hình session, field và sinh file Entity JSON/PHP.</p>
                 <p class="mt-4 text-sm text-zinc-500">Hiện có <?= esc((string) $entityCount) ?> entity.</p>
             </a>
         </div>

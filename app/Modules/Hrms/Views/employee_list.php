@@ -5,9 +5,7 @@
 /** @var string $createUrl */
 /** @var string $editUrlBase */
 /** @var string $builderUrl */
-/** @var string $csrfTokenName */
-/** @var string $csrfHash */
-$columns = json_decode('[{"fieldname":"name","label":"Name"}]', true) ?: [];
+$columns = json_decode('[{"fieldname":"name","label":"Name"},{"fieldname":"employee_name","label":"Tên Nhân Viên"},{"fieldname":"employee_age","label":"Tuổi Nhân Viên"},{"fieldname":"input_3","label":"Input 3"},{"fieldname":"check_4","label":"Check 4"}]', true) ?: [];
 ?>
 <!doctype html>
 <html lang="vi">
@@ -25,9 +23,7 @@ $columns = json_decode('[{"fieldname":"name","label":"Name"}]', true) ?: [];
             createUrl: <?= esc(json_encode($createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode($editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            columns: <?= esc(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfTokenName: <?= esc(json_encode($csrfTokenName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            csrfHash: <?= esc(json_encode($csrfHash, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            columns: <?= esc(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -36,7 +32,7 @@ $columns = json_decode('[{"fieldname":"name","label":"Name"}]', true) ?: [];
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-zinc-900 bg-zinc-950 px-3 py-2 font-semibold text-white hover:bg-zinc-800">Create Employee</a>
+                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create Employee</a>
             </div>
         </header>
 
@@ -99,6 +95,6 @@ $columns = json_decode('[{"fieldname":"name","label":"Name"}]', true) ?: [];
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/DocTypes/Employee/employee_list.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_list.js'); ?></script>
 </body>
 </html>

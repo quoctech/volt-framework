@@ -9,11 +9,14 @@ use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Database\RawSql;
 use InvalidArgumentException;
 use Throwable;
+use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Engine\SchemaSync;
 
 final class EntityBuilderService
 {
+    private static bool $moduleTableEnsured = false;
+
     private BaseConnection $db;
     private EntityMetadataCache $metadataCache;
     private ArtifactScaffolder $artifactScaffolder;
@@ -256,9 +259,10 @@ final class EntityBuilderService
             $compiled = $this->compileMetadata($entity, $fields, $customPatch);
             // Mỗi lần save entity đều đồng bộ lại artifact để code app luôn khớp metadata mới nhất.
             $artifacts = $this->artifactScaffolder->scaffoldEntity($entity['module'], $entity['name'], $compiled);
-            $this->metadataCache->put($entity['name'], $compiled);
 
             $this->db->transComplete();
+
+            $this->metadataCache->put($entity['name'], $compiled);
 
             return [
                 'entity'   => $entity,
@@ -490,7 +494,7 @@ final class EntityBuilderService
         return [
             'entity_name'  => $entity['name'],
             'module'       => $entity['module'],
-            'table_name'   => strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $entity['name']) ?? $entity['name']),
+            'table_name'   => TableNameResolver::entity((string) $entity['name']),
             'entity'       => $entity,
             'fields'       => $fields,
             'field_map'    => $fieldMap,
@@ -501,6 +505,10 @@ final class EntityBuilderService
 
     private function ensureModuleTable(): void
     {
+        if (self::$moduleTableEnsured) {
+            return;
+        }
+
         // Tự bảo đảm bảng module tồn tại để builder chạy độc lập, không phụ thuộc migration tay.
         $this->db->query(
             'CREATE TABLE IF NOT EXISTS sys_module (
@@ -513,7 +521,7 @@ final class EntityBuilderService
                 updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
             )'
         );
-
+        self::$moduleTableEnsured = true;
     }
 
     /**

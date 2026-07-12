@@ -5,8 +5,6 @@ function employeeListApp(boot) {
         createUrl: boot.createUrl || '',
         editUrlBase: boot.editUrlBase || '',
         deleteUrlBase: boot.deleteUrlBase || '',
-        csrfTokenName: boot.csrfTokenName || '',
-        csrfHash: boot.csrfHash || '',
         columns: boot.columns || [],
         query: '',
         loading: false,
@@ -16,6 +14,14 @@ function employeeListApp(boot) {
         total: 0,
         totalPages: 1,
         perPageOptions: [50, 100, 200, 500, 1000, 2500],
+        requestUrl(url) {
+            const resolved = new URL(String(url || ''), window.location.origin);
+            if (resolved.origin === window.location.origin) {
+                return resolved.toString();
+            }
+
+            return window.location.origin + resolved.pathname + resolved.search + resolved.hash;
+        },
         async init() {
             await this.load(1);
         },
@@ -52,16 +58,15 @@ function employeeListApp(boot) {
                 return;
             }
 
-            const response = await fetch(this.deleteUrlBase + '/' + encodeURIComponent(name), {
+            const response = await fetch(this.requestUrl(this.deleteUrlBase + '/' + encodeURIComponent(name)), {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'X-CSRF-TOKEN': this.csrfHash,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams({
-                    [this.csrfTokenName]: this.csrfHash,
-                }).toString(),
+                body: '',
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
@@ -79,8 +84,12 @@ function employeeListApp(boot) {
                     per_page: String(this.perPage),
                     q: this.query || '',
                 });
-                const response = await fetch(this.dataUrl + '?' + params.toString(), {
-                    headers: { Accept: 'application/json' },
+                const response = await fetch(this.requestUrl(this.dataUrl + '?' + params.toString()), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 });
                 const result = await response.json();
                 if (!response.ok || result.status !== 'ok') {

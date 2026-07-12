@@ -5,20 +5,26 @@ declare(strict_types=1);
 namespace Volt\Core\Engine;
 
 use CodeIgniter\Database\BaseConnection;
+use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Validation\MetadataValidator;
 
 class SchemaSync
 {
+    private const CORE_COLUMNS = [
+        "name VARCHAR(100) PRIMARY KEY",
+        "docstatus SMALLINT DEFAULT 0",
+        "owner VARCHAR(100) NOT NULL",
+        "creation TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "modified TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+    ];
+
     protected BaseConnection $db;
-    protected string $tablePrefix;
     protected MetadataValidator $validator;
 
     public function __construct()
     {
         $this->db = VoltDatabase::connection();
-        // Tận dụng trực tiếp cấu hình database.default.DBPrefix từ file .env
-        $this->tablePrefix = $this->db->DBPrefix;
         $this->validator = new MetadataValidator();
     }
 
@@ -80,11 +86,8 @@ class SchemaSync
     public function syncEntity(string $entityName): array
     {
         $entityName = $this->validator->assertEntityName($entityName);
-        // Chuyển PascalCase (SalesInvoice) sang snake_case (sales_invoice) để làm tên bảng vật lý
-        $cleanEntityName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $entityName));
-        
-        // Ghép động với tiền tố được cấu hình từ .env
-        $tableName = $this->tablePrefix . $cleanEntityName;
+        $tableName = TableNameResolver::entity($entityName);
+        $legacyTableName = TableNameResolver::legacyEntity($entityName);
         
         // 1. Đọc Metadata gốc của trường từ sys_entity_field
         $metaFields = $this->db->table('sys_entity_field')
@@ -100,18 +103,22 @@ class SchemaSync
         }
 
         // 2. Lấy cấu trúc thực tế đang có dưới Postgres
-        $currentSchema = $this->getPostgresSchema($tableName);
         $logs = [];
+        $currentSchema = $this->getPostgresSchema($tableName);
+
+        if ($currentSchema === [] && $legacyTableName !== '' && $legacyTableName !== $tableName) {
+            $legacySchema = $this->getPostgresSchema($legacyTableName);
+            if ($legacySchema !== []) {
+                // Tự nâng cấp bảng cũ sang chuẩn tab_ để giữ nguyên dữ liệu khi đổi quy ước đặt tên.
+                $this->db->query("ALTER TABLE {$legacyTableName} RENAME TO {$tableName}");
+                $logs[] = "🔁 Đã đổi tên bảng legacy {$legacyTableName} -> {$tableName}";
+                $currentSchema = $this->getPostgresSchema($tableName);
+            }
+        }
 
         // 3. KỊCH BẢN A: Bảng chưa tồn tại -> CREATE TABLE mới tinh
         if (empty($currentSchema)) {
-            $columnsSql = [
-                "name VARCHAR(100) PRIMARY KEY", // Khóa chính dạng chuỗi Naming Series
-                "docstatus SMALLINT DEFAULT 0",   // Hệ thống trạng thái cốt lõi: 0=Draft, 1=Submitted, 2=Cancelled
-                "owner VARCHAR(100) NOT NULL",
-                "creation TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
-                "modified TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP"
-            ];
+            $columnsSql = self::CORE_COLUMNS;
 
             foreach ($metaFields as $field) {
                 // Chặn cứng: Nếu trường thuộc kiểu Table tách riêng (separate) thì bảng cha không tạo cột vật lý

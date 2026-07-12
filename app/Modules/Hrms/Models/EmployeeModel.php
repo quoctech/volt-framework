@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Modules\Hrms\Models;
 
-use App\Modules\Hrms\DocTypes\Employee\Employee;
+use App\Modules\Hrms\Entities\Employee\Employee;
 use Volt\Core\Models\VoltModel;
 
 final class EmployeeModel extends VoltModel
 {
-    protected $table = 'employee';
+    protected $table = 'tab_employee';
     protected $primaryKey = 'name';
     protected $returnType = 'array';
     protected $useAutoIncrement = false;
     protected $protectFields = false;
     protected $allowedFields = [];
-    protected $beforeInsert = ['voltBeforeInsert', 'callBeforeInsert'];
+    protected $beforeInsert = ['callBeforeInsert', 'voltBeforeInsert'];
     protected $afterInsert = ['voltAfterInsert', 'callAfterInsert'];
-    protected $beforeUpdate = ['voltBeforeUpdate', 'callBeforeUpdate'];
+    protected $beforeUpdate = ['callBeforeUpdate', 'voltBeforeUpdate'];
     protected $afterUpdate = ['voltAfterUpdate', 'callAfterUpdate'];
 
     private ?Employee $docType = null;

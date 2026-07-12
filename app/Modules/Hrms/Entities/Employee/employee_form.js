@@ -6,10 +6,21 @@ function employeeFormApp(boot) {
         loadUrlBase: boot.loadUrlBase || '',
         recordName: boot.recordName || '',
         fields: boot.fields || [],
-        csrfTokenName: boot.csrfTokenName || '',
-        csrfHash: boot.csrfHash || '',
+        sessions: boot.sessions || [],
         form: {},
+        requestUrl(url) {
+            const resolved = new URL(String(url || ''), window.location.origin);
+            if (resolved.origin === window.location.origin) {
+                return resolved.toString();
+            }
+
+            return window.location.origin + resolved.pathname + resolved.search + resolved.hash;
+        },
         init() {
+            if (!Array.isArray(this.sessions) || this.sessions.length === 0) {
+                this.sessions = [{ uid: 'primary', title: 'Primary', description: '', column_count: 1 }];
+            }
+
             this.fields.forEach((field) => {
                 if (field.fieldtype === 'Check') {
                     this.form[field.fieldname] = String(field.default_value || '') === '1';
@@ -29,6 +40,21 @@ function employeeFormApp(boot) {
                 .map((item) => item.trim())
                 .filter(Boolean);
         },
+        sessionColumnNumbers(session) {
+            const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
+            return Array.from({ length: count }, (_, index) => index + 1);
+        },
+        sessionGridStyle(session) {
+            const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
+            return 'grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
+        },
+        sessionFieldsByColumn(sessionUid, columnNumber) {
+            return this.fields.filter((field) => {
+                const fieldSession = field.session_uid || this.sessions[0]?.uid || 'primary';
+                const fieldColumn = Math.min(4, Math.max(1, Number(field.column || 1)));
+                return fieldSession === sessionUid && fieldColumn === columnNumber;
+            });
+        },
         inputType(fieldType) {
             if (fieldType === 'Int' || fieldType === 'Float') {
                 return 'number';
@@ -41,8 +67,12 @@ function employeeFormApp(boot) {
             return 'text';
         },
         async load() {
-            const response = await fetch(this.loadUrlBase + '/' + encodeURIComponent(this.recordName), {
-                headers: { Accept: 'application/json' },
+            const response = await fetch(this.requestUrl(this.loadUrlBase + '/' + encodeURIComponent(this.recordName)), {
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
@@ -64,24 +94,24 @@ function employeeFormApp(boot) {
                 const value = this.form[field.fieldname];
                 payload[field.fieldname] = field.fieldtype === 'Check' ? (value ? '1' : '0') : value;
             });
+            if (this.recordName) {
+                payload.name = this.recordName;
+            }
 
-            const response = await fetch(this.saveUrl, {
+            const response = await fetch(this.requestUrl(this.saveUrl), {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': this.csrfHash,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams({
-                    ...payload,
-                    [this.csrfTokenName]: this.csrfHash,
-                }).toString(),
+                body: new URLSearchParams(payload).toString(),
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
                 throw new Error(result.message || 'Unable to save record.');
             }
-
             window.location.href = this.listUrl;
         },
     };

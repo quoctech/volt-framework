@@ -7,6 +7,7 @@ namespace Volt\Core\Metadata;
 use Config\Cache;
 use Predis\Client as PredisClient;
 use Redis;
+use Throwable;
 use RuntimeException;
 
 final class EntityMetadataCache
@@ -30,15 +31,19 @@ final class EntityMetadataCache
             throw new RuntimeException('Failed to encode metadata cache payload.');
         }
 
-        $client = $this->client();
+        try {
+            $client = $this->client();
 
-        if ($client instanceof Redis) {
+            if ($client instanceof Redis) {
+                $client->set($this->key($entityName), $payload);
+
+                return;
+            }
+
             $client->set($this->key($entityName), $payload);
-
-            return;
+        } catch (Throwable) {
+            // Metadata cache is an optimization only; save flow must continue even if Redis is unavailable.
         }
-
-        $client->set($this->key($entityName), $payload);
     }
 
     private function key(string $entityName): string
@@ -53,7 +58,7 @@ final class EntityMetadataCache
             $connected = $client->connect(
                 (string) ($this->config['host'] ?? '127.0.0.1'),
                 (int) ($this->config['port'] ?? 6379),
-                (float) ($this->config['timeout'] ?? 0)
+                max(0.5, (float) ($this->config['timeout'] ?? 0.5))
             );
 
             if ($connected !== true) {
@@ -61,7 +66,7 @@ final class EntityMetadataCache
             }
 
             $password = $this->config['password'] ?? null;
-            if (is_string($password) && $password !== '') {
+            if (is_string($password) && $password !== '' && $password !== '<password>') {
                 $client->auth($password);
             }
 
@@ -78,12 +83,27 @@ final class EntityMetadataCache
                 'scheme'   => 'tcp',
                 'host'     => (string) ($this->config['host'] ?? '127.0.0.1'),
                 'port'     => (int) ($this->config['port'] ?? 6379),
-                'timeout'  => (float) ($this->config['timeout'] ?? 0),
-                'password' => $this->config['password'] ?? null,
+                'timeout'  => max(0.5, (float) ($this->config['timeout'] ?? 0.5)),
+                'password' => $this->sanitizePassword($this->config['password'] ?? null),
                 'database' => (int) ($this->config['database'] ?? 0),
             ]);
         }
 
         throw new RuntimeException('Redis driver is unavailable. Install ext-redis or predis/predis.');
+    }
+
+    private function sanitizePassword(mixed $password): ?string
+    {
+        if (! is_string($password)) {
+            return null;
+        }
+
+        $password = trim($password);
+
+        if ($password === '' || $password === '<password>') {
+            return null;
+        }
+
+        return $password;
     }
 }

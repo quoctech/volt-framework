@@ -26,10 +26,7 @@ class EntityBuilderController extends Controller
     {
         return view('Volt\\Core\\Metadata\\Views\\entity_builder', [
             'modules'           => $this->builderService->listModules(),
-            'entities'          => $this->builderService->listEntityNames(),
             'initialEntityName' => (string) ($this->request->getGet('entity') ?? ''),
-            'csrfTokenName'     => csrf_token(),
-            'csrfHash'          => csrf_hash(),
         ]);
     }
 
@@ -50,8 +47,6 @@ class EntityBuilderController extends Controller
     {
         return view('Volt\\Core\\Metadata\\Views\\create_module', [
             'modules'       => $this->builderService->listModules(),
-            'csrfTokenName' => csrf_token(),
-            'csrfHash'      => csrf_hash(),
         ]);
     }
 
@@ -79,10 +74,7 @@ class EntityBuilderController extends Controller
 
     public function save(): ResponseInterface
     {
-        $payload = $this->request->getJSON(true);
-        if (! is_array($payload)) {
-            $payload = $this->request->getPost();
-        }
+        $payload = $this->extractPayload();
 
         if (! is_array($payload)) {
             return $this->response->setStatusCode(422)->setJSON([
@@ -114,10 +106,7 @@ class EntityBuilderController extends Controller
 
     public function saveModule(): ResponseInterface
     {
-        $payload = $this->request->getJSON(true);
-        if (! is_array($payload)) {
-            $payload = $this->request->getPost();
-        }
+        $payload = $this->extractPayload();
 
         if (! is_array($payload)) {
             return $this->response->setStatusCode(422)->setJSON([
@@ -145,5 +134,20 @@ class EntityBuilderController extends Controller
                 'message' => $throwable->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function extractPayload(): ?array
+    {
+        if ($this->request->is('json')) {
+            $payload = $this->request->getJSON(true);
+            return is_array($payload) ? $payload : null;
+        }
+
+        $payload = $this->request->getPost();
+
+        return is_array($payload) ? $payload : null;
     }
 }

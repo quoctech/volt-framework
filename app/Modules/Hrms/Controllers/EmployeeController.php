@@ -6,24 +6,32 @@ namespace App\Modules\Hrms\Controllers;
 
 use App\Modules\Hrms\Models\EmployeeModel;
 use CodeIgniter\Controller;
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Database\VoltDatabase;
 
 final class EmployeeController extends Controller
 {
     private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
+    private const AUTONAME_PATTERN = 'Eoo-.YYYY.-.#####';
 
     /** @var array<int, array<string, mixed>> */
     private array $fields = [];
+    /** @var array<int, array<string, mixed>> */
+    private array $sessions = [];
     private EmployeeModel $model;
+    private BaseConnection $db;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         helper(['url']);
         $this->model = new EmployeeModel();
-        $this->fields = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Input","options":"","default_value":"","placeholder":"","is_required":true},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","is_required":false},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","is_required":false}]', true) ?: [];
+        $this->db = VoltDatabase::connection();
+        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","is_required":false,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","is_required":false,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":2,"custom_meta":{"column":2,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true}},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input","options":"","default_value":"","placeholder":"","is_required":false,"read_only":true,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check","options":"","default_value":"","placeholder":"","is_required":true,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
     }
 
     public function index(): string
@@ -34,8 +42,6 @@ final class EmployeeController extends Controller
             'createUrl' => site_url('hrms/employee/create'),
             'editUrlBase' => site_url('hrms/employee/edit'),
             'builderUrl' => site_url('desk/entity-builder?entity=employee'),
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -47,9 +53,8 @@ final class EmployeeController extends Controller
             'saveUrl' => site_url('hrms/api/employee/save'),
             'loadUrlBase' => site_url('hrms/api/employee/load'),
             'fields' => $this->fields,
+            'sessions' => $this->sessions,
             'recordName' => '',
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -61,9 +66,8 @@ final class EmployeeController extends Controller
             'saveUrl' => site_url('hrms/api/employee/save'),
             'loadUrlBase' => site_url('hrms/api/employee/load'),
             'fields' => $this->fields,
+            'sessions' => $this->sessions,
             'recordName' => $name,
-            'csrfTokenName' => csrf_token(),
-            'csrfHash' => csrf_hash(),
         ]);
     }
 
@@ -131,10 +135,7 @@ final class EmployeeController extends Controller
 
     public function save(): ResponseInterface
     {
-        $payload = $this->request->getJSON(true);
-        if (! is_array($payload)) {
-            $payload = $this->request->getPost();
-        }
+        $payload = $this->extractPayload();
 
         if (! is_array($payload)) {
             return $this->response->setStatusCode(422)->setJSON([
@@ -145,15 +146,17 @@ final class EmployeeController extends Controller
 
         $row = $this->normalizePayload($payload);
         $name = trim((string) ($row['name'] ?? ''));
-        if ($name === '') {
-            return $this->response->setStatusCode(422)->setJSON([
-                'status' => 'error',
-                'message' => 'Name is required.',
-            ]);
-        }
 
         try {
-            $exists = is_array($this->model->find($name));
+            $exists = $name !== '' && is_array($this->model->find($name));
+            if (! $exists && $name === '') {
+                $name = $this->generateDocumentName();
+                $row['name'] = $name;
+            }
+
+            $row = $this->applyReadOnlyFields($row, $exists ? $name : null);
+            $this->assertRequiredFields($row, $exists ? $name : null);
+
             if ($exists) {
                 $this->model->update($name, $row);
             } else {
@@ -173,6 +176,75 @@ final class EmployeeController extends Controller
                 'message' => $throwable->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function extractPayload(): ?array
+    {
+        if ($this->request->is('json')) {
+            $payload = $this->request->getJSON(true);
+            return is_array($payload) ? $payload : null;
+        }
+
+        $payload = $this->request->getPost();
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function generateDocumentName(): string
+    {
+        $pattern = trim(self::AUTONAME_PATTERN);
+        if ($pattern === '' || $pattern === 'HASH') {
+            return bin2hex(random_bytes(16));
+        }
+
+        $resolved = strtr($pattern, [
+            '.YYYY.' => gmdate('Y'),
+            '.YY.' => gmdate('y'),
+            '.MM.' => gmdate('m'),
+            '.DD.' => gmdate('d'),
+        ]);
+        $resolved = preg_replace('/([\-\/])\.(#+)/', '$1$2', $resolved) ?? $resolved;
+
+        if (! preg_match('/#+/', $resolved, $matches)) {
+            return $resolved;
+        }
+
+        $token = $matches[0];
+        $sequence = $this->nextSequenceValue(strtolower('employee:' . $resolved));
+        $serial = str_pad((string) $sequence, strlen($token), '0', STR_PAD_LEFT);
+
+        return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;
+    }
+
+    private function nextSequenceValue(string $key): int
+    {
+        $this->db->transStart();
+
+        $row = $this->db->table('sys_sequence')
+            ->where('key', $key)
+            ->get()
+            ->getRowArray();
+
+        $current = is_array($row) ? (int) ($row['current_value'] ?? 0) : 0;
+        $next = $current + 1;
+
+        if (is_array($row)) {
+            $this->db->table('sys_sequence')
+                ->where('key', $key)
+                ->update(['current_value' => $next]);
+        } else {
+            $this->db->table('sys_sequence')->insert([
+                'key' => $key,
+                'current_value' => $next,
+            ]);
+        }
+
+        $this->db->transComplete();
+
+        return $next;
     }
 
     public function delete(string $name): ResponseInterface
@@ -222,5 +294,78 @@ final class EmployeeController extends Controller
         }
 
         return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function applyReadOnlyFields(array $row, ?string $existingName = null): array
+    {
+        if ($existingName === null || $existingName === '') {
+            return $row;
+        }
+
+        $existing = $this->model->find($existingName);
+        if (! is_array($existing)) {
+            return $row;
+        }
+
+        foreach ($this->fields as $field) {
+            if ((bool) ($field['read_only'] ?? false) !== true) {
+                continue;
+            }
+
+            $fieldname = (string) ($field['fieldname'] ?? '');
+            if ($fieldname === '' || ! array_key_exists($fieldname, $existing)) {
+                continue;
+            }
+
+            $row[$fieldname] = $existing[$fieldname];
+        }
+
+        return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function assertRequiredFields(array $row, ?string $existingName = null): void
+    {
+        $existing = null;
+        if ($existingName !== null && $existingName !== '') {
+            $existingRecord = $this->model->find($existingName);
+            $existing = is_array($existingRecord) ? $existingRecord : null;
+        }
+
+        foreach ($this->fields as $field) {
+            if ((bool) ($field['is_required'] ?? false) !== true) {
+                continue;
+            }
+
+            $fieldname = (string) ($field['fieldname'] ?? '');
+            if ($fieldname === '') {
+                continue;
+            }
+
+            $value = $row[$fieldname] ?? ($existing[$fieldname] ?? null);
+            if (! $this->hasFieldValue($field, $value)) {
+                $label = (string) ($field['label'] ?? $fieldname);
+                throw new \InvalidArgumentException($label . ' is required.');
+            }
+        }
+    }
+
+    private function hasFieldValue(array $field, mixed $value): bool
+    {
+        if ((string) ($field['fieldtype'] ?? '') === 'Check') {
+            return $value !== null;
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return trim((string) ($value ?? '')) !== '';
     }
 }

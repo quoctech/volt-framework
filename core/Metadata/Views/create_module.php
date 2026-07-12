@@ -21,8 +21,6 @@
         x-data="createModuleApp(<?= esc(json_encode([
             'modules' => $modules,
             'saveModuleUrl' => site_url('api/entity-builder/module/save'),
-            'csrfTokenName' => $csrfTokenName,
-            'csrfHash' => $csrfHash,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         class="mx-auto max-w-5xl p-4 lg:p-8"
     >
@@ -77,13 +75,19 @@
             return {
                 modules: boot.modules || [],
                 saveModuleUrl: boot.saveModuleUrl,
-                csrfTokenName: boot.csrfTokenName,
-                csrfHash: boot.csrfHash,
                 form: {
                     name: '',
                     label: '',
                 },
                 flash: { type: 'info', message: '' },
+                requestUrl(url) {
+                    const resolved = new URL(String(url || ''), window.location.origin);
+                    if (resolved.origin === window.location.origin) {
+                        return resolved.toString();
+                    }
+
+                    return `${window.location.origin}${resolved.pathname}${resolved.search}${resolved.hash}`;
+                },
                 async saveModule() {
                     try {
                         const name = this.slugify(this.form.name);
@@ -91,15 +95,15 @@
                             throw new Error('Module name is required.');
                         }
 
-                        const response = await fetch(this.saveModuleUrl, {
+                        const response = await fetch(this.requestUrl(this.saveModuleUrl), {
                             method: 'POST',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': this.csrfHash,
+                                'X-Requested-With': 'XMLHttpRequest',
                             },
                             body: JSON.stringify({
-                                [this.csrfTokenName]: this.csrfHash,
                                 name,
                                 label: this.form.label || this.titleize(name),
                             }),
