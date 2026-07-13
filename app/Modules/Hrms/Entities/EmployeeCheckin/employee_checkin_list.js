@@ -1,4 +1,4 @@
-function employeeListApp(boot) {
+function employee_checkinListApp(boot) {
     return {
         title: boot.title || '',
         dataUrl: boot.dataUrl || '',
@@ -37,6 +37,23 @@ function employeeListApp(boot) {
             }
 
             return value;
+        },
+        linkDisplayValue(column, row) {
+            if (!column || !row) {
+                return '-';
+            }
+
+            const code = String(row[column.fieldname] || '').trim();
+            const display = String(row[column.fieldname + '__display'] || '').trim();
+            if (code === '') {
+                return '-';
+            }
+
+            if (display === '' || display === code) {
+                return code;
+            }
+
+            return code + ' - ' + display;
         },
         isLinkColumn(column) {
             return String(column?.fieldtype || '') === 'Link';

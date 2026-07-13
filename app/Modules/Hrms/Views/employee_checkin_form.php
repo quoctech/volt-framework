@@ -19,7 +19,7 @@
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeFormApp({
+    <div x-data="employee_checkinFormApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             listUrl: <?= esc(json_encode($listUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             saveUrl: <?= esc(json_encode($saveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -32,7 +32,7 @@
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500"><?= esc('/hrms/employee') ?></p>
+                <p class="text-zinc-500"><?= esc('/hrms/employee_checkin') ?></p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
@@ -85,15 +85,15 @@
                                                             :required="field.is_required"
                                                             autocomplete="off"
                                                         >
-                                                        <div x-show="linkLookupOpen(field.fieldname)" x-cloak class="absolute left-0 right-0 top-12 z-20 border border-zinc-300 bg-white shadow-sm">
+                                                        <div x-show="linkLookupOpen(field.fieldname)" x-cloak class="absolute left-0 top-12 z-20 w-[22rem] max-w-[calc(100vw-3rem)] border border-zinc-300 bg-white shadow-sm">
                                                             <div x-show="linkLookupState(field.fieldname).loading" x-cloak class="border-b border-zinc-200 px-3 py-2 text-sm text-zinc-500">
                                                                 Searching...
                                                             </div>
                                                             <div class="max-h-80 overflow-auto">
                                                                 <template x-for="item in linkLookupState(field.fieldname).items" :key="item.name">
                                                                     <button @click.prevent="selectLinkLookupItem(field, item)" type="button" class="block w-full border-b border-zinc-100 px-3 py-2 text-left hover:bg-zinc-50">
-                                                                        <div class="font-medium text-zinc-900" x-text="item.name"></div>
-                                                                        <div x-show="linkLookupSecondaryText(item) !== ''" x-cloak class="text-sm text-zinc-500" x-text="linkLookupSecondaryText(item)"></div>
+                                                                        <div class="font-medium text-zinc-900" x-text="linkLookupCodeText(item)"></div>
+                                                                        <div x-show="linkLookupPrimaryText(field, item) !== ''" x-cloak class="text-sm text-zinc-500" x-text="linkLookupPrimaryText(field, item)"></div>
                                                                     </button>
                                                                 </template>
                                                                 <div x-show="!linkLookupState(field.fieldname).loading && linkLookupState(field.fieldname).items.length === 0" x-cloak class="px-3 py-2 text-sm text-zinc-500">
@@ -121,6 +121,6 @@
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_form.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/EmployeeCheckin/employee_checkin_form.js'); ?></script>
 </body>
 </html>

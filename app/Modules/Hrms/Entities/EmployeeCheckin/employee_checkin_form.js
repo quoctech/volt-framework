@@ -1,4 +1,4 @@
-function employeeFormApp(boot) {
+function employee_checkinFormApp(boot) {
     return {
         title: boot.title || '',
         listUrl: boot.listUrl || '',
@@ -154,25 +154,21 @@ function employeeFormApp(boot) {
             this.closeLinkLookup(field.fieldname);
             this.handleLinkChange(field);
         },
-        linkLookupSecondaryText(item) {
-            if (!item || typeof item !== 'object') {
-                return '';
+        linkLookupCodeText(item) {
+            return String(item?.name || '');
+        },
+        linkLookupPrimaryText(field, item) {
+            const target = this.linkTarget(field);
+            const displayField = String(target?.display_field || 'name');
+            const displayValue = item && Object.prototype.hasOwnProperty.call(item, displayField)
+                ? item[displayField]
+                : '';
+
+            if (displayValue !== null && displayValue !== undefined && String(displayValue).trim() !== '') {
+                return String(displayValue);
             }
 
-            const parts = [];
-            Object.entries(item).forEach(([key, value]) => {
-                if (key === 'name' || value === null || value === undefined || value === '') {
-                    return;
-                }
-
-                if (typeof value === 'object') {
-                    return;
-                }
-
-                parts.push(String(value));
-            });
-
-            return parts.slice(0, 2).join(' • ');
+            return String(item?.name || '');
         },
         async handleLinkChange(field) {
             if (!field || field.fieldtype !== 'Link') {

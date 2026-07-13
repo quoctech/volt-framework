@@ -25,7 +25,9 @@ class EntityBuilderController extends Controller
     public function index(): string
     {
         return view('Volt\\Core\\Metadata\\Views\\entity_builder', [
-            'modules'           => $this->builderService->listModules(),
+            'modules'          => $this->builderService->listModules(),
+            'entityOptions'    => $this->builderService->listEntityOptions(),
+            'entityFieldCatalog' => $this->builderService->listEntityFieldCatalog(),
             'initialEntityName' => (string) ($this->request->getGet('entity') ?? ''),
         ]);
     }

@@ -305,6 +305,7 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
 final class {$entityStudly}Controller extends Controller
@@ -316,6 +317,8 @@ final class {$entityStudly}Controller extends Controller
     private array \$fields = [];
     /** @var array<int, array<string, mixed>> */
     private array \$sessions = [];
+    /** @var array<string, array<string, string>> */
+    private array \$linkTargets = [];
     private {$entityStudly}Model \$model;
     private BaseConnection \$db;
 
@@ -327,6 +330,7 @@ final class {$entityStudly}Controller extends Controller
         \$this->db = VoltDatabase::connection();
         \$this->fields = json_decode('{$this->escapePhpSingleQuoted($fieldsJson)}', true) ?: [];
         \$this->sessions = json_decode('{$this->escapePhpSingleQuoted($sessionsJson)}', true) ?: [];
+        \$this->linkTargets = \$this->resolveLinkTargets();
     }
 
     public function index(): string
@@ -337,6 +341,7 @@ final class {$entityStudly}Controller extends Controller
             'createUrl' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}/create'),
             'editUrlBase' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}/edit'),
             'builderUrl' => site_url('desk/entity-builder?entity={$entitySnake}'),
+            'linkTargets' => \$this->linkTargets,
         ]);
     }
 
@@ -349,6 +354,7 @@ final class {$entityStudly}Controller extends Controller
             'loadUrlBase' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/load'),
             'fields' => \$this->fields,
             'sessions' => \$this->sessions,
+            'linkTargets' => \$this->linkTargets,
             'recordName' => '',
         ]);
     }
@@ -362,6 +368,7 @@ final class {$entityStudly}Controller extends Controller
             'loadUrlBase' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}/load'),
             'fields' => \$this->fields,
             'sessions' => \$this->sessions,
+            'linkTargets' => \$this->linkTargets,
             'recordName' => \$name,
         ]);
     }
@@ -398,6 +405,7 @@ final class {$entityStudly}Controller extends Controller
             ->limit(\$perPage, (\$page - 1) * \$perPage)
             ->get()
             ->getResultArray();
+        \$rows = \$this->hydrateLinkDisplayValues(\$rows);
 
         return \$this->response->setJSON([
             'status' => 'ok',
@@ -663,6 +671,182 @@ final class {$entityStudly}Controller extends Controller
 
         return trim((string) (\$value ?? '')) !== '';
     }
+
+    /**
+     * @param array<int, array<string, mixed>> \$rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function hydrateLinkDisplayValues(array \$rows): array
+    {
+        if (\$rows === [] || \$this->linkTargets === []) {
+            return \$rows;
+        }
+
+        foreach (\$this->linkTargets as \$fieldname => \$target) {
+            \$displayField = trim((string) (\$target['display_field'] ?? 'name'));
+            \$targetEntity = trim((string) (\$target['entity'] ?? ''));
+            if (\$fieldname === '' || \$displayField === '' || \$targetEntity === '') {
+                continue;
+            }
+
+            \$names = [];
+            foreach (\$rows as \$row) {
+                \$value = trim((string) (\$row[\$fieldname] ?? ''));
+                if (\$value !== '') {
+                    \$names[] = \$value;
+                }
+            }
+
+            \$names = array_values(array_unique(\$names));
+            if (\$names === []) {
+                continue;
+            }
+
+            \$linkedRows = \$this->db->table(TableNameResolver::entity(\$targetEntity))
+                ->select('name, ' . \$displayField)
+                ->whereIn('name', \$names)
+                ->get()
+                ->getResultArray();
+
+            \$displayByName = [];
+            foreach (\$linkedRows as \$linkedRow) {
+                \$displayByName[(string) (\$linkedRow['name'] ?? '')] = (string) (\$linkedRow[\$displayField] ?? '');
+            }
+
+            foreach (\$rows as &\$row) {
+                \$value = trim((string) (\$row[\$fieldname] ?? ''));
+                \$row[\$fieldname . '__display'] = \$displayByName[\$value] ?? '';
+            }
+            unset(\$row);
+        }
+
+        return \$rows;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function resolveLinkTargets(): array
+    {
+        \$targetsByField = [];
+        \$entityNames = [];
+
+        foreach (\$this->fields as \$field) {
+            if ((string) (\$field['fieldtype'] ?? '') !== 'Link') {
+                continue;
+            }
+
+            \$fieldname = trim((string) (\$field['fieldname'] ?? ''));
+            \$targetEntity = trim((string) (\$field['options'] ?? ''));
+            if (\$fieldname === '' || \$targetEntity === '') {
+                continue;
+            }
+
+            \$targetsByField[\$fieldname] = \$targetEntity;
+            \$entityNames[] = \$targetEntity;
+        }
+
+        if (\$targetsByField === []) {
+            return [];
+        }
+
+        \$rows = \$this->db->table('sys_entity')
+            ->select('name, module')
+            ->whereIn('name', array_values(array_unique(\$entityNames)))
+            ->get()
+            ->getResultArray();
+
+        \$targetFields = \$this->db->table('sys_entity_field')
+            ->select('parent, fieldname, fieldtype, hidden, idx')
+            ->whereIn('parent', array_values(array_unique(\$entityNames)))
+            ->orderBy('parent', 'ASC')
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        \$modulesByEntity = [];
+        foreach (\$rows as \$row) {
+            \$modulesByEntity[(string) (\$row['name'] ?? '')] = (string) (\$row['module'] ?? '');
+        }
+
+        \$fieldsByEntity = [];
+        foreach (\$targetFields as \$row) {
+            \$entityName = (string) (\$row['parent'] ?? '');
+            if (\$entityName === '') {
+                continue;
+            }
+
+            \$fieldsByEntity[\$entityName] ??= [];
+            \$fieldsByEntity[\$entityName][] = [
+                'fieldname' => (string) (\$row['fieldname'] ?? ''),
+                'fieldtype' => (string) (\$row['fieldtype'] ?? ''),
+                'hidden' => (bool) (\$row['hidden'] ?? false),
+            ];
+        }
+
+        \$linkTargets = [];
+        foreach (\$targetsByField as \$fieldname => \$targetEntity) {
+            \$moduleName = \$modulesByEntity[\$targetEntity] ?? '';
+            if (\$moduleName === '') {
+                continue;
+            }
+
+            \$entitySlug = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', trim((string) \$targetEntity)) ?? trim((string) \$targetEntity));
+            \$displayField = \$this->resolveLinkDisplayField(\$targetEntity, \$fieldsByEntity[\$targetEntity] ?? []);
+            \$linkTargets[\$fieldname] = [
+                'entity' => \$targetEntity,
+                'module' => \$moduleName,
+                'display_field' => \$displayField,
+                'list_url' => site_url(\$moduleName . '/' . \$entitySlug),
+                'edit_url_base' => site_url(\$moduleName . '/' . \$entitySlug . '/edit'),
+                'data_url' => site_url(\$moduleName . '/api/' . \$entitySlug . '/link-options'),
+                'load_url_base' => site_url(\$moduleName . '/api/' . \$entitySlug . '/load'),
+            ];
+        }
+
+        return \$linkTargets;
+    }
+
+    /**
+     * @param array<int, array{fieldname:string,fieldtype:string,hidden:bool}> \$fields
+     */
+    private function resolveLinkDisplayField(string \$entityName, array \$fields): string
+    {
+        \$entitySnake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', trim(\$entityName)) ?? trim(\$entityName));
+        \$preferred = [
+            \$entitySnake . '_name',
+            'title',
+            'label',
+            'full_name',
+            'display_name',
+            'description',
+        ];
+
+        foreach (\$preferred as \$fieldname) {
+            foreach (\$fields as \$field) {
+                if ((bool) (\$field['hidden'] ?? false) === true) {
+                    continue;
+                }
+
+                if ((string) (\$field['fieldname'] ?? '') === \$fieldname) {
+                    return \$fieldname;
+                }
+            }
+        }
+
+        foreach (\$fields as \$field) {
+            if ((bool) (\$field['hidden'] ?? false) === true) {
+                continue;
+            }
+
+            \$fieldtype = (string) (\$field['fieldtype'] ?? '');
+            if (in_array(\$fieldtype, ['Data', 'Input', 'Link'], true)) {
+                return (string) (\$field['fieldname'] ?? 'name');
+            }
+        }
+
+        return 'name';
+    }
 }
 PHP;
     }
@@ -688,6 +872,7 @@ PHP;
 /** @var string \$createUrl */
 /** @var string \$editUrlBase */
 /** @var string \$builderUrl */
+/** @var array<string, array<string, string>> \$linkTargets */
 \$columns = json_decode('{$this->escapePhpSingleQuoted($columnsJson)}', true) ?: [];
 ?>
 <!doctype html>
@@ -706,7 +891,8 @@ PHP;
             createUrl: <?= esc(json_encode(\$createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode(\$editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             deleteUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            columns: <?= esc(json_encode(\$columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            columns: <?= esc(json_encode(\$columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -754,7 +940,14 @@ PHP;
                         <template x-for="row in rows" :key="row.name ?? JSON.stringify(row)">
                             <tr class="border-b border-zinc-200">
                                 <template x-for="column in columns" :key="column.fieldname">
-                                    <td class="px-4 py-3" x-text="cellValue(row, column.fieldname)"></td>
+                                    <td class="px-4 py-3">
+                                        <template x-if="isLinkColumn(column) && canOpenLinkedRecord(column, row)">
+                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
+                                        </template>
+                                        <template x-if="!isLinkColumn(column) || !canOpenLinkedRecord(column, row)">
+                                            <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
+                                        </template>
+                                    </td>
                                 </template>
                                 <td class="px-4 py-3">
                                     <div class="flex gap-2">
@@ -812,6 +1005,7 @@ PHP;
 /** @var string \$recordName */
 /** @var array<int, array<string, mixed>> \$fields */
 /** @var array<int, array<string, mixed>> \$sessions */
+/** @var array<string, array<string, string>> \$linkTargets */
 ?>
 <!doctype html>
 <html lang="vi">
@@ -830,7 +1024,8 @@ PHP;
             loadUrlBase: <?= esc(json_encode(\$loadUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             recordName: <?= esc(json_encode(\$recordName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             fields: <?= esc(json_encode(\$fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            sessions: <?= esc(json_encode(\$sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            sessions: <?= esc(json_encode(\$sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -873,10 +1068,43 @@ PHP;
                                                         </template>
                                                     </select>
                                                 </template>
+                                                <template x-if="field.fieldtype === 'Link'">
+                                                    <div class="relative" @click.outside="closeLinkLookup(field.fieldname)">
+                                                        <input
+                                                            x-model="form[field.fieldname]"
+                                                            @focus="openLinkLookup(field)"
+                                                            @click="openLinkLookup(field)"
+                                                            @input="handleLinkInput(field)"
+                                                            @change="handleLinkChange(field)"
+                                                            type="text"
+                                                            class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500"
+                                                            :placeholder="field.placeholder || ''"
+                                                            :readonly="field.read_only"
+                                                            :required="field.is_required"
+                                                            autocomplete="off"
+                                                        >
+                                                        <div x-show="linkLookupOpen(field.fieldname)" x-cloak class="absolute left-0 top-12 z-20 w-[22rem] max-w-[calc(100vw-3rem)] border border-zinc-300 bg-white shadow-sm">
+                                                            <div x-show="linkLookupState(field.fieldname).loading" x-cloak class="border-b border-zinc-200 px-3 py-2 text-sm text-zinc-500">
+                                                                Searching...
+                                                            </div>
+                                                            <div class="max-h-80 overflow-auto">
+                                                                <template x-for="item in linkLookupState(field.fieldname).items" :key="item.name">
+                                                                    <button @click.prevent="selectLinkLookupItem(field, item)" type="button" class="block w-full border-b border-zinc-100 px-3 py-2 text-left hover:bg-zinc-50">
+                                                                        <div class="font-medium text-zinc-900" x-text="linkLookupCodeText(item)"></div>
+                                                                        <div x-show="linkLookupPrimaryText(field, item) !== ''" x-cloak class="text-sm text-zinc-500" x-text="linkLookupPrimaryText(field, item)"></div>
+                                                                    </button>
+                                                                </template>
+                                                                <div x-show="!linkLookupState(field.fieldname).loading && linkLookupState(field.fieldname).items.length === 0" x-cloak class="px-3 py-2 text-sm text-zinc-500">
+                                                                    No linked record found.
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Text', 'Code'].includes(field.fieldtype)">
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>
@@ -908,6 +1136,7 @@ function {$entitySnake}ListApp(boot) {
         editUrlBase: boot.editUrlBase || '',
         deleteUrlBase: boot.deleteUrlBase || '',
         columns: boot.columns || [],
+        linkTargets: boot.linkTargets || {},
         query: '',
         loading: false,
         rows: [],
@@ -938,6 +1167,43 @@ function {$entitySnake}ListApp(boot) {
             }
 
             return value;
+        },
+        linkDisplayValue(column, row) {
+            if (!column || !row) {
+                return '-';
+            }
+
+            const code = String(row[column.fieldname] || '').trim();
+            const display = String(row[column.fieldname + '__display'] || '').trim();
+            if (code === '') {
+                return '-';
+            }
+
+            if (display === '' || display === code) {
+                return code;
+            }
+
+            return code + ' - ' + display;
+        },
+        isLinkColumn(column) {
+            return String(column?.fieldtype || '') === 'Link';
+        },
+        linkTarget(column) {
+            return this.linkTargets?.[column?.fieldname] || null;
+        },
+        canOpenLinkedRecord(column, row) {
+            const target = this.linkTarget(column);
+            const value = row && column ? row[column.fieldname] : '';
+            return !!target && String(value || '').trim() !== '';
+        },
+        openLinkedRecord(column, row) {
+            const target = this.linkTarget(column);
+            const value = row && column ? row[column.fieldname] : '';
+            if (!target || String(value || '').trim() === '') {
+                return;
+            }
+
+            window.location.href = target.edit_url_base + '/' + encodeURIComponent(String(value).trim());
         },
         paginationText() {
             if (this.total === 0) {
@@ -1030,7 +1296,9 @@ function {$entitySnake}FormApp(boot) {
         recordName: boot.recordName || '',
         fields: boot.fields || [],
         sessions: boot.sessions || [],
+        linkTargets: boot.linkTargets || {},
         form: {},
+        linkLookups: {},
         requestUrl(url) {
             const resolved = new URL(String(url || ''), window.location.origin);
             if (resolved.origin === window.location.origin) {
@@ -1088,6 +1356,159 @@ function {$entitySnake}FormApp(boot) {
             }
 
             return 'text';
+        },
+        linkTarget(field) {
+            return this.linkTargets?.[field?.fieldname] || null;
+        },
+        linkLookupState(fieldname) {
+            if (!this.linkLookups[fieldname]) {
+                this.linkLookups[fieldname] = {
+                    open: false,
+                    loading: false,
+                    query: '',
+                    items: [],
+                };
+            }
+
+            return this.linkLookups[fieldname];
+        },
+        linkLookupOpen(fieldname) {
+            return !!this.linkLookupState(fieldname).open;
+        },
+        closeLinkLookup(fieldname) {
+            this.linkLookupState(fieldname).open = false;
+        },
+        openLinkLookup(field) {
+            if (!field || field.read_only) {
+                return;
+            }
+
+            const state = this.linkLookupState(field.fieldname);
+            state.query = String(this.form[field.fieldname] || '').trim();
+            state.open = true;
+            this.searchLinkLookup(field);
+        },
+        handleLinkInput(field) {
+            if (!field || field.read_only) {
+                return;
+            }
+
+            const state = this.linkLookupState(field.fieldname);
+            state.query = String(this.form[field.fieldname] || '').trim();
+            state.open = true;
+            this.searchLinkLookup(field);
+        },
+        async searchLinkLookup(field) {
+            const target = this.linkTarget(field);
+            if (!field || !target || !target.data_url) {
+                return;
+            }
+
+            const state = this.linkLookupState(field.fieldname);
+            state.loading = true;
+
+            try {
+                const params = new URLSearchParams({
+                    page: '1',
+                    per_page: '50',
+                    q: state.query || '',
+                });
+                const response = await fetch(this.requestUrl(target.data_url + '?' + params.toString()), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Unable to load linked records.');
+                }
+
+                state.items = Array.isArray(result.rows) ? result.rows.slice(0, 50) : [];
+            } catch (error) {
+                console.error(error);
+                state.items = [];
+            } finally {
+                state.loading = false;
+            }
+        },
+        selectLinkLookupItem(field, item) {
+            if (!field || !item || !item.name) {
+                return;
+            }
+
+            this.form[field.fieldname] = item.name;
+            this.linkLookupState(field.fieldname).query = item.name;
+            this.closeLinkLookup(field.fieldname);
+            this.handleLinkChange(field);
+        },
+        linkLookupCodeText(item) {
+            return String(item?.name || '');
+        },
+        linkLookupPrimaryText(field, item) {
+            const target = this.linkTarget(field);
+            const displayField = String(target?.display_field || 'name');
+            const displayValue = item && Object.prototype.hasOwnProperty.call(item, displayField)
+                ? item[displayField]
+                : '';
+
+            if (displayValue !== null && displayValue !== undefined && String(displayValue).trim() !== '') {
+                return String(displayValue);
+            }
+
+            return String(item?.name || '');
+        },
+        async handleLinkChange(field) {
+            if (!field || field.fieldtype !== 'Link') {
+                return;
+            }
+
+            const target = this.linkTarget(field);
+            const linkValue = String(this.form[field.fieldname] || '').trim();
+            if (!target || linkValue === '') {
+                this.applyFetchedValues(field, {});
+                return;
+            }
+
+            try {
+                const response = await fetch(this.requestUrl(target.load_url_base + '/' + encodeURIComponent(linkValue)), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Unable to load linked record.');
+                }
+
+                this.applyFetchedValues(field, result.data || {});
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        applyFetchedValues(linkField, linkedRow) {
+            const prefix = String(linkField?.fieldname || '') + '.';
+            if (prefix === '.') {
+                return;
+            }
+
+            this.fields.forEach((field) => {
+                const fetchFrom = String(field.fetch_from || '').trim();
+                if (!fetchFrom.startsWith(prefix)) {
+                    return;
+                }
+
+                const sourceFieldname = fetchFrom.slice(prefix.length);
+                const fetchedValue = linkedRow && Object.prototype.hasOwnProperty.call(linkedRow, sourceFieldname)
+                    ? linkedRow[sourceFieldname]
+                    : '';
+                this.form[field.fieldname] = field.fieldtype === 'Check'
+                    ? String(fetchedValue) === '1' || fetchedValue === 1 || fetchedValue === true
+                    : fetchedValue;
+            });
         },
         async load() {
             const response = await fetch(this.requestUrl(this.loadUrlBase + '/' + encodeURIComponent(this.recordName)), {
@@ -1153,6 +1574,7 @@ JS;
             $routeLines[] = "\$routes->get('{$entity['snake']}/create', '{$entity['studly']}Controller::create');";
             $routeLines[] = "\$routes->get('{$entity['snake']}/edit/(:segment)', '{$entity['studly']}Controller::edit/$1');";
             $routeLines[] = "\$routes->get('api/{$entity['snake']}', '{$entity['studly']}Controller::data');";
+            $routeLines[] = "\$routes->get('api/{$entity['snake']}/link-options', '{$entity['studly']}Controller::data');";
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', '{$entity['studly']}Controller::load/$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', '{$entity['studly']}Controller::save');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', '{$entity['studly']}Controller::delete/$1');";
@@ -1219,7 +1641,7 @@ PHP;
     private function extractListColumns(array $compiled): array
     {
         $columns = [
-            ['fieldname' => 'name', 'label' => 'Name'],
+            ['fieldname' => 'name', 'label' => 'Name', 'fieldtype' => 'Data'],
         ];
 
         $fields = is_array($compiled['fields'] ?? null) ? $compiled['fields'] : [];
@@ -1245,6 +1667,7 @@ PHP;
             $columns[] = [
                 'fieldname' => $fieldname,
                 'label' => (string) ($field['label'] ?? $this->studly($fieldname)),
+                'fieldtype' => (string) ($field['fieldtype'] ?? 'Data'),
             ];
         }
 
@@ -1278,6 +1701,7 @@ PHP;
                 'options' => (string) ($field['options'] ?? ''),
                 'default_value' => $custom['default_value'] ?? '',
                 'placeholder' => (string) ($custom['placeholder'] ?? ''),
+                'fetch_from' => (string) ($custom['fetch_from'] ?? ''),
                 'is_required' => (bool) ($field['is_required'] ?? false),
                 'read_only' => (bool) ($field['read_only'] ?? false),
                 'session_uid' => (string) ($custom['session_uid'] ?? self::DEFAULT_SESSION_UID),

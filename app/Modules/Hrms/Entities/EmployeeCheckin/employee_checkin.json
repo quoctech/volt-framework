@@ -1,0 +1,131 @@
+{
+    "entity_name": "employee_checkin",
+    "module": "hrms",
+    "table_name": "tab_employee_checkin",
+    "entity": {
+        "name": "employee_checkin",
+        "module": "hrms",
+        "label": "Employee Checkin",
+        "is_submittable": false,
+        "issingle": false,
+        "istable": false,
+        "autoname": "EC-.YYYY.-#####",
+        "states": [],
+        "s_custom_jsonb": {
+            "label": "Employee Checkin",
+            "layout": {
+                "sessions": [
+                    {
+                        "uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                        "title": "Primary",
+                        "description": "Main fields",
+                        "column_count": 1
+                    }
+                ]
+            },
+            "is_submittable": false
+        }
+    },
+    "fields": [
+        {
+            "id": 106,
+            "fieldname": "employee",
+            "label": "Nhân Viên",
+            "fieldtype": "Link",
+            "length": 255,
+            "options": "employee",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 1,
+            "f_custom_jsonb": {
+                "column": 1,
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": true,
+                "default_value": ""
+            }
+        },
+        {
+            "id": 119,
+            "fieldname": "employee_name",
+            "label": "Tên Nhân Viên",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 2,
+            "f_custom_jsonb": {
+                "column": 1,
+                "fetch_from": "employee.employee_name",
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": false,
+                "default_value": ""
+            }
+        }
+    ],
+    "field_map": {
+        "employee": {
+            "id": 106,
+            "fieldname": "employee",
+            "label": "Nhân Viên",
+            "fieldtype": "Link",
+            "length": 255,
+            "options": "employee",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 1,
+            "f_custom_jsonb": {
+                "column": 1,
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": true,
+                "default_value": ""
+            }
+        },
+        "employee_name": {
+            "id": 119,
+            "fieldname": "employee_name",
+            "label": "Tên Nhân Viên",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 2,
+            "f_custom_jsonb": {
+                "column": 1,
+                "fetch_from": "employee.employee_name",
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": false,
+                "default_value": ""
+            }
+        }
+    },
+    "custom_patch": {
+        "fields": {
+            "employee": {
+                "column": 1,
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": true,
+                "default_value": ""
+            },
+            "employee_name": {
+                "column": 1,
+                "fetch_from": "employee.employee_name",
+                "placeholder": "",
+                "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                "in_list_view": false,
+                "default_value": ""
+            }
+        }
+    },
+    "compiled_at": "2026-07-12T04:46:21+00:00"
+}

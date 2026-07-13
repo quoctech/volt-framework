@@ -1,6 +1,8 @@
 <?php
 
 /** @var array<int, string> $modules */
+/** @var array<int, array{name:string,label:string,module:string}> $entityOptions */
+/** @var array<string, array<int, array{fieldname:string,label:string,fieldtype:string}>> $entityFieldCatalog */
 /** @var string $initialEntityName */
 ?>
 <!doctype html>
@@ -19,9 +21,12 @@
     <div
         x-data="entityBuilderApp(<?= esc(json_encode([
             'modules' => $modules,
+            'entityOptions' => $entityOptions,
+            'entityFieldCatalog' => $entityFieldCatalog,
             'initialEntityName' => $initialEntityName,
             'loadUrl' => site_url('api/entity-builder/load'),
             'saveUrl' => site_url('api/entity-builder/save'),
+            'deskUrl' => site_url('desk'),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         x-init="init()"
         @keydown.window.ctrl.s.prevent="save()"
@@ -30,12 +35,14 @@
     >
         <div class="border border-zinc-300 bg-white">
             <header class="border-b border-zinc-300 p-4">
-                <div class="flex items-center justify-end gap-2">
+                <div class="flex items-center justify-between gap-2">
+                    <a :href="deskUrl" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">Back to Desk</a>
+                    <div class="flex items-center gap-2">
                     <button x-show="canOpenEntityList()" x-cloak @click="goToEntityList()" type="button" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">
                         <span x-text="`Go to ${entity.label || titleize(entity.name || 'Entity')}`"></span>
                     </button>
-                    <button @click="loadEntity(entity.name)" type="button" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">Load</button>
                     <button @click="save()" type="button" class="border border-zinc-900 bg-zinc-900 px-4 py-2 text-base text-white hover:bg-zinc-700">Save</button>
+                    </div>
                 </div>
 
                 <div class="mt-4 flex gap-2">
@@ -44,55 +51,10 @@
                 </div>
             </header>
 
-            <main class="grid gap-px bg-zinc-300 xl:grid-cols-[240px_minmax(0,1fr)_320px]">
-                <aside class="bg-zinc-50 p-4">
-                    <section class="border border-zinc-300 bg-white">
-                        <div class="flex items-center justify-between border-b border-zinc-300 px-3 py-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Sessions</span>
-                            <button @click="appendSession()" type="button" class="text-xs text-zinc-700">+ Add</button>
-                        </div>
-                        <div class="space-y-2 p-3">
-                            <template x-for="session in sessions" :key="session.uid">
-                                <button @click="selectedSessionUid = session.uid" type="button" class="block w-full border px-3 py-2 text-left text-base" :class="selectedSessionUid === session.uid ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white'">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="truncate" x-text="session.title"></span>
-                                        <span class="text-xs" x-text="sessionFields(session.uid).length"></span>
-                                    </div>
-                                </button>
-                            </template>
-                        </div>
-                    </section>
-                </aside>
-
+            <main class="grid gap-px bg-zinc-300 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <section x-show="activeTab === 'entity'" class="bg-zinc-100 p-4">
                     <div x-show="modules.length === 0" x-cloak class="mb-4 border border-zinc-300 bg-white px-4 py-3 text-base text-zinc-600">
                         Chưa có module nào. Tạo module trước tại <a href="<?= site_url('desk/create-module') ?>" class="underline">/desk/create-module</a>.
-                    </div>
-
-                    <div class="mb-4 flex flex-col gap-3 border border-zinc-300 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Workspace</p>
-                            <h2 class="text-base font-semibold">Sessions and fields</h2>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="relative">
-                                <button @click="toggleFieldTypeDropdown()" type="button" class="min-w-40 border border-zinc-300 px-3 py-2 text-left text-base hover:bg-zinc-50">
-                                    <span x-text="newFieldType"></span>
-                                </button>
-                                <div x-show="fieldTypeDropdownOpen" x-cloak @click.outside="fieldTypeDropdownOpen = false" class="absolute right-0 top-12 z-20 w-56 border border-zinc-300 bg-white shadow-sm">
-                                    <div class="border-b border-zinc-200 p-2">
-                                        <input x-model="fieldTypeFilter" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Filter type">
-                                    </div>
-                                    <div class="max-h-64 overflow-auto p-1">
-                                        <template x-for="type in filteredFieldTypes()" :key="type">
-                                            <button @click="selectNewFieldType(type)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50" :class="newFieldType === type ? 'bg-zinc-100' : ''" x-text="type"></button>
-                                        </template>
-                                        <div x-show="filteredFieldTypes().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No type found.</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button @click="addFieldToSelectedSession()" type="button" class="border border-zinc-300 px-3 py-2 text-base hover:bg-zinc-50">Add Field</button>
-                        </div>
                     </div>
 
                     <div class="space-y-4">
@@ -117,7 +79,25 @@
 
                                 <div @dragover.prevent="selectedSessionUid = session.uid" @drop.prevent="handleSessionDrop(session.uid)" class="space-y-2 p-3" :class="selectedSessionUid === session.uid ? 'bg-zinc-50' : ''">
                                     <template x-if="sessionFields(session.uid).length === 0">
-                                        <div class="border border-dashed border-zinc-300 px-4 py-8 text-center text-base text-zinc-500">No field in this session.</div>
+                                        <div class="border border-dashed border-zinc-300 px-4 py-8 text-center text-base text-zinc-500">
+                                            <p>No field in this session.</p>
+                                            <div class="mt-4">
+                                                <div class="relative inline-block text-left" @click.outside="closeFieldTypeDropdown()">
+                                                    <button @click="toggleFieldTypeDropdown(`session:${session.uid}`)" type="button" class="border border-zinc-300 bg-white px-3 py-2 text-base hover:bg-zinc-50">Add Field</button>
+                                                    <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `session:${session.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 border border-zinc-300 bg-white shadow-sm">
+                                                        <div class="border-b border-zinc-200 p-2">
+                                                            <input x-model="fieldTypeFilter" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Filter type">
+                                                        </div>
+                                                        <div class="max-h-64 overflow-auto p-1">
+                                                            <template x-for="type in filteredFieldTypes()" :key="type">
+                                                                <button @click="addFieldFromAnchor(type, `session:${session.uid}`)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50" x-text="type"></button>
+                                                            </template>
+                                                            <div x-show="filteredFieldTypes().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No type found.</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </template>
 
                                     <template x-if="sessionFields(session.uid).length > 0">
@@ -125,41 +105,62 @@
                                             <template x-for="columnNumber in sessionColumnNumbers(session)" :key="`${session.uid}_${columnNumber}`">
                                                 <div class="space-y-2" @dragover.prevent @drop.prevent="handleColumnDrop(session.uid, columnNumber)">
                                                     <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.uid">
-                                                        <article
-                                                            draggable="true"
-                                                            @dragstart="startFieldDrag(field.uid)"
-                                                            @dragend="resetDrag()"
-                                                            @dragover.prevent="setFieldDropTarget(field.uid)"
-                                                            @drop.prevent="dropOnField(field.uid)"
-                                                            @click="selectField(field.uid)"
-                                                            class="border px-3 py-3 cursor-pointer"
-                                                            :class="selectedFieldUid === field.uid ? 'border-zinc-900 bg-zinc-50' : (dragState.targetFieldUid === field.uid ? 'border-zinc-600 bg-zinc-50' : 'border-zinc-300 bg-white')"
-                                                        >
-                                                            <div class="flex items-center justify-between gap-3">
-                                                                <div class="min-w-0">
-                                                                    <input
-                                                                        x-model="field.label"
-                                                                        @input="syncFieldname(field)"
-                                                                        @click.stop
-                                                                        type="text"
-                                                                        class="w-full bg-transparent font-medium outline-none"
-                                                                        placeholder="Field label"
-                                                                    >
-                                                                    <div class="mt-2 flex flex-wrap gap-1 text-[11px] text-zinc-600">
-                                                                        <span class="border border-zinc-300 px-2 py-0.5 font-mono" x-text="field.fieldname || 'fieldname'"></span>
-                                                                        <span x-show="field.in_list_view" x-cloak class="border border-zinc-300 px-2 py-0.5">List</span>
-                                                                        <span x-show="field.is_required" x-cloak class="border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">Required</span>
-                                                                        <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-800">Read only</span>
-                                                                        <span x-show="field.hidden" x-cloak class="border border-zinc-400 bg-zinc-100 px-2 py-0.5 text-zinc-700">Hidden</span>
-                                                                        <span x-show="hasCustomJson(field.f_custom_jsonb_text)" x-cloak class="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">JSON</span>
+                                                        <div class="space-y-2">
+                                                            <article
+                                                                draggable="true"
+                                                                @dragstart="startFieldDrag(field.uid)"
+                                                                @dragend="resetDrag()"
+                                                                @dragover.prevent="setFieldDropTarget(field.uid)"
+                                                                @drop.prevent="dropOnField(field.uid)"
+                                                                @click="selectField(field.uid)"
+                                                                class="border px-3 py-3 cursor-pointer"
+                                                                :class="selectedFieldUid === field.uid ? 'border-zinc-900 bg-zinc-50' : (dragState.targetFieldUid === field.uid ? 'border-zinc-600 bg-zinc-50' : 'border-zinc-300 bg-white')"
+                                                            >
+                                                                <div class="flex items-center justify-between gap-3">
+                                                                    <div class="min-w-0">
+                                                                        <input
+                                                                            x-model="field.label"
+                                                                            @input="syncFieldname(field)"
+                                                                            @click.stop
+                                                                            type="text"
+                                                                            class="w-full bg-transparent font-medium outline-none"
+                                                                            placeholder="Field label"
+                                                                        >
+                                                                        <div class="mt-2 flex flex-wrap gap-1 text-[11px] text-zinc-600">
+                                                                            <span class="border border-zinc-300 px-2 py-0.5 font-mono" x-text="field.fieldname || 'fieldname'"></span>
+                                                                            <span x-show="field.in_list_view" x-cloak class="border border-zinc-300 px-2 py-0.5">List</span>
+                                                                            <span x-show="field.is_required" x-cloak class="border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">Required</span>
+                                                                            <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-800">Read only</span>
+                                                                            <span x-show="field.hidden" x-cloak class="border border-zinc-400 bg-zinc-100 px-2 py-0.5 text-zinc-700">Hidden</span>
+                                                                            <span x-show="hasCustomJson(field.f_custom_jsonb_text)" x-cloak class="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">JSON</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="flex items-center gap-2">
+                                                                        <span class="border border-zinc-300 px-2 py-1 text-base text-zinc-600" x-text="field.fieldtype"></span>
+                                                                        <button @click.stop="removeField(field.uid)" type="button" class="border border-zinc-300 px-2 py-1 text-base text-zinc-700 hover:bg-zinc-50">Delete</button>
                                                                     </div>
                                                                 </div>
-                                                                <div class="flex items-center gap-2">
-                                                                    <span class="border border-zinc-300 px-2 py-1 text-base text-zinc-600" x-text="field.fieldtype"></span>
-                                                                    <button @click.stop="removeField(field.uid)" type="button" class="border border-zinc-300 px-2 py-1 text-base text-zinc-700 hover:bg-zinc-50">Delete</button>
+                                                            </article>
+
+                                                            <template x-if="selectedFieldUid === field.uid">
+                                                                <div class="flex justify-center">
+                                                                    <div class="relative inline-block text-left" @click.outside="closeFieldTypeDropdown()">
+                                                                        <button @click="toggleFieldTypeDropdown(`field:${field.uid}`)" type="button" class="border border-zinc-300 bg-white px-3 py-2 text-base hover:bg-zinc-50">Add Field</button>
+                                                                        <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `field:${field.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 border border-zinc-300 bg-white shadow-sm">
+                                                                            <div class="border-b border-zinc-200 p-2">
+                                                                                <input x-model="fieldTypeFilter" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Filter type">
+                                                                            </div>
+                                                                            <div class="max-h-64 overflow-auto p-1">
+                                                                                <template x-for="type in filteredFieldTypes()" :key="type">
+                                                                                    <button @click="addFieldFromAnchor(type, `field:${field.uid}`)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50" x-text="type"></button>
+                                                                                </template>
+                                                                                <div x-show="filteredFieldTypes().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No type found.</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </article>
+                                                            </template>
+                                                        </div>
                                                     </template>
                                                 </div>
                                             </template>
@@ -238,7 +239,7 @@
 
                                 <div>
                                     <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Field Type</label>
-                                    <select x-model="selectedField.fieldtype" @change="applyFieldDefaults(selectedField)" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <select x-model="selectedField.fieldtype" @change="selectedField.fieldtype = normalizeFieldType(selectedField.fieldtype); applyFieldDefaults(selectedField)" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
                                         <template x-for="type in fieldTypes" :key="type">
                                             <option :value="type" x-text="type"></option>
                                         </template>
@@ -252,7 +253,46 @@
 
                                 <div x-show="requiresOptions(selectedField.fieldtype)" x-cloak>
                                     <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Options</label>
-                                    <textarea x-model="selectedField.options" rows="5" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
+                                    <template x-if="selectedField.fieldtype === 'Link'">
+                                        <div class="relative" @click.outside="closeLinkEntityPicker()">
+                                            <input
+                                                x-model="selectedField.options"
+                                                @focus="openLinkEntityPicker()"
+                                                @click="openLinkEntityPicker()"
+                                                @input="syncLinkEntityFilter()"
+                                                type="text"
+                                                class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500"
+                                                placeholder="Select linked entity"
+                                            >
+                                            <div x-show="linkEntityDropdownOpen" x-cloak class="absolute left-0 right-0 top-12 z-20 border border-zinc-300 bg-white shadow-sm">
+                                                <div class="max-h-64 overflow-auto p-1">
+                                                    <template x-for="entityOption in filteredLinkEntityOptions()" :key="entityOption.name">
+                                                        <button @click.prevent="selectLinkEntity(entityOption.name)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50">
+                                                            <span x-text="entityOption.label || titleize(entityOption.name)"></span>
+                                                            <span class="ml-2 text-xs text-zinc-500" x-text="entityOption.name"></span>
+                                                        </button>
+                                                    </template>
+                                                    <div x-show="filteredLinkEntityOptions().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No entity found.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="selectedField.fieldtype !== 'Link'">
+                                        <textarea x-model="selectedField.options" rows="5" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
+                                    </template>
+                                </div>
+
+                                <div>
+                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Fetch From</label>
+                                    <input x-model="selectedField.fetch_from" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="employee.age">
+                                    <div x-show="fetchFromSuggestions(selectedField).length > 0" x-cloak class="mt-2 flex flex-wrap gap-2">
+                                        <template x-for="suggestion in fetchFromSuggestions(selectedField)" :key="suggestion.value">
+                                            <button @click="selectedField.fetch_from = suggestion.value" type="button" class="border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
+                                                <span x-text="suggestion.value"></span>
+                                                <span class="ml-1 text-zinc-500" x-text="suggestion.label"></span>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 <div x-show="supportsDefaultValue(selectedField.fieldtype)" x-cloak>
@@ -349,8 +389,11 @@
         function entityBuilderApp(boot) {
             return {
                 modules: boot.modules || [],
+                entityOptions: boot.entityOptions || [],
+                entityFieldCatalog: boot.entityFieldCatalog || {},
                 loadUrl: boot.loadUrl,
                 saveUrl: boot.saveUrl,
+                deskUrl: boot.deskUrl,
                 entity: {
                     name: '',
                     module: '',
@@ -359,10 +402,12 @@
                     autoname: 'HASH',
                 },
                 namingPreset: 'HASH',
-                activeTab: 'entity',
-                newFieldType: 'Input',
+                activeTab: 'settings',
                 fieldTypeFilter: '',
                 fieldTypeDropdownOpen: false,
+                fieldTypeAnchor: null,
+                linkEntityFilter: '',
+                linkEntityDropdownOpen: false,
                 sessions: [],
                 fields: [],
                 selectedSessionUid: null,
@@ -377,7 +422,8 @@
                     fieldUid: null,
                     targetFieldUid: null,
                 },
-                fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Table', 'Input'],
+                fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Input', 'Link', 'Table'],
+                normalizedFieldTypes: ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table'],
                 namingPresets: [
                     { value: 'HASH', label: 'HASH' },
                     { value: 'CUSTOM', label: 'Custom series' },
@@ -415,6 +461,7 @@
                     this.entity.autoname = 'HASH';
                     this.namingPreset = 'HASH';
                     this.lastGeneratedAutoname = 'HASH';
+                    this.activeTab = 'settings';
                 },
                 normalizeEntityName() {
                     const previousGenerated = this.lastGeneratedAutoname;
@@ -442,6 +489,13 @@
                 },
                 makeSession(title = 'New Session', description = '') {
                     return { uid: this.uuid(), title, description, column_count: 1 };
+                },
+                // Normalize field type from legacy payloads so inspector and badges stay consistent.
+                normalizeFieldType(fieldType) {
+                    const candidate = String(fieldType || '').trim();
+                    const matched = this.normalizedFieldTypes.find((type) => type.toLowerCase() === candidate.toLowerCase());
+
+                    return matched || 'Data';
                 },
                 appendSession() {
                     const session = this.makeSession(`Session ${this.sessions.length + 1}`, '');
@@ -523,16 +577,24 @@
 
                     return this.fieldTypes.filter((type) => type.toLowerCase().includes(keyword));
                 },
-                toggleFieldTypeDropdown() {
-                    this.fieldTypeDropdownOpen = !this.fieldTypeDropdownOpen;
-                    if (!this.fieldTypeDropdownOpen) {
+                toggleFieldTypeDropdown(anchor) {
+                    const shouldOpen = !this.fieldTypeDropdownOpen || this.fieldTypeAnchor !== anchor;
+                    this.fieldTypeDropdownOpen = shouldOpen;
+                    this.fieldTypeAnchor = shouldOpen ? anchor : null;
+
+                    if (!shouldOpen) {
                         this.fieldTypeFilter = '';
                     }
                 },
-                selectNewFieldType(type) {
-                    this.newFieldType = type;
+                closeFieldTypeDropdown() {
                     this.fieldTypeDropdownOpen = false;
+                    this.fieldTypeAnchor = null;
                     this.fieldTypeFilter = '';
+                },
+                parseFieldTypeAnchor(anchor) {
+                    const [kind, uid] = String(anchor || '').split(':', 2);
+
+                    return { kind: kind || '', uid: uid || '' };
                 },
                 canOpenEntityList() {
                     return this.buildEntityListUrl() !== '';
@@ -558,29 +620,54 @@
 
                     window.location.href = url;
                 },
-                addFieldToSelectedSession() {
-                    const availableTypes = this.filteredFieldTypes();
-                    if (availableTypes.length > 0 && !availableTypes.includes(this.newFieldType)) {
-                        this.newFieldType = availableTypes[0];
+                addFieldFromAnchor(fieldType, anchor) {
+                    const parsedAnchor = this.parseFieldTypeAnchor(anchor);
+                    this.closeFieldTypeDropdown();
+
+                    if (parsedAnchor.kind === 'field' && parsedAnchor.uid) {
+                        const referenceField = this.fields.find((field) => field.uid === parsedAnchor.uid) || null;
+                        if (referenceField) {
+                            this.addField(referenceField.session_uid, fieldType, referenceField.uid, Number(referenceField.column || 1));
+                            return;
+                        }
                     }
 
-                    this.addField(this.selectedSessionUid || this.sessions[0]?.uid || null, this.newFieldType);
+                    if (parsedAnchor.kind === 'session' && parsedAnchor.uid) {
+                        this.addField(parsedAnchor.uid, fieldType);
+                        return;
+                    }
+
+                    this.addField(this.selectedSessionUid || this.sessions[0]?.uid || null, fieldType);
                 },
-                addField(sessionUid, fieldType = 'Input') {
+                addField(sessionUid, fieldType = 'Input', insertAfterUid = null, columnNumber = 1) {
                     const targetSessionUid = sessionUid || this.sessions[0]?.uid || null;
                     if (!targetSessionUid) {
                         return;
                     }
 
-                    const field = this.makeField(fieldType, targetSessionUid);
-                    this.fields.push(field);
+                    const field = this.makeField(this.normalizeFieldType(fieldType), targetSessionUid);
+                    field.column = Math.max(1, Number(columnNumber || 1));
+
+                    if (insertAfterUid) {
+                        const insertIndex = this.fields.findIndex((item) => item.uid === insertAfterUid);
+                        if (insertIndex >= 0) {
+                            this.fields.splice(insertIndex + 1, 0, field);
+                        } else {
+                            this.fields.push(field);
+                        }
+                    } else {
+                        this.fields.push(field);
+                    }
+
                     this.selectedSessionUid = targetSessionUid;
                     this.selectedFieldUid = field.uid;
+                    this.activeTab = 'entity';
                     this.reindexFields();
                 },
                 makeField(fieldType, sessionUid) {
                     const index = this.fields.length + 1;
-                    const label = `${fieldType} ${index}`;
+                    const normalizedType = this.normalizeFieldType(fieldType);
+                    const label = `${normalizedType} ${index}`;
 
                     return {
                         uid: this.uuid(),
@@ -589,11 +676,12 @@
                         column: 1,
                         fieldname: this.slugify(label),
                         label,
-                        fieldtype: fieldType,
-                        length: this.defaultLength(fieldType),
+                        fieldtype: normalizedType,
+                        length: this.defaultLength(normalizedType),
                         options: '',
                         default_value: '',
                         placeholder: '',
+                        fetch_from: '',
                         in_list_view: false,
                         is_required: false,
                         read_only: false,
@@ -605,15 +693,20 @@
                 },
                 selectField(fieldUid) {
                     this.selectedFieldUid = fieldUid;
+                    const field = this.selectedField;
+                    if (field) {
+                        field.fieldtype = this.normalizeFieldType(field.fieldtype);
+                    }
                 },
                 defaultLength(fieldType) {
-                    if (fieldType === 'Input' || fieldType === 'Data' || fieldType === 'Select') {
+                    if (['Input', 'Data', 'Select', 'Link'].includes(fieldType)) {
                         return 255;
                     }
 
                     return null;
                 },
                 applyFieldDefaults(field) {
+                    field.fieldtype = this.normalizeFieldType(field.fieldtype);
                     field.length = this.defaultLength(field.fieldtype);
                     if (!this.requiresOptions(field.fieldtype)) {
                         field.options = '';
@@ -626,20 +719,68 @@
                     }
                 },
                 requiresOptions(fieldType) {
-                    return ['Select', 'Table'].includes(fieldType);
+                    return ['Select', 'Table', 'Link'].includes(fieldType);
+                },
+                openLinkEntityPicker() {
+                    this.linkEntityFilter = this.selectedField?.options || '';
+                    this.linkEntityDropdownOpen = true;
+                },
+                closeLinkEntityPicker() {
+                    this.linkEntityDropdownOpen = false;
+                },
+                syncLinkEntityFilter() {
+                    this.linkEntityFilter = this.selectedField?.options || '';
+                    this.linkEntityDropdownOpen = true;
+                },
+                filteredLinkEntityOptions() {
+                    const keyword = String(this.linkEntityFilter || this.selectedField?.options || '').trim().toLowerCase();
+                    return this.entityOptions
+                        .filter((entityOption) => entityOption.name !== this.entity.name)
+                        .filter((entityOption) => {
+                            if (!keyword) {
+                                return true;
+                            }
+
+                            const haystack = `${entityOption.name} ${entityOption.label || ''} ${entityOption.module || ''}`.toLowerCase();
+                            return haystack.includes(keyword);
+                        });
+                },
+                selectLinkEntity(entityName) {
+                    if (!this.selectedField) {
+                        return;
+                    }
+
+                    this.selectedField.options = entityName;
+                    this.linkEntityFilter = entityName;
+                    this.linkEntityDropdownOpen = false;
+                },
+                fetchFromSuggestions(field) {
+                    if (!field) {
+                        return [];
+                    }
+
+                    return this.fields
+                        .filter((candidate) => candidate.uid !== field.uid && candidate.fieldtype === 'Link' && candidate.options)
+                        .flatMap((candidate) => {
+                            const targetFields = this.entityFieldCatalog[candidate.options] || [];
+                            return targetFields.map((targetField) => ({
+                                value: `${candidate.fieldname}.${targetField.fieldname}`,
+                                label: `${candidate.label || candidate.fieldname} -> ${targetField.label || targetField.fieldname}`,
+                            }));
+                        });
                 },
                 supportsDefaultValue(fieldType) {
-                    return ['Input', 'Data', 'Select', 'Check'].includes(fieldType);
+                    return ['Input', 'Data', 'Select', 'Check', 'Link'].includes(fieldType);
                 },
                 supportsPlaceholder(fieldType) {
-                    return ['Input', 'Data'].includes(fieldType);
+                    return ['Input', 'Data', 'Link'].includes(fieldType);
                 },
                 defaultValuePlaceholder(fieldType) {
                     if (fieldType === 'Select') {
                         return 'draft';
                     }
 
-                    if (fieldType === 'Input' || fieldType === 'Data') {
+                    if (fieldType === 'Input' || fieldType === 'Data' || fieldType === 'Link') {
                         return 'Default text';
                     }
 
@@ -652,6 +793,10 @@
 
                     if (fieldType === 'Table') {
                         return 'child_entity or child_entity:separate';
+                    }
+
+                    if (fieldType === 'Link') {
+                        return 'target_entity_name';
                     }
 
                     return '';
@@ -858,11 +1003,12 @@
                                 column: Number(parsedCustom.column || 1),
                                 fieldname: field.fieldname || '',
                                 label: field.label || '',
-                                fieldtype: field.fieldtype || 'Input',
-                                length: field.length ?? this.defaultLength(field.fieldtype || 'Input'),
+                                fieldtype: this.normalizeFieldType(field.fieldtype || 'Input'),
+                                length: field.length ?? this.defaultLength(this.normalizeFieldType(field.fieldtype || 'Input')),
                                 options: field.options || '',
                                 default_value: parsedCustom.default_value ?? '',
                                 placeholder: parsedCustom.placeholder ?? '',
+                                fetch_from: parsedCustom.fetch_from ?? '',
                                 in_list_view: !!parsedCustom.in_list_view,
                                 is_required: !!field.is_required,
                                 read_only: !!field.read_only,
@@ -873,6 +1019,7 @@
                             };
                         });
                         this.selectedFieldUid = this.fields[0]?.uid || null;
+                        this.activeTab = 'settings';
 
                         if (!this.modules.includes(this.entity.module)) {
                             this.modules.push(this.entity.module);
@@ -975,13 +1122,18 @@
                         } else {
                             delete custom.placeholder;
                         }
+                        if (String(field.fetch_from || '').trim() !== '') {
+                            custom.fetch_from = String(field.fetch_from || '').trim();
+                        } else {
+                            delete custom.fetch_from;
+                        }
                         custom.in_list_view = !!field.in_list_view;
 
                         return {
                             id: field.id,
                             fieldname: this.slugify(field.fieldname || field.label),
                             label: field.label || this.titleize(field.fieldname),
-                            fieldtype: field.fieldtype,
+                            fieldtype: this.normalizeFieldType(field.fieldtype),
                             length: field.length === '' ? null : field.length,
                             options: field.options || '',
                             is_required: !!field.is_required,

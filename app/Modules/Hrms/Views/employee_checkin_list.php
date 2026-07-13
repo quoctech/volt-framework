@@ -6,7 +6,7 @@
 /** @var string $editUrlBase */
 /** @var string $builderUrl */
 /** @var array<string, array<string, string>> $linkTargets */
-$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data"},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int"},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input"},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check"}]', true) ?: [];
+$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link"}]', true) ?: [];
 ?>
 <!doctype html>
 <html lang="vi">
@@ -18,23 +18,23 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeListApp({
+    <div x-data="employee_checkinListApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             dataUrl: <?= esc(json_encode($dataUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             createUrl: <?= esc(json_encode($createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode($editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/employee_checkin/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             columns: <?= esc(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/employee') ?></p>
+                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/employee_checkin') ?></p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create Employee</a>
+                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create EmployeeCheckin</a>
             </div>
         </header>
 
@@ -75,10 +75,10 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},
                                 <template x-for="column in columns" :key="column.fieldname">
                                     <td class="px-4 py-3">
                                         <template x-if="isLinkColumn(column) && canOpenLinkedRecord(column, row)">
-                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="cellValue(row, column.fieldname)"></button>
+                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
                                         </template>
                                         <template x-if="!isLinkColumn(column) || !canOpenLinkedRecord(column, row)">
-                                            <span x-text="cellValue(row, column.fieldname)"></span>
+                                            <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
                                         </template>
                                     </td>
                                 </template>
@@ -104,6 +104,6 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_list.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/EmployeeCheckin/employee_checkin_list.js'); ?></script>
 </body>
 </html>

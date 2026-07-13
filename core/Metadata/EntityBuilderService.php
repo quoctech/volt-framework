@@ -77,6 +77,52 @@ final class EntityBuilderService
     }
 
     /**
+     * @return array<int, array{name:string,label:string,module:string}>
+     */
+    public function listEntityOptions(?string $module = null): array
+    {
+        return array_map(
+            static fn (array $entity): array => [
+                'name' => (string) ($entity['name'] ?? ''),
+                'label' => (string) ($entity['label'] ?? ''),
+                'module' => (string) ($entity['module'] ?? ''),
+            ],
+            $this->listEntities($module)
+        );
+    }
+
+    /**
+     * @return array<string, array<int, array{fieldname:string,label:string,fieldtype:string}>>
+     */
+    public function listEntityFieldCatalog(): array
+    {
+        $rows = $this->db->table('sys_entity_field')
+            ->select('parent, fieldname, label, fieldtype, idx')
+            ->orderBy('parent', 'ASC')
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $catalog = [];
+        foreach ($rows as $row) {
+            $entityName = (string) ($row['parent'] ?? '');
+            $fieldname = (string) ($row['fieldname'] ?? '');
+            if ($entityName === '' || $fieldname === '') {
+                continue;
+            }
+
+            $catalog[$entityName] ??= [];
+            $catalog[$entityName][] = [
+                'fieldname' => $fieldname,
+                'label' => (string) ($row['label'] ?? $this->titleize($fieldname)),
+                'fieldtype' => (string) ($row['fieldtype'] ?? 'Data'),
+            ];
+        }
+
+        return $catalog;
+    }
+
+    /**
      * @return array<int, string>
      */
     public function listModules(): array
@@ -593,7 +639,7 @@ final class EntityBuilderService
     private function normalizeFieldType(string $value): string
     {
         // Input là kiểu nhập liệu chuẩn, map vật lý như Data để UI gần với Frappe hơn.
-        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Code', 'Table'];
+        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table'];
 
         if (! in_array($value, $allowed, true)) {
             throw new InvalidArgumentException("Invalid field type: {$value}");

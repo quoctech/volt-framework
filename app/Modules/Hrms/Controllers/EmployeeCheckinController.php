@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Hrms\Controllers;
 
-use App\Modules\Hrms\Models\EmployeeModel;
+use App\Modules\Hrms\Models\EmployeeCheckinModel;
 use CodeIgniter\Controller;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
-final class EmployeeController extends Controller
+final class EmployeeCheckinController extends Controller
 {
     private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
-    private const AUTONAME_PATTERN = 'Eoo-.YYYY.-.#####';
+    private const AUTONAME_PATTERN = 'EC-.YYYY.-#####';
 
     /** @var array<int, array<string, mixed>> */
     private array $fields = [];
@@ -23,39 +24,39 @@ final class EmployeeController extends Controller
     private array $sessions = [];
     /** @var array<string, array<string, string>> */
     private array $linkTargets = [];
-    private EmployeeModel $model;
+    private EmployeeCheckinModel $model;
     private BaseConnection $db;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         helper(['url']);
-        $this->model = new EmployeeModel();
+        $this->model = new EmployeeCheckinModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":2,"custom_meta":{"column":2,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true}},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":true,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":true,"read_only":false,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":{"column":1,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","in_list_view":true,"default_value":""}}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","in_list_view":true,"default_value":""}},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"employee.employee_name","is_required":false,"read_only":false,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":{"column":1,"fetch_from":"employee.employee_name","placeholder":"","session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","in_list_view":false,"default_value":""}}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 
     public function index(): string
     {
-        return view('App\Modules\Hrms\Views\employee_list', [
-            'title' => 'Employee List',
-            'dataUrl' => site_url('hrms/api/employee'),
-            'createUrl' => site_url('hrms/employee/create'),
-            'editUrlBase' => site_url('hrms/employee/edit'),
-            'builderUrl' => site_url('desk/entity-builder?entity=employee'),
+        return view('App\Modules\Hrms\Views\employee_checkin_list', [
+            'title' => 'EmployeeCheckin List',
+            'dataUrl' => site_url('hrms/api/employee_checkin'),
+            'createUrl' => site_url('hrms/employee_checkin/create'),
+            'editUrlBase' => site_url('hrms/employee_checkin/edit'),
+            'builderUrl' => site_url('desk/entity-builder?entity=employee_checkin'),
             'linkTargets' => $this->linkTargets,
         ]);
     }
 
     public function create(): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'New Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\employee_checkin_form', [
+            'title' => 'New EmployeeCheckin',
+            'listUrl' => site_url('hrms/employee_checkin'),
+            'saveUrl' => site_url('hrms/api/employee_checkin/save'),
+            'loadUrlBase' => site_url('hrms/api/employee_checkin/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -65,11 +66,11 @@ final class EmployeeController extends Controller
 
     public function edit(string $name): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'Edit Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\employee_checkin_form', [
+            'title' => 'Edit EmployeeCheckin',
+            'listUrl' => site_url('hrms/employee_checkin'),
+            'saveUrl' => site_url('hrms/api/employee_checkin/save'),
+            'loadUrlBase' => site_url('hrms/api/employee_checkin/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -109,6 +110,7 @@ final class EmployeeController extends Controller
             ->limit($perPage, ($page - 1) * $perPage)
             ->get()
             ->getResultArray();
+        $rows = $this->hydrateLinkDisplayValues($rows);
 
         return $this->response->setJSON([
             'status' => 'ok',
@@ -219,7 +221,7 @@ final class EmployeeController extends Controller
         }
 
         $token = $matches[0];
-        $sequence = $this->nextSequenceValue(strtolower('employee:' . $resolved));
+        $sequence = $this->nextSequenceValue(strtolower('employee_checkin:' . $resolved));
         $serial = str_pad((string) $sequence, strlen($token), '0', STR_PAD_LEFT);
 
         return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;
@@ -376,6 +378,57 @@ final class EmployeeController extends Controller
     }
 
     /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function hydrateLinkDisplayValues(array $rows): array
+    {
+        if ($rows === [] || $this->linkTargets === []) {
+            return $rows;
+        }
+
+        foreach ($this->linkTargets as $fieldname => $target) {
+            $displayField = trim((string) ($target['display_field'] ?? 'name'));
+            $targetEntity = trim((string) ($target['entity'] ?? ''));
+            if ($fieldname === '' || $displayField === '' || $targetEntity === '') {
+                continue;
+            }
+
+            $names = [];
+            foreach ($rows as $row) {
+                $value = trim((string) ($row[$fieldname] ?? ''));
+                if ($value !== '') {
+                    $names[] = $value;
+                }
+            }
+
+            $names = array_values(array_unique($names));
+            if ($names === []) {
+                continue;
+            }
+
+            $linkedRows = $this->db->table(TableNameResolver::entity($targetEntity))
+                ->select('name, ' . $displayField)
+                ->whereIn('name', $names)
+                ->get()
+                ->getResultArray();
+
+            $displayByName = [];
+            foreach ($linkedRows as $linkedRow) {
+                $displayByName[(string) ($linkedRow['name'] ?? '')] = (string) ($linkedRow[$displayField] ?? '');
+            }
+
+            foreach ($rows as &$row) {
+                $value = trim((string) ($row[$fieldname] ?? ''));
+                $row[$fieldname . '__display'] = $displayByName[$value] ?? '';
+            }
+            unset($row);
+        }
+
+        return $rows;
+    }
+
+    /**
      * @return array<string, array<string, string>>
      */
     private function resolveLinkTargets(): array
@@ -408,9 +461,32 @@ final class EmployeeController extends Controller
             ->get()
             ->getResultArray();
 
+        $targetFields = $this->db->table('sys_entity_field')
+            ->select('parent, fieldname, fieldtype, hidden, idx')
+            ->whereIn('parent', array_values(array_unique($entityNames)))
+            ->orderBy('parent', 'ASC')
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
         $modulesByEntity = [];
         foreach ($rows as $row) {
             $modulesByEntity[(string) ($row['name'] ?? '')] = (string) ($row['module'] ?? '');
+        }
+
+        $fieldsByEntity = [];
+        foreach ($targetFields as $row) {
+            $entityName = (string) ($row['parent'] ?? '');
+            if ($entityName === '') {
+                continue;
+            }
+
+            $fieldsByEntity[$entityName] ??= [];
+            $fieldsByEntity[$entityName][] = [
+                'fieldname' => (string) ($row['fieldname'] ?? ''),
+                'fieldtype' => (string) ($row['fieldtype'] ?? ''),
+                'hidden' => (bool) ($row['hidden'] ?? false),
+            ];
         }
 
         $linkTargets = [];
@@ -421,9 +497,11 @@ final class EmployeeController extends Controller
             }
 
             $entitySlug = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', trim((string) $targetEntity)) ?? trim((string) $targetEntity));
+            $displayField = $this->resolveLinkDisplayField($targetEntity, $fieldsByEntity[$targetEntity] ?? []);
             $linkTargets[$fieldname] = [
                 'entity' => $targetEntity,
                 'module' => $moduleName,
+                'display_field' => $displayField,
                 'list_url' => site_url($moduleName . '/' . $entitySlug),
                 'edit_url_base' => site_url($moduleName . '/' . $entitySlug . '/edit'),
                 'data_url' => site_url($moduleName . '/api/' . $entitySlug . '/link-options'),
@@ -432,5 +510,46 @@ final class EmployeeController extends Controller
         }
 
         return $linkTargets;
+    }
+
+    /**
+     * @param array<int, array{fieldname:string,fieldtype:string,hidden:bool}> $fields
+     */
+    private function resolveLinkDisplayField(string $entityName, array $fields): string
+    {
+        $entitySnake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', trim($entityName)) ?? trim($entityName));
+        $preferred = [
+            $entitySnake . '_name',
+            'title',
+            'label',
+            'full_name',
+            'display_name',
+            'description',
+        ];
+
+        foreach ($preferred as $fieldname) {
+            foreach ($fields as $field) {
+                if ((bool) ($field['hidden'] ?? false) === true) {
+                    continue;
+                }
+
+                if ((string) ($field['fieldname'] ?? '') === $fieldname) {
+                    return $fieldname;
+                }
+            }
+        }
+
+        foreach ($fields as $field) {
+            if ((bool) ($field['hidden'] ?? false) === true) {
+                continue;
+            }
+
+            $fieldtype = (string) ($field['fieldtype'] ?? '');
+            if (in_array($fieldtype, ['Data', 'Input', 'Link'], true)) {
+                return (string) ($field['fieldname'] ?? 'name');
+            }
+        }
+
+        return 'name';
     }
 }
