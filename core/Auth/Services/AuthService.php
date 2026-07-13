@@ -152,6 +152,38 @@ class AuthService
         $session->destroy();
     }
 
+    /**
+     * Change password for the currently authenticated user.
+     *
+     * @return array{ok:bool,message:string}
+     */
+    public function changePassword(string $currentPassword, string $newPassword): array
+    {
+        $user = $this->currentUser();
+
+        if (! $user instanceof UserEntity) {
+            return ['ok' => false, 'message' => 'Bạn chưa đăng nhập.'];
+        }
+
+        if (! password_verify($currentPassword, (string) $user->password)) {
+            return ['ok' => false, 'message' => 'Mật khẩu hiện tại không đúng.'];
+        }
+
+        if (mb_strlen($newPassword) < 8) {
+            return ['ok' => false, 'message' => 'Mật khẩu mới phải có ít nhất 8 ký tự.'];
+        }
+
+        if (password_verify($newPassword, (string) $user->password)) {
+            return ['ok' => false, 'message' => 'Mật khẩu mới phải khác mật khẩu hiện tại.'];
+        }
+
+        $this->userModel->update($user->name, [
+            'password' => password_hash($newPassword, PASSWORD_DEFAULT),
+        ]);
+
+        return ['ok' => true, 'message' => 'Đã cập nhật mật khẩu.'];
+    }
+
     public function issueApiToken(UserEntity $user): string
     {
         $token = bin2hex(random_bytes(32));

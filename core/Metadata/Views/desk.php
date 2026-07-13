@@ -2,9 +2,11 @@
 
 /** @var int $moduleCount */
 /** @var int $entityCount */
-/** @var array<int, string> $modules */
-/** @var string $moduleFilter */
-/** @var array<int, array<string, mixed>> $entities */
+/** @var bool $isAdmin */
+/** @var string $currentUserName */
+$isAdmin = $isAdmin ?? false;
+$currentUserName = $currentUserName ?? '';
+$deskActive = 'desk';
 ?>
 <!doctype html>
 <html lang="vi">
@@ -12,84 +14,48 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Volt Desk</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
+    <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-zinc-900">
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
+
     <main class="mx-auto max-w-5xl p-4 lg:p-8">
         <div class="mb-6">
             <h1 class="text-2xl font-semibold">Desk</h1>
-            <p class="mt-1 text-sm text-zinc-500">Tạo module trước, sau đó dùng module đó để dựng entity.</p>
+            <p class="mt-1 text-sm text-slate-500">Chọn mục bên dưới để làm việc. Entity List nằm ở trang riêng.</p>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-            <a href="<?= site_url('desk/create-module') ?>" class="border border-zinc-300 bg-white p-5 transition hover:border-zinc-500">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Create Module</p>
-                <h2 class="mt-2 text-xl font-semibold">Tạo module mới</h2>
-                <p class="mt-2 text-sm text-zinc-600">Sinh thư mục `app/Modules/{Module}` và lưu metadata module vào database.</p>
-                <p class="mt-4 text-sm text-zinc-500">Hiện có <?= esc((string) $moduleCount) ?> module.</p>
+        <div class="grid gap-4 sm:grid-cols-2 <?= $isAdmin ? 'lg:grid-cols-3' : '' ?>">
+            <a href="<?= site_url('desk/entities') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Browse</p>
+                <h2 class="mt-2 text-xl font-semibold">Entity List</h2>
+                <p class="mt-2 text-sm text-slate-600">Xem và lọc entity theo module. Admin có thể mở Entity Builder từ danh sách.</p>
+                <p class="mt-4 text-sm text-slate-500">Hiện có <?= esc((string) $entityCount) ?> entity.</p>
             </a>
 
-            <a href="<?= site_url('desk/entity-builder') ?>" class="border border-zinc-300 bg-white p-5 transition hover:border-zinc-500">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Entity Builder</p>
-                <h2 class="mt-2 text-xl font-semibold">Tạo entity</h2>
-                <p class="mt-2 text-sm text-zinc-600">Chọn module có sẵn, cấu hình session, field và sinh file Entity JSON/PHP.</p>
-                <p class="mt-4 text-sm text-zinc-500">Hiện có <?= esc((string) $entityCount) ?> entity.</p>
-            </a>
-        </div>
+            <?php if ($isAdmin): ?>
+                <a href="<?= site_url('desk/create-module') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                    <h2 class="mt-2 text-xl font-semibold">Create Module</h2>
+                    <p class="mt-2 text-sm text-slate-600">Sinh thư mục <code class="text-xs">app/Modules/{Module}</code> và lưu metadata module.</p>
+                    <p class="mt-4 text-sm text-slate-500">Hiện có <?= esc((string) $moduleCount) ?> module.</p>
+                </a>
 
-        <section class="mt-6 border border-zinc-300 bg-white p-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold">Entity List</h2>
-                    <p class="mt-1 text-sm text-zinc-500">Lọc entity theo module để kiểm tra metadata đã có.</p>
+                <a href="<?= site_url('desk/entity-builder') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                    <h2 class="mt-2 text-xl font-semibold">Entity Builder</h2>
+                    <p class="mt-2 text-sm text-slate-600">Cấu hình field, session layout, sync schema và scaffold artifact.</p>
+                    <p class="mt-4 text-sm text-slate-500">Chỉ tài khoản admin.</p>
+                </a>
+            <?php else: ?>
+                <div class="border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 sm:col-span-1">
+                    <p class="font-semibold">Quyền hạn chế</p>
+                    <p class="mt-2">Create Module và Entity Builder chỉ dành cho <strong>admin</strong>. Bạn vẫn dùng Entity List để xem metadata.</p>
                 </div>
-
-                <form method="get" action="<?= site_url('desk') ?>" class="flex gap-2">
-                    <select name="module" class="border border-zinc-300 px-3 py-2 text-sm outline-none">
-                        <option value="">All modules</option>
-                        <?php foreach ($modules as $module): ?>
-                            <option value="<?= esc($module) ?>" <?= $moduleFilter === $module ? 'selected' : '' ?>><?= esc($module) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button type="submit" class="border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50">Filter</button>
-                </form>
-            </div>
-
-            <div class="mt-4 overflow-x-auto">
-                <table class="min-w-full border-collapse text-sm">
-                    <thead>
-                        <tr class="border-b border-zinc-300 text-left text-zinc-500">
-                            <th class="py-2 pr-4 font-medium">Entity</th>
-                            <th class="py-2 pr-4 font-medium">Label</th>
-                            <th class="py-2 pr-4 font-medium">Module</th>
-                            <th class="py-2 pr-4 font-medium">Autoname</th>
-                            <th class="py-2 pr-4 font-medium">Submittable</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($entities === []): ?>
-                            <tr>
-                                <td colspan="5" class="py-4 text-zinc-500">Không có entity nào khớp bộ lọc hiện tại.</td>
-                            </tr>
-                        <?php endif; ?>
-
-                        <?php foreach ($entities as $entity): ?>
-                            <tr class="border-b border-zinc-200">
-                                <td class="py-2 pr-4">
-                                    <a href="<?= site_url('desk/entity-builder?entity=' . rawurlencode((string) $entity['name'])) ?>" class="underline">
-                                        <?= esc((string) $entity['name']) ?>
-                                    </a>
-                                </td>
-                                <td class="py-2 pr-4"><?= esc((string) $entity['label']) ?></td>
-                                <td class="py-2 pr-4"><?= esc((string) $entity['module']) ?></td>
-                                <td class="py-2 pr-4"><?= esc((string) $entity['autoname']) ?></td>
-                                <td class="py-2 pr-4"><?= !empty($entity['is_submittable']) ? 'Yes' : 'No' ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            <?php endif; ?>
+        </div>
     </main>
 </body>
 </html>

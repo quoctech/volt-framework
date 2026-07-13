@@ -24,32 +24,66 @@ class EntityBuilderController extends Controller
 
     public function index(): string
     {
+        $userContext = $this->deskUserContext();
+
         return view('Volt\\Core\\Metadata\\Views\\entity_builder', [
             'modules'          => $this->builderService->listModules(),
             'entityOptions'    => $this->builderService->listEntityOptions(),
             'entityFieldCatalog' => $this->builderService->listEntityFieldCatalog(),
             'initialEntityName' => (string) ($this->request->getGet('entity') ?? ''),
+            'isAdmin' => $userContext['isAdmin'],
+            'currentUserName' => $userContext['currentUserName'],
         ]);
     }
 
     public function desk(): string
     {
-        $moduleFilter = trim((string) ($this->request->getGet('module') ?? ''));
+        $userContext = $this->deskUserContext();
 
         return view('Volt\\Core\\Metadata\\Views\\desk', [
             'moduleCount' => count($this->builderService->listModules()),
             'entityCount' => count($this->builderService->listEntityNames()),
+            'isAdmin' => $userContext['isAdmin'],
+            'currentUserName' => $userContext['currentUserName'],
+        ]);
+    }
+
+    public function entityList(): string
+    {
+        $moduleFilter = trim((string) ($this->request->getGet('module') ?? ''));
+        $userContext = $this->deskUserContext();
+
+        return view('Volt\\Core\\Metadata\\Views\\entity_list', [
             'modules' => $this->builderService->listModules(),
             'moduleFilter' => $moduleFilter,
             'entities' => $this->builderService->listEntities($moduleFilter !== '' ? $moduleFilter : null),
+            'isAdmin' => $userContext['isAdmin'],
+            'currentUserName' => $userContext['currentUserName'],
         ]);
     }
 
     public function modulePage(): string
     {
+        $userContext = $this->deskUserContext();
+
         return view('Volt\\Core\\Metadata\\Views\\create_module', [
-            'modules'       => $this->builderService->listModules(),
+            'modules' => $this->builderService->listModules(),
+            'isAdmin' => $userContext['isAdmin'],
+            'currentUserName' => $userContext['currentUserName'],
         ]);
+    }
+
+    /**
+     * @return array{isAdmin:bool,currentUserName:string}
+     */
+    private function deskUserContext(): array
+    {
+        $user = service('voltAuth')->currentUser();
+
+        return [
+            'isAdmin' => $user !== null && $user->isAdmin(),
+            'currentUserName' => $user !== null ? (string) $user->name : '',
+        ];
     }
 
     public function load(string $entityName): ResponseInterface

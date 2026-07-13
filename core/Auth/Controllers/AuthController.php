@@ -174,4 +174,63 @@ class AuthController extends Controller
 
         return redirect()->to(site_url('login'));
     }
+
+    public function profile()
+    {
+        $user = $this->authService->currentUser();
+
+        if ($user === null) {
+            return redirect()->to(site_url('login'));
+        }
+
+        return view('auth/profile', [
+            'user' => $user,
+            'isAdmin' => $user->isAdmin(),
+            'currentUserName' => (string) $user->name,
+            'error' => session()->getFlashdata('profile_error'),
+            'success' => session()->getFlashdata('profile_success'),
+        ]);
+    }
+
+    public function updateProfile()
+    {
+        $user = $this->authService->currentUser();
+
+        if ($user === null) {
+            return redirect()->to(site_url('login'));
+        }
+
+        $rules = [
+            'current_password'      => 'required|min_length[8]|max_length[255]',
+            'password'              => 'required|min_length[8]|max_length[255]',
+            'password_confirmation' => 'required|matches[password]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return view('auth/profile', [
+                'user' => $user,
+                'isAdmin' => $user->isAdmin(),
+                'currentUserName' => (string) $user->name,
+                'error' => implode(' ', $this->validator->getErrors()),
+                'success' => null,
+            ]);
+        }
+
+        $result = $this->authService->changePassword(
+            (string) $this->request->getPost('current_password'),
+            (string) $this->request->getPost('password'),
+        );
+
+        if (! $result['ok']) {
+            return view('auth/profile', [
+                'user' => $user,
+                'isAdmin' => $user->isAdmin(),
+                'currentUserName' => (string) $user->name,
+                'error' => $result['message'],
+                'success' => null,
+            ]);
+        }
+
+        return redirect()->to(site_url('desk/profile'))->with('profile_success', $result['message']);
+    }
 }

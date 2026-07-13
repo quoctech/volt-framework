@@ -24,17 +24,26 @@ $routes->group('notes', ['namespace' => 'Volt\Core\Notes\Controllers', 'filter' 
     $routes->post('delete/(:num)', 'NoteController::delete/$1');
 });
 
-$routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers'], static function (RouteCollection $routes): void {
+// Desk: bất kỳ user đã login. Create Module / Entity Builder: chỉ admin.
+$routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('/', 'EntityBuilderController::desk');
     $routes->get('desk', 'EntityBuilderController::desk');
+    $routes->get('desk/entities', 'EntityBuilderController::entityList');
+});
+
+$routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('desk/profile', 'AuthController::profile');
+    $routes->post('desk/profile', 'AuthController::updateProfile');
+});
+
+$routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('desk/entity-builder', 'EntityBuilderController::index');
     $routes->get('desk/create-module', 'EntityBuilderController::modulePage');
     $routes->get('entity-builder', 'EntityBuilderController::index');
-    $routes->get('entities', 'EntityBuilderController::index');
     $routes->get('entities/new', 'EntityBuilderController::index');
 });
 
-$routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Controllers'], static function (RouteCollection $routes): void {
+$routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('load/(:segment)', 'EntityBuilderController::load/$1');
     $routes->post('module/save', 'EntityBuilderController::saveModule');
     $routes->post('save', 'EntityBuilderController::save');

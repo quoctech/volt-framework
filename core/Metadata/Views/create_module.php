@@ -1,22 +1,27 @@
 <?php
 
 /** @var array<int, string> $modules */
-/** @var string $csrfTokenName */
-/** @var string $csrfHash */
+/** @var bool $isAdmin */
+/** @var string $currentUserName */
+$isAdmin = $isAdmin ?? true;
+$currentUserName = $currentUserName ?? '';
+$deskActive = 'create-module';
 ?>
 <!doctype html>
 <html lang="vi">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Create Module</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <title>Create Module · Volt Desk</title>
+    <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
     <style>
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-zinc-900">
+<body class="min-h-screen bg-slate-100 text-slate-900">
+    <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
+
     <main
         x-data="createModuleApp(<?= esc(json_encode([
             'modules' => $modules,
@@ -24,12 +29,9 @@
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         class="mx-auto max-w-5xl p-4 lg:p-8"
     >
-        <div class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-semibold">Create Module</h1>
-                <p class="mt-1 text-sm text-zinc-500">Module được tạo riêng, sau đó mới dùng trong Entity Builder.</p>
-            </div>
-            <a href="<?= site_url('desk') ?>" class="border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50">Back to Desk</a>
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold">Create Module</h1>
+            <p class="mt-1 text-sm text-slate-500">Module được tạo riêng, sau đó mới dùng trong Entity Builder.</p>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
