@@ -33,8 +33,8 @@ final class EmployeeCheckinController extends Controller
         helper(['url']);
         $this->model = new EmployeeCheckinModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","in_list_view":true,"default_value":""}},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"employee.employee_name","is_required":false,"read_only":false,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":{"column":1,"fetch_from":"employee.employee_name","placeholder":"","session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","in_list_view":false,"default_value":""}}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 
@@ -279,6 +279,10 @@ final class EmployeeCheckinController extends Controller
     private function normalizePayload(array $payload): array
     {
         $row = [];
+        if (isset($payload['name'])) {
+            $row['name'] = $payload['name'];
+        }
+
         foreach ($this->fields as $field) {
             $fieldname = (string) ($field['fieldname'] ?? '');
             if ($fieldname === '') {
@@ -295,6 +299,11 @@ final class EmployeeCheckinController extends Controller
 
             if (in_array($fieldtype, ['Int', 'Float'], true)) {
                 $row[$fieldname] = $value === '' || $value === null ? null : $value;
+                continue;
+            }
+
+            if ($fieldtype === 'Table') {
+                $row[$fieldname] = is_array($value) ? $value : [];
                 continue;
             }
 
@@ -387,12 +396,20 @@ final class EmployeeCheckinController extends Controller
             return $rows;
         }
 
+        // Group Link fields by target entity to batch queries
+        $groups = [];
+        $fieldValues = [];
+
         foreach ($this->linkTargets as $fieldname => $target) {
             $displayField = trim((string) ($target['display_field'] ?? 'name'));
             $targetEntity = trim((string) ($target['entity'] ?? ''));
             if ($fieldname === '' || $displayField === '' || $targetEntity === '') {
                 continue;
             }
+
+            $groupKey = $targetEntity;
+            $groups[$groupKey]['display_fields'][$displayField] = true;
+            $groups[$groupKey]['fields'][$fieldname] = $displayField;
 
             $names = [];
             foreach ($rows as $row) {
@@ -401,29 +418,49 @@ final class EmployeeCheckinController extends Controller
                     $names[] = $value;
                 }
             }
+            $fieldValues[$fieldname] = array_values(array_unique($names));
+        }
 
-            $names = array_values(array_unique($names));
-            if ($names === []) {
+        $displayByName = [];
+
+        foreach ($groups as $targetEntity => $group) {
+            $allNames = [];
+            foreach ($group['fields'] as $fieldname => $displayField) {
+                foreach ($fieldValues[$fieldname] as $name) {
+                    $allNames[] = $name;
+                }
+            }
+            $allNames = array_values(array_unique($allNames));
+            if ($allNames === []) {
                 continue;
             }
 
+            $select = 'name';
+            foreach (array_keys($group['display_fields']) as $df) {
+                $select .= ', ' . $df;
+            }
+
             $linkedRows = $this->db->table(TableNameResolver::entity($targetEntity))
-                ->select('name, ' . $displayField)
-                ->whereIn('name', $names)
+                ->select($select)
+                ->whereIn('name', $allNames)
                 ->get()
                 ->getResultArray();
 
-            $displayByName = [];
-            foreach ($linkedRows as $linkedRow) {
-                $displayByName[(string) ($linkedRow['name'] ?? '')] = (string) ($linkedRow[$displayField] ?? '');
+            foreach ($group['fields'] as $fieldname => $displayField) {
+                $displayByName[$fieldname] ??= [];
+                foreach ($linkedRows as $linkedRow) {
+                    $displayByName[$fieldname][(string) ($linkedRow['name'] ?? '')] = (string) ($linkedRow[$displayField] ?? '');
+                }
             }
-
-            foreach ($rows as &$row) {
-                $value = trim((string) ($row[$fieldname] ?? ''));
-                $row[$fieldname . '__display'] = $displayByName[$value] ?? '';
-            }
-            unset($row);
         }
+
+        foreach ($rows as &$row) {
+            foreach ($this->linkTargets as $fieldname => $target) {
+                $value = trim((string) ($row[$fieldname] ?? ''));
+                $row[$fieldname . '__display'] = $displayByName[$fieldname][$value] ?? '';
+            }
+        }
+        unset($row);
 
         return $rows;
     }

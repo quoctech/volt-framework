@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hrms\Controllers;
 
-use App\Modules\Hrms\Models\EmployeeModel;
+use App\Modules\Hrms\Models\EmployeeSkillMapModel;
 use CodeIgniter\Controller;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -13,10 +13,10 @@ use Throwable;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
-final class EmployeeController extends Controller
+final class EmployeeSkillMapController extends Controller
 {
     private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
-    private const AUTONAME_PATTERN = 'EOO-.YYYY.-.#####';
+    private const AUTONAME_PATTERN = 'ESM-.YYYY.-#####';
 
     /** @var array<int, array<string, mixed>> */
     private array $fields = [];
@@ -24,39 +24,39 @@ final class EmployeeController extends Controller
     private array $sessions = [];
     /** @var array<string, array<string, string>> */
     private array $linkTargets = [];
-    private EmployeeModel $model;
+    private EmployeeSkillMapModel $model;
     private BaseConnection $db;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         helper(['url']);
-        $this->model = new EmployeeModel();
+        $this->model = new EmployeeSkillMapModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":true,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"traning_events","label":"Traning Events","fieldtype":"Table","options":"traning_event:separate","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[],"child_columns":[{"fieldname":"title","label":"Title","fieldtype":"Data"},{"fieldname":"content","label":"Content","fieldtype":"Data"}]}]', true) ?: [];
         $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 
     public function index(): string
     {
-        return view('App\Modules\Hrms\Views\employee_list', [
-            'title' => 'Employee List',
-            'dataUrl' => site_url('hrms/api/employee'),
-            'createUrl' => site_url('hrms/employee/create'),
-            'editUrlBase' => site_url('hrms/employee/edit'),
-            'builderUrl' => site_url('desk/entity-builder?entity=employee'),
+        return view('App\Modules\Hrms\Views\employee_skill_map_list', [
+            'title' => 'EmployeeSkillMap List',
+            'dataUrl' => site_url('hrms/api/employee_skill_map'),
+            'createUrl' => site_url('hrms/employee_skill_map/create'),
+            'editUrlBase' => site_url('hrms/employee_skill_map/edit'),
+            'builderUrl' => site_url('desk/entity-builder?entity=employee_skill_map'),
             'linkTargets' => $this->linkTargets,
         ]);
     }
 
     public function create(): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'New Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\employee_skill_map_form', [
+            'title' => 'New EmployeeSkillMap',
+            'listUrl' => site_url('hrms/employee_skill_map'),
+            'saveUrl' => site_url('hrms/api/employee_skill_map/save'),
+            'loadUrlBase' => site_url('hrms/api/employee_skill_map/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -66,11 +66,11 @@ final class EmployeeController extends Controller
 
     public function edit(string $name): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'Edit Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\employee_skill_map_form', [
+            'title' => 'Edit EmployeeSkillMap',
+            'listUrl' => site_url('hrms/employee_skill_map'),
+            'saveUrl' => site_url('hrms/api/employee_skill_map/save'),
+            'loadUrlBase' => site_url('hrms/api/employee_skill_map/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -221,7 +221,7 @@ final class EmployeeController extends Controller
         }
 
         $token = $matches[0];
-        $sequence = $this->nextSequenceValue(strtolower('employee:' . $resolved));
+        $sequence = $this->nextSequenceValue(strtolower('employee_skill_map:' . $resolved));
         $serial = str_pad((string) $sequence, strlen($token), '0', STR_PAD_LEFT);
 
         return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;

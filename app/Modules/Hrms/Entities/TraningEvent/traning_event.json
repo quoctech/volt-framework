@@ -1,17 +1,17 @@
 {
     "entity": {
-        "name": "employee_checkin",
+        "name": "traning_event",
         "module": "hrms",
         "issingle": 0,
-        "istable": 0,
-        "autoname": "EC-.YYYY.-#####",
+        "istable": 1,
+        "autoname": "TE-.YYYY.-#####",
         "states": [],
         "custom_attributes": {
-            "label": "Employee Checkin",
+            "label": "Traning Event",
             "layout": {
                 "sessions": [
                     {
-                        "uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                        "uid": "fa7b17ac-951f-467c-9dab-5fcc426c32a2",
                         "title": "Primary",
                         "description": "Main fields",
                         "column_count": 1
@@ -22,14 +22,14 @@
         }
     },
     "fields": {
-        "employee": {
-            "id": 106,
-            "parent": "employee_checkin",
-            "fieldname": "employee",
-            "label": "Nhân Viên",
-            "fieldtype": "Link",
+        "title": {
+            "id": 128,
+            "parent": "traning_event",
+            "fieldname": "title",
+            "label": "Title",
+            "fieldtype": "Data",
             "length": 255,
-            "options": "employee",
+            "options": "",
             "reqd": 0,
             "read_only": 0,
             "hidden": 0,
@@ -38,15 +38,15 @@
             "storage_mode": "embedded_jsonb",
             "column": 1,
             "placeholder": "",
-            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
-            "in_list_view": true,
+            "session_uid": "fa7b17ac-951f-467c-9dab-5fcc426c32a2",
+            "in_list_view": false,
             "default_value": ""
         },
-        "employee_name": {
-            "id": 119,
-            "parent": "employee_checkin",
-            "fieldname": "employee_name",
-            "label": "Tên Nhân Viên",
+        "content": {
+            "id": 129,
+            "parent": "traning_event",
+            "fieldname": "content",
+            "label": "Content",
             "fieldtype": "Data",
             "length": 255,
             "options": "",
@@ -57,58 +57,57 @@
             "is_child_table": false,
             "storage_mode": "embedded_jsonb",
             "column": 1,
-            "fetch_from": "employee.employee_name",
             "placeholder": "",
-            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+            "session_uid": "fa7b17ac-951f-467c-9dab-5fcc426c32a2",
             "in_list_view": false,
             "default_value": ""
         }
     },
     "field_order": [
-        "employee",
-        "employee_name"
+        "title",
+        "content"
     ],
     "main_fields": [
-        "employee",
-        "employee_name"
+        "title",
+        "content"
     ],
     "child_fields": [],
     "child_tables": [],
     "cache": {
-        "key": "volt_metadata_entity_v1_employee_checkin_global",
+        "key": "volt_metadata_entity_v1_traning_event_global",
         "ttl": 86400,
         "compiledAt": "2026-07-14T14:31:51+00:00",
         "role": null
     },
     "source": {
         "entity": {
-            "name": "employee_checkin",
+            "name": "traning_event",
             "module": "hrms",
             "issingle": "0",
-            "istable": "0",
-            "autoname": "EC-.YYYY.-#####",
+            "istable": "1",
+            "autoname": "TE-.YYYY.-#####",
             "states": "[]",
-            "custom_attributes": "{\"label\": \"Employee Checkin\", \"layout\": {\"sessions\": [{\"uid\": \"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 1}]}, \"is_submittable\": false}"
+            "custom_attributes": "{\"label\": \"Traning Event\", \"layout\": {\"sessions\": [{\"uid\": \"fa7b17ac-951f-467c-9dab-5fcc426c32a2\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 1}]}, \"is_submittable\": false}"
         },
         "fields": [
             {
-                "id": "106",
-                "parent": "employee_checkin",
-                "fieldname": "employee",
-                "label": "Nhân Viên",
-                "fieldtype": "Link",
+                "id": "128",
+                "parent": "traning_event",
+                "fieldname": "title",
+                "label": "Title",
+                "fieldtype": "Data",
                 "length": "255",
-                "options": "employee",
+                "options": "",
                 "reqd": "0",
                 "read_only": "0",
                 "hidden": "0",
                 "idx": "1"
             },
             {
-                "id": "119",
-                "parent": "employee_checkin",
-                "fieldname": "employee_name",
-                "label": "Tên Nhân Viên",
+                "id": "129",
+                "parent": "traning_event",
+                "fieldname": "content",
+                "label": "Content",
                 "fieldtype": "Data",
                 "length": "255",
                 "options": "",
@@ -123,18 +122,17 @@
                 "apply_to_role": null,
                 "custom_meta": {
                     "fields": {
-                        "employee": {
+                        "title": {
                             "column": 1,
                             "placeholder": "",
-                            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
-                            "in_list_view": true,
+                            "session_uid": "fa7b17ac-951f-467c-9dab-5fcc426c32a2",
+                            "in_list_view": false,
                             "default_value": ""
                         },
-                        "employee_name": {
+                        "content": {
                             "column": 1,
-                            "fetch_from": "employee.employee_name",
                             "placeholder": "",
-                            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                            "session_uid": "fa7b17ac-951f-467c-9dab-5fcc426c32a2",
                             "in_list_view": false,
                             "default_value": ""
                         }
@@ -147,8 +145,8 @@
         "main_field_count": 2,
         "child_field_count": 0,
         "field_names": [
-            "employee",
-            "employee_name"
+            "title",
+            "content"
         ],
         "required_fields": [],
         "hidden_fields": [],

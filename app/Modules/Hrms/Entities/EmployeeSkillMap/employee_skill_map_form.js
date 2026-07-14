@@ -1,4 +1,4 @@
-function employeeFormApp(boot) {
+function employee_skill_mapFormApp(boot) {
     return {
         title: boot.title || '',
         listUrl: boot.listUrl || '',

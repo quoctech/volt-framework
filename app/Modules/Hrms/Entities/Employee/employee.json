@@ -1,17 +1,12 @@
 {
-    "entity_name": "employee",
-    "module": "hrms",
-    "table_name": "tab_employee",
     "entity": {
         "name": "employee",
         "module": "hrms",
-        "label": "Employee",
-        "is_submittable": false,
-        "issingle": false,
-        "istable": false,
-        "autoname": "Eoo-.YYYY.-.#####",
+        "issingle": 0,
+        "istable": 0,
+        "autoname": "EOO-.YYYY.-.#####",
         "states": [],
-        "s_custom_jsonb": {
+        "custom_attributes": {
             "label": "Employee",
             "layout": {
                 "sessions": [
@@ -26,184 +21,219 @@
             "is_submittable": false
         }
     },
-    "fields": [
-        {
-            "id": 51,
-            "fieldname": "employee_name",
-            "label": "Tên Nhân Viên",
-            "fieldtype": "Data",
-            "length": 255,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 1,
-            "f_custom_jsonb": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
-        },
-        {
-            "id": 52,
-            "fieldname": "employee_age",
-            "label": "Tuổi Nhân Viên",
-            "fieldtype": "Int",
-            "length": null,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 2,
-            "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true
-            }
-        },
-        {
-            "id": 77,
-            "fieldname": "input_3",
-            "label": "Input 3",
-            "fieldtype": "Input",
-            "length": 255,
-            "options": "",
-            "is_required": false,
-            "read_only": true,
-            "hidden": false,
-            "idx": 3,
-            "f_custom_jsonb": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
-        },
-        {
-            "id": 84,
-            "fieldname": "check_4",
-            "label": "Check 4",
-            "fieldtype": "Check",
-            "length": null,
-            "options": "",
-            "is_required": true,
-            "read_only": false,
-            "hidden": false,
-            "idx": 4,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
-        }
-    ],
-    "field_map": {
+    "fields": {
         "employee_name": {
             "id": 51,
+            "parent": "employee",
             "fieldname": "employee_name",
             "label": "Tên Nhân Viên",
             "fieldtype": "Data",
             "length": 255,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 1,
-            "f_custom_jsonb": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "placeholder": "",
+            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+            "in_list_view": true,
+            "default_value": ""
         },
         "employee_age": {
             "id": 52,
+            "parent": "employee",
             "fieldname": "employee_age",
             "label": "Tuổi Nhân Viên",
             "fieldtype": "Int",
             "length": null,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 2,
-            "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 2,
+            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+            "in_list_view": true
         },
         "input_3": {
             "id": 77,
+            "parent": "employee",
             "fieldname": "input_3",
             "label": "Input 3",
             "fieldtype": "Input",
             "length": 255,
             "options": "",
-            "is_required": false,
-            "read_only": true,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 1,
+            "hidden": 0,
             "idx": 3,
-            "f_custom_jsonb": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "placeholder": "",
+            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+            "in_list_view": true,
+            "default_value": ""
         },
         "check_4": {
             "id": 84,
+            "parent": "employee",
             "fieldname": "check_4",
             "label": "Check 4",
             "fieldtype": "Check",
             "length": null,
             "options": "",
-            "is_required": true,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 1,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 4,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+            "in_list_view": true,
+            "default_value": ""
         }
     },
-    "custom_patch": {
-        "fields": {
-            "employee_name": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            },
-            "employee_age": {
-                "column": 2,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true
-            },
-            "input_3": {
-                "column": 1,
-                "placeholder": "",
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            },
-            "check_4": {
-                "column": 1,
-                "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                "in_list_view": true,
-                "default_value": ""
-            }
-        }
+    "field_order": [
+        "employee_name",
+        "employee_age",
+        "input_3",
+        "check_4"
+    ],
+    "main_fields": [
+        "employee_name",
+        "employee_age",
+        "input_3",
+        "check_4"
+    ],
+    "child_fields": [],
+    "child_tables": [],
+    "cache": {
+        "key": "volt_metadata_entity_v1_employee_global",
+        "ttl": 86400,
+        "compiledAt": "2026-07-14T14:31:51+00:00",
+        "role": null
     },
-    "compiled_at": "2026-07-12T04:18:11+00:00"
+    "source": {
+        "entity": {
+            "name": "employee",
+            "module": "hrms",
+            "issingle": "0",
+            "istable": "0",
+            "autoname": "Eoo-.YYYY.-.#####",
+            "states": "[]",
+            "custom_attributes": "{\"label\": \"Employee\", \"layout\": {\"sessions\": [{\"uid\": \"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 2}]}, \"is_submittable\": false}"
+        },
+        "fields": [
+            {
+                "id": "51",
+                "parent": "employee",
+                "fieldname": "employee_name",
+                "label": "Tên Nhân Viên",
+                "fieldtype": "Data",
+                "length": "255",
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "1"
+            },
+            {
+                "id": "52",
+                "parent": "employee",
+                "fieldname": "employee_age",
+                "label": "Tuổi Nhân Viên",
+                "fieldtype": "Int",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "2"
+            },
+            {
+                "id": "77",
+                "parent": "employee",
+                "fieldname": "input_3",
+                "label": "Input 3",
+                "fieldtype": "Input",
+                "length": "255",
+                "options": "",
+                "reqd": "0",
+                "read_only": "1",
+                "hidden": "0",
+                "idx": "3"
+            },
+            {
+                "id": "84",
+                "parent": "employee",
+                "fieldname": "check_4",
+                "label": "Check 4",
+                "fieldtype": "Check",
+                "length": null,
+                "options": "",
+                "reqd": "1",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "4"
+            }
+        ],
+        "customRows": [
+            {
+                "apply_to_role": null,
+                "custom_meta": {
+                    "fields": {
+                        "check_4": {
+                            "column": 1,
+                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                            "in_list_view": true,
+                            "default_value": ""
+                        },
+                        "input_3": {
+                            "column": 1,
+                            "placeholder": "",
+                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                            "in_list_view": true,
+                            "default_value": ""
+                        },
+                        "employee_age": {
+                            "column": 2,
+                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                            "in_list_view": true
+                        },
+                        "employee_name": {
+                            "column": 1,
+                            "placeholder": "",
+                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
+                            "in_list_view": true,
+                            "default_value": ""
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "derived": {
+        "main_field_count": 4,
+        "child_field_count": 0,
+        "field_names": [
+            "employee_name",
+            "employee_age",
+            "input_3",
+            "check_4"
+        ],
+        "required_fields": [
+            "check_4"
+        ],
+        "hidden_fields": [],
+        "read_only_fields": [
+            "input_3"
+        ]
+    }
 }

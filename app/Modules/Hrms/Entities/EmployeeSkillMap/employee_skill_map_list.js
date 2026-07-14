@@ -1,4 +1,4 @@
-function employeeListApp(boot) {
+function employee_skill_mapListApp(boot) {
     return {
         title: boot.title || '',
         dataUrl: boot.dataUrl || '',

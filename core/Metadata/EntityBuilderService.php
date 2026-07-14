@@ -52,7 +52,7 @@ final class EntityBuilderService
     public function listEntities(?string $module = null): array
     {
         $builder = $this->db->table('sys_entity')
-            ->select('name, module, autoname')
+            ->select('name, module, autoname, istable')
             ->select(new RawSql("COALESCE(custom_attributes, '{}'::jsonb) AS custom_attributes"))
             ->orderBy('module', 'ASC')
             ->orderBy('name', 'ASC');
@@ -71,6 +71,7 @@ final class EntityBuilderService
                 'module' => (string) ($row['module'] ?? ''),
                 'label' => (string) ($custom['label'] ?? $this->titleize((string) ($row['name'] ?? ''))),
                 'autoname' => (string) ($row['autoname'] ?? 'HASH'),
+                'istable' => (bool) ($row['istable'] ?? false),
                 'is_submittable' => (bool) ($custom['is_submittable'] ?? false),
             ];
         }, $rows);
@@ -86,6 +87,7 @@ final class EntityBuilderService
                 'name' => (string) ($entity['name'] ?? ''),
                 'label' => (string) ($entity['label'] ?? ''),
                 'module' => (string) ($entity['module'] ?? ''),
+                'istable' => (bool) ($entity['istable'] ?? false),
             ],
             $this->listEntities($module)
         );
@@ -309,6 +311,7 @@ final class EntityBuilderService
             $this->db->transComplete();
 
             $this->metadataCache->put($entity['name'], $compiled);
+            service('voltMetadataCompiler')->invalidateEntity($entity['name']);
 
             return [
                 'entity'   => $entity,

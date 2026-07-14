@@ -209,10 +209,14 @@
                                 </select>
                             </label>
 
-                            <div class="flex items-end">
+                            <div class="flex items-end gap-4">
                                 <label class="flex items-center gap-2 text-base">
                                     <input x-model="entity.is_submittable" type="checkbox" class="h-4 w-4 border-zinc-400">
                                     <span>Submittable</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-base">
+                                    <input x-model="entity.istable" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                    <span>Child Table (istable)</span>
                                 </label>
                             </div>
                         </div>
@@ -253,16 +257,16 @@
 
                                 <div x-show="requiresOptions(selectedField.fieldtype)" x-cloak>
                                     <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Options</label>
-                                    <template x-if="selectedField.fieldtype === 'Link'">
+                                    <template x-if="selectedField.fieldtype === 'Link' || selectedField.fieldtype === 'Table'">
                                         <div class="relative" @click.outside="closeLinkEntityPicker()">
                                             <input
-                                                x-model="selectedField.options"
+                                                :value="selectedField.fieldtype === 'Table' ? stripSeparateSuffix(selectedField.options) : selectedField.options"
                                                 @focus="openLinkEntityPicker()"
                                                 @click="openLinkEntityPicker()"
-                                                @input="syncLinkEntityFilter()"
+                                                @input="syncLinkEntityFilter(); handleEntityInput($event)"
                                                 type="text"
                                                 class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500"
-                                                placeholder="Select linked entity"
+                                                :placeholder="selectedField.fieldtype === 'Table' ? 'Select child entity' : 'Select linked entity'"
                                             >
                                             <div x-show="linkEntityDropdownOpen" x-cloak class="absolute left-0 right-0 top-12 z-20 border border-zinc-300 bg-white shadow-sm">
                                                 <div class="max-h-64 overflow-auto p-1">
@@ -277,7 +281,7 @@
                                             </div>
                                         </div>
                                     </template>
-                                    <template x-if="selectedField.fieldtype !== 'Link'">
+                                    <template x-if="selectedField.fieldtype !== 'Link' && selectedField.fieldtype !== 'Table'">
                                         <textarea x-model="selectedField.options" rows="5" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
                                     </template>
                                 </div>
@@ -399,6 +403,7 @@
                     module: '',
                     label: '',
                     is_submittable: false,
+                    istable: false,
                     autoname: 'HASH',
                 },
                 namingPreset: 'HASH',
@@ -721,21 +726,41 @@
                 requiresOptions(fieldType) {
                     return ['Select', 'Table', 'Link'].includes(fieldType);
                 },
+                stripSeparateSuffix(options) {
+                    if (!options) return '';
+                    return options.replace(/:separate$/, '');
+                },
+                handleEntityInput(event) {
+                    const value = event.target.value;
+                    if (this.selectedField?.fieldtype === 'Table') {
+                        this.selectedField.options = value + ':separate';
+                    } else {
+                        this.selectedField.options = value;
+                    }
+                },
                 openLinkEntityPicker() {
-                    this.linkEntityFilter = this.selectedField?.options || '';
+                    const raw = this.selectedField?.options || '';
+                    this.linkEntityFilter = this.selectedField?.fieldtype === 'Table' ? this.stripSeparateSuffix(raw) : raw;
                     this.linkEntityDropdownOpen = true;
                 },
                 closeLinkEntityPicker() {
                     this.linkEntityDropdownOpen = false;
                 },
                 syncLinkEntityFilter() {
-                    this.linkEntityFilter = this.selectedField?.options || '';
+                    const raw = this.selectedField?.options || '';
+                    this.linkEntityFilter = this.selectedField?.fieldtype === 'Table' ? this.stripSeparateSuffix(raw) : raw;
                     this.linkEntityDropdownOpen = true;
                 },
                 filteredLinkEntityOptions() {
-                    const keyword = String(this.linkEntityFilter || this.selectedField?.options || '').trim().toLowerCase();
+                    const raw = String(this.linkEntityFilter || this.selectedField?.options || '').trim();
+                    const keyword = raw.replace(/:separate$/, '').toLowerCase();
+                    const isTable = this.selectedField?.fieldtype === 'Table';
                     return this.entityOptions
                         .filter((entityOption) => entityOption.name !== this.entity.name)
+                        .filter((entityOption) => {
+                            if (isTable) return !!entityOption.istable;
+                            return true;
+                        })
                         .filter((entityOption) => {
                             if (!keyword) {
                                 return true;
@@ -750,7 +775,11 @@
                         return;
                     }
 
-                    this.selectedField.options = entityName;
+                    if (this.selectedField.fieldtype === 'Table') {
+                        this.selectedField.options = entityName + ':separate';
+                    } else {
+                        this.selectedField.options = entityName;
+                    }
                     this.linkEntityFilter = entityName;
                     this.linkEntityDropdownOpen = false;
                 },
@@ -791,11 +820,7 @@
                         return 'draft\nsubmitted\ncancelled';
                     }
 
-                    if (fieldType === 'Table') {
-                        return 'child_entity or child_entity:separate';
-                    }
-
-                    if (fieldType === 'Link') {
+                    if (fieldType === 'Table' || fieldType === 'Link') {
                         return 'target_entity_name';
                     }
 
@@ -981,6 +1006,7 @@
                             module: payload.entity.module || '',
                             label: payload.entity.label || this.titleize(payload.entity.name || ''),
                             is_submittable: !!payload.entity.is_submittable,
+                            istable: !!payload.entity.istable,
                             autoname: payload.entity.autoname || 'HASH',
                         };
                         this.namingPreset = this.entity.autoname === 'HASH' ? 'HASH' : 'CUSTOM';
@@ -1172,6 +1198,7 @@
                             module: moduleName,
                             label: this.entity.label,
                             is_submittable: !!this.entity.is_submittable,
+                            istable: !!this.entity.istable,
                             autoname: this.entity.autoname || 'HASH',
                             s_custom_jsonb: entityCustom,
                         },

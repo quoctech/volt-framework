@@ -1,17 +1,17 @@
 {
     "entity": {
-        "name": "employee_checkin",
+        "name": "employee_skill_map",
         "module": "hrms",
         "issingle": 0,
         "istable": 0,
-        "autoname": "EC-.YYYY.-#####",
+        "autoname": "ESM-.YYYY.-#####",
         "states": [],
         "custom_attributes": {
-            "label": "Employee Checkin",
+            "label": "Employee Skill Map",
             "layout": {
                 "sessions": [
                     {
-                        "uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                        "uid": "d0ccbda1-bc77-4b14-a13d-37e043302c61",
                         "title": "Primary",
                         "description": "Main fields",
                         "column_count": 1
@@ -23,8 +23,8 @@
     },
     "fields": {
         "employee": {
-            "id": 106,
-            "parent": "employee_checkin",
+            "id": 127,
+            "parent": "employee_skill_map",
             "fieldname": "employee",
             "label": "Nhân Viên",
             "fieldtype": "Link",
@@ -38,62 +38,65 @@
             "storage_mode": "embedded_jsonb",
             "column": 1,
             "placeholder": "",
-            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
-            "in_list_view": true,
+            "session_uid": "d0ccbda1-bc77-4b14-a13d-37e043302c61",
+            "in_list_view": false,
             "default_value": ""
         },
-        "employee_name": {
-            "id": 119,
-            "parent": "employee_checkin",
-            "fieldname": "employee_name",
-            "label": "Tên Nhân Viên",
-            "fieldtype": "Data",
-            "length": 255,
-            "options": "",
+        "traning_events": {
+            "id": 133,
+            "parent": "employee_skill_map",
+            "fieldname": "traning_events",
+            "label": "Traning Events",
+            "fieldtype": "Table",
+            "length": null,
+            "options": "traning_event:separate",
             "reqd": 0,
             "read_only": 0,
             "hidden": 0,
             "idx": 2,
-            "is_child_table": false,
-            "storage_mode": "embedded_jsonb",
+            "is_child_table": true,
+            "storage_mode": "separate_table",
             "column": 1,
-            "fetch_from": "employee.employee_name",
-            "placeholder": "",
-            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
-            "in_list_view": false,
-            "default_value": ""
+            "session_uid": "d0ccbda1-bc77-4b14-a13d-37e043302c61",
+            "in_list_view": true
         }
     },
     "field_order": [
         "employee",
-        "employee_name"
+        "traning_events"
     ],
     "main_fields": [
-        "employee",
-        "employee_name"
+        "employee"
     ],
-    "child_fields": [],
-    "child_tables": [],
+    "child_fields": [
+        "traning_events"
+    ],
+    "child_tables": {
+        "traning_events": {
+            "child_entity": "traning_event",
+            "storage": "separate_table"
+        }
+    },
     "cache": {
-        "key": "volt_metadata_entity_v1_employee_checkin_global",
+        "key": "volt_metadata_entity_v1_employee_skill_map_global",
         "ttl": 86400,
         "compiledAt": "2026-07-14T14:31:51+00:00",
         "role": null
     },
     "source": {
         "entity": {
-            "name": "employee_checkin",
+            "name": "employee_skill_map",
             "module": "hrms",
             "issingle": "0",
             "istable": "0",
-            "autoname": "EC-.YYYY.-#####",
+            "autoname": "ESM-.YYYY.-#####",
             "states": "[]",
-            "custom_attributes": "{\"label\": \"Employee Checkin\", \"layout\": {\"sessions\": [{\"uid\": \"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 1}]}, \"is_submittable\": false}"
+            "custom_attributes": "{\"label\": \"Employee Skill Map\", \"layout\": {\"sessions\": [{\"uid\": \"d0ccbda1-bc77-4b14-a13d-37e043302c61\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 1}]}, \"is_submittable\": false}"
         },
         "fields": [
             {
-                "id": "106",
-                "parent": "employee_checkin",
+                "id": "127",
+                "parent": "employee_skill_map",
                 "fieldname": "employee",
                 "label": "Nhân Viên",
                 "fieldtype": "Link",
@@ -105,13 +108,13 @@
                 "idx": "1"
             },
             {
-                "id": "119",
-                "parent": "employee_checkin",
-                "fieldname": "employee_name",
-                "label": "Tên Nhân Viên",
-                "fieldtype": "Data",
-                "length": "255",
-                "options": "",
+                "id": "133",
+                "parent": "employee_skill_map",
+                "fieldname": "traning_events",
+                "label": "Traning Events",
+                "fieldtype": "Table",
+                "length": null,
+                "options": "traning_event:separate",
                 "reqd": "0",
                 "read_only": "0",
                 "hidden": "0",
@@ -126,17 +129,14 @@
                         "employee": {
                             "column": 1,
                             "placeholder": "",
-                            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
-                            "in_list_view": true,
-                            "default_value": ""
-                        },
-                        "employee_name": {
-                            "column": 1,
-                            "fetch_from": "employee.employee_name",
-                            "placeholder": "",
-                            "session_uid": "e6f380a8-28e6-4684-8b07-0aa7ea9fefb0",
+                            "session_uid": "d0ccbda1-bc77-4b14-a13d-37e043302c61",
                             "in_list_view": false,
                             "default_value": ""
+                        },
+                        "traning_events": {
+                            "column": 1,
+                            "session_uid": "d0ccbda1-bc77-4b14-a13d-37e043302c61",
+                            "in_list_view": true
                         }
                     }
                 }
@@ -144,11 +144,11 @@
         ]
     },
     "derived": {
-        "main_field_count": 2,
-        "child_field_count": 0,
+        "main_field_count": 1,
+        "child_field_count": 1,
         "field_names": [
             "employee",
-            "employee_name"
+            "traning_events"
         ],
         "required_fields": [],
         "hidden_fields": [],

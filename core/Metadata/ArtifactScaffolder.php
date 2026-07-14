@@ -6,6 +6,7 @@ namespace Volt\Core\Metadata;
 
 use RuntimeException;
 use Volt\Core\Database\TableNameResolver;
+use Volt\Core\Database\VoltDatabase;
 
 final class ArtifactScaffolder
 {
@@ -574,6 +575,10 @@ final class {$entityStudly}Controller extends Controller
     private function normalizePayload(array \$payload): array
     {
         \$row = [];
+        if (isset(\$payload['name'])) {
+            \$row['name'] = \$payload['name'];
+        }
+
         foreach (\$this->fields as \$field) {
             \$fieldname = (string) (\$field['fieldname'] ?? '');
             if (\$fieldname === '') {
@@ -590,6 +595,11 @@ final class {$entityStudly}Controller extends Controller
 
             if (in_array(\$fieldtype, ['Int', 'Float'], true)) {
                 \$row[\$fieldname] = \$value === '' || \$value === null ? null : \$value;
+                continue;
+            }
+
+            if (\$fieldtype === 'Table') {
+                \$row[\$fieldname] = is_array(\$value) ? \$value : [];
                 continue;
             }
 
@@ -682,12 +692,20 @@ final class {$entityStudly}Controller extends Controller
             return \$rows;
         }
 
+        // Group Link fields by target entity to batch queries
+        \$groups = [];
+        \$fieldValues = [];
+
         foreach (\$this->linkTargets as \$fieldname => \$target) {
             \$displayField = trim((string) (\$target['display_field'] ?? 'name'));
             \$targetEntity = trim((string) (\$target['entity'] ?? ''));
             if (\$fieldname === '' || \$displayField === '' || \$targetEntity === '') {
                 continue;
             }
+
+            \$groupKey = \$targetEntity;
+            \$groups[\$groupKey]['display_fields'][\$displayField] = true;
+            \$groups[\$groupKey]['fields'][\$fieldname] = \$displayField;
 
             \$names = [];
             foreach (\$rows as \$row) {
@@ -696,29 +714,49 @@ final class {$entityStudly}Controller extends Controller
                     \$names[] = \$value;
                 }
             }
+            \$fieldValues[\$fieldname] = array_values(array_unique(\$names));
+        }
 
-            \$names = array_values(array_unique(\$names));
-            if (\$names === []) {
+        \$displayByName = [];
+
+        foreach (\$groups as \$targetEntity => \$group) {
+            \$allNames = [];
+            foreach (\$group['fields'] as \$fieldname => \$displayField) {
+                foreach (\$fieldValues[\$fieldname] as \$name) {
+                    \$allNames[] = \$name;
+                }
+            }
+            \$allNames = array_values(array_unique(\$allNames));
+            if (\$allNames === []) {
                 continue;
             }
 
+            \$select = 'name';
+            foreach (array_keys(\$group['display_fields']) as \$df) {
+                \$select .= ', ' . \$df;
+            }
+
             \$linkedRows = \$this->db->table(TableNameResolver::entity(\$targetEntity))
-                ->select('name, ' . \$displayField)
-                ->whereIn('name', \$names)
+                ->select(\$select)
+                ->whereIn('name', \$allNames)
                 ->get()
                 ->getResultArray();
 
-            \$displayByName = [];
-            foreach (\$linkedRows as \$linkedRow) {
-                \$displayByName[(string) (\$linkedRow['name'] ?? '')] = (string) (\$linkedRow[\$displayField] ?? '');
+            foreach (\$group['fields'] as \$fieldname => \$displayField) {
+                \$displayByName[\$fieldname] ??= [];
+                foreach (\$linkedRows as \$linkedRow) {
+                    \$displayByName[\$fieldname][(string) (\$linkedRow['name'] ?? '')] = (string) (\$linkedRow[\$displayField] ?? '');
+                }
             }
-
-            foreach (\$rows as &\$row) {
-                \$value = trim((string) (\$row[\$fieldname] ?? ''));
-                \$row[\$fieldname . '__display'] = \$displayByName[\$value] ?? '';
-            }
-            unset(\$row);
         }
+
+        foreach (\$rows as &\$row) {
+            foreach (\$this->linkTargets as \$fieldname => \$target) {
+                \$value = trim((string) (\$row[\$fieldname] ?? ''));
+                \$row[\$fieldname . '__display'] = \$displayByName[\$fieldname][\$value] ?? '';
+            }
+        }
+        unset(\$row);
 
         return \$rows;
     }
@@ -1101,10 +1139,58 @@ PHP;
                                                         </div>
                                                     </div>
                                                 </template>
+                                                <template x-if="field.fieldtype === 'Table'">
+                                                    <div class="w-full" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
+                                                        <table class="w-full border-collapse border border-zinc-300 text-sm">
+                                                            <thead>
+                                                                <tr class="bg-zinc-100">
+                                                                    <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                        <th class="border border-zinc-300 px-2 py-1.5 text-left font-medium" x-text="col.label || col.fieldname"></th>
+                                                                    </template>
+                                                                    <th x-show="!field.read_only" class="border border-zinc-300 px-2 py-1.5 w-10"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <template x-for="(row, rowIdx) in (form[field.fieldname] || [])" :key="rowIdx">
+                                                                    <tr>
+                                                                        <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                            <td class="border border-zinc-300 px-2 py-1">
+                                                                                <template x-if="col.fieldtype === 'Check'">
+                                                                                    <input type="checkbox" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="h-4 w-4 border-zinc-400">
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Select'">
+                                                                                    <select x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                        <option value="">Select</option>
+                                                                                        <template x-for="opt in parseOptions(col.options || '')" :key="opt">
+                                                                                            <option :value="opt" x-text="opt"></option>
+                                                                                        </template>
+                                                                                    </select>
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Int'">
+                                                                                    <input type="number" step="1" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Float'">
+                                                                                    <input type="number" step="any" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                                <template x-if="!['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
+                                                                                    <input type="text" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                            </td>
+                                                                        </template>
+                                                                        <td x-show="!field.read_only" class="border border-zinc-300 px-2 py-1 text-center">
+                                                                            <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" class="text-red-600 hover:text-red-800 text-xs font-bold" title="Remove row">&times;</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                </template>
+                                                            </tbody>
+                                                        </table>
+                                                        <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="mt-1 border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">+ Add Row</button>
+                                                    </div>
+                                                </template>
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code'].includes(field.fieldtype)">
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>
@@ -1318,12 +1404,31 @@ function {$entitySnake}FormApp(boot) {
                     return;
                 }
 
+                if (field.fieldtype === 'Table') {
+                    this.form[field.fieldname] = [];
+                    return;
+                }
+
                 this.form[field.fieldname] = field.default_value ?? '';
             });
 
             if (this.recordName) {
                 this.load();
             }
+        },
+        addChildRow(fieldname) {
+            if (!Array.isArray(this.form[fieldname])) {
+                this.form[fieldname] = [];
+            }
+
+            this.form[fieldname].push({});
+        },
+        removeChildRow(fieldname, index) {
+            if (!Array.isArray(this.form[fieldname])) {
+                return;
+            }
+
+            this.form[fieldname].splice(index, 1);
         },
         parseOptions(options) {
             return String(options || '')
@@ -1524,19 +1629,25 @@ function {$entitySnake}FormApp(boot) {
             }
 
             this.fields.forEach((field) => {
-                const value = result.data && Object.prototype.hasOwnProperty.call(result.data, field.fieldname)
-                    ? result.data[field.fieldname]
-                    : (field.default_value ?? '');
-                this.form[field.fieldname] = field.fieldtype === 'Check'
-                    ? String(value) === '1' || value === 1 || value === true
-                    : value;
+                const hasData = result.data && Object.prototype.hasOwnProperty.call(result.data, field.fieldname);
+                const value = hasData ? result.data[field.fieldname] : null;
+
+                if (field.fieldtype === 'Check') {
+                    this.form[field.fieldname] = hasData
+                        ? String(value) === '1' || value === 1 || value === true
+                        : false;
+                } else if (field.fieldtype === 'Table') {
+                    this.form[field.fieldname] = hasData && Array.isArray(value) ? value : [];
+                } else {
+                    this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');
+                }
             });
         },
         async save() {
             const payload = {};
             this.fields.forEach((field) => {
                 const value = this.form[field.fieldname];
-                payload[field.fieldname] = field.fieldtype === 'Check' ? (value ? '1' : '0') : value;
+                payload[field.fieldname] = value;
             });
             if (this.recordName) {
                 payload.name = this.recordName;
@@ -1546,11 +1657,11 @@ function {$entitySnake}FormApp(boot) {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Content-Type': 'application/json; charset=UTF-8',
                     Accept: 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams(payload).toString(),
+                body: JSON.stringify(payload),
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
@@ -1683,18 +1794,22 @@ PHP;
         $fields = [];
 
         $source = is_array($compiled['fields'] ?? null) ? $compiled['fields'] : [];
+
+        // Batch-fetch child columns for all Table fields (avoids N+1)
+        $childColumnsByEntity = $this->batchResolveChildColumns($source);
+
         foreach ($source as $field) {
             if (! is_array($field)) {
                 continue;
             }
 
             $fieldname = (string) ($field['fieldname'] ?? '');
-            if ($fieldname === 'name' || ($field['hidden'] ?? false) || ($field['fieldtype'] ?? '') === 'Table') {
+            if ($fieldname === 'name' || ($field['hidden'] ?? false)) {
                 continue;
             }
 
             $custom = is_array($field['f_custom_jsonb'] ?? null) ? $field['f_custom_jsonb'] : [];
-            $fields[] = [
+            $row = [
                 'fieldname' => $fieldname,
                 'label' => (string) ($field['label'] ?? ''),
                 'fieldtype' => (string) ($field['fieldtype'] ?? 'Input'),
@@ -1708,9 +1823,133 @@ PHP;
                 'column' => min(4, max(1, (int) ($custom['column'] ?? 1))),
                 'custom_meta' => $custom,
             ];
+
+            // Với Table field, nhúng child_columns để UI render grid
+            if ($row['fieldtype'] === 'Table') {
+                $childName = $this->parseChildEntityName($row['options']);
+                $row['child_columns'] = $childColumnsByEntity[$childName] ?? [];
+                $row['column'] = 1;
+            }
+
+            $fields[] = $row;
         }
 
         return array_values(array_filter($fields, static fn (array $field): bool => (string) ($field['fieldname'] ?? '') !== ''));
+    }
+
+    /**
+     * Batch-fetch child columns for all Table fields in a single query.
+     *
+     * @param array<int, array<string, mixed>> $source
+     * @return array<string, array<int, array{fieldname:string,label:string,fieldtype:string}>>
+     */
+    private function batchResolveChildColumns(array $source): array
+    {
+        $childNames = [];
+        foreach ($source as $field) {
+            if (($field['fieldtype'] ?? '') !== 'Table') {
+                continue;
+            }
+            $childName = $this->parseChildEntityName((string) ($field['options'] ?? ''));
+            if ($childName !== '') {
+                $childNames[$childName] = true;
+            }
+        }
+
+        if ($childNames === []) {
+            return [];
+        }
+
+        $db = VoltDatabase::connection();
+        $allRows = $db->table('sys_entity_field')
+            ->select('parent, fieldname, label, fieldtype, hidden')
+            ->whereIn('parent', array_keys($childNames))
+            ->orderBy('parent', 'ASC')
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $result = [];
+        foreach ($allRows as $row) {
+            $parent = (string) ($row['parent'] ?? '');
+            if ($parent === '') {
+                continue;
+            }
+            $result[$parent] ??= [];
+
+            if ((int) ($row['hidden'] ?? 0) === 1) {
+                continue;
+            }
+            $fn = (string) ($row['fieldname'] ?? '');
+            if ($fn === '' || $fn === 'name') {
+                continue;
+            }
+
+            $result[$parent][] = [
+                'fieldname' => $fn,
+                'label' => (string) ($row['label'] ?? ''),
+                'fieldtype' => (string) ($row['fieldtype'] ?? 'Input'),
+            ];
+        }
+
+        foreach (array_keys($childNames) as $name) {
+            $result[$name] ??= [];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, array{fieldname:string,label:string,fieldtype:string}>
+     */
+    private function resolveChildColumns(string $options): array
+    {
+        $childName = $this->parseChildEntityName($options);
+        if ($childName === '') {
+            return [];
+        }
+
+        try {
+            $rows = VoltDatabase::connection()
+                ->table('sys_entity_field')
+                ->select('fieldname, label, fieldtype, hidden')
+                ->where('parent', $childName)
+                ->orderBy('idx', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            return array_values(array_filter(
+                array_map(function (array $row): ?array {
+                    if ((int) ($row['hidden'] ?? 0) === 1) {
+                        return null;
+                    }
+
+                    $fn = (string) ($row['fieldname'] ?? '');
+                    if ($fn === '' || $fn === 'name') {
+                        return null;
+                    }
+
+                    return [
+                        'fieldname' => $fn,
+                        'label' => (string) ($row['label'] ?? ''),
+                        'fieldtype' => (string) ($row['fieldtype'] ?? 'Input'),
+                    ];
+                }, $rows),
+                static fn (?array $col): bool => $col !== null
+            ));
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function parseChildEntityName(string $options): string
+    {
+        $parts = explode(':', $options);
+        $name = trim($parts[0]);
+
+        $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
+
+        return $name !== '' ? $name : '';
     }
 
     /**

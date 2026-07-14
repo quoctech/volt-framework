@@ -6,7 +6,7 @@
 /** @var string $editUrlBase */
 /** @var string $builderUrl */
 /** @var array<string, array<string, string>> $linkTargets */
-$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data"},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int"},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input"},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check"}]', true) ?: [];
+$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]', true) ?: [];
 ?>
 <!doctype html>
 <html lang="vi">
@@ -75,10 +75,10 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},
                                 <template x-for="column in columns" :key="column.fieldname">
                                     <td class="px-4 py-3">
                                         <template x-if="isLinkColumn(column) && canOpenLinkedRecord(column, row)">
-                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="cellValue(row, column.fieldname)"></button>
+                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
                                         </template>
                                         <template x-if="!isLinkColumn(column) || !canOpenLinkedRecord(column, row)">
-                                            <span x-text="cellValue(row, column.fieldname)"></span>
+                                            <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
                                         </template>
                                     </td>
                                 </template>

@@ -15,8 +15,8 @@ use Volt\Core\Validation\MetadataValidator;
 final class VoltMetadataCompiler
 {
     private const CACHE_VERSION = 'v1';
-    private const INDEX_KEY_PREFIX = 'volt:metadata:index:';
-    private const ENTITY_KEY_PREFIX = 'volt:metadata:entity:';
+    private const INDEX_KEY_PREFIX = 'volt_metadata_index_';
+    private const ENTITY_KEY_PREFIX = 'volt_metadata_entity_';
 
     private BaseConnection $db;
     private CacheInterface $cache;
@@ -39,7 +39,8 @@ final class VoltMetadataCompiler
     public function compileEntity(string $entityName, ?string $role = null, bool $forceRefresh = false): array
     {
         $entityName = $this->validator->assertEntityName($entityName);
-        $cacheKey = $this->entityCacheKey($entityName, $role);
+        $cacheEntityName = self::normalizeEntityName($entityName);
+        $cacheKey = $this->entityCacheKey($cacheEntityName, $role);
 
         if (! $forceRefresh) {
             $cached = $this->cache->get($cacheKey);
@@ -49,7 +50,7 @@ final class VoltMetadataCompiler
         }
 
         $entity = $this->db->table('sys_entity')
-            ->where('name', $entityName)
+            ->where('LOWER(name)', self::normalizeEntityName($entityName))
             ->get()
             ->getRowArray();
 
@@ -57,8 +58,10 @@ final class VoltMetadataCompiler
             throw new InvalidArgumentException("Entity not found: {$entityName}");
         }
 
+        $entityName = (string) ($entity['name'] ?? $entityName);
+
         $fields = $this->db->table('sys_entity_field')
-            ->where('parent', $entityName)
+            ->where('LOWER(parent)', self::normalizeEntityName($entityName))
             ->orderBy('idx', 'ASC')
             ->get()
             ->getResultArray();
@@ -180,6 +183,7 @@ final class VoltMetadataCompiler
         $fieldMap = [];
         $mainFields = [];
         $childFields = [];
+        $childTables = [];
 
         foreach ($fields as $field) {
             $normalized = $this->validator->normalizeFieldRow($field);
@@ -187,6 +191,10 @@ final class VoltMetadataCompiler
 
             if ($normalized['is_child_table']) {
                 $childFields[] = $normalized['fieldname'];
+                $childTables[$normalized['fieldname']] = [
+                    'child_entity' => $this->parseChildEntityName($normalized['options'] ?? ''),
+                    'storage' => $normalized['storage_mode'] ?? 'separate_table',
+                ];
                 continue;
             }
 
@@ -199,7 +207,18 @@ final class VoltMetadataCompiler
             'field_order' => array_keys($fieldMap),
             'main_fields' => $mainFields,
             'child_fields' => $childFields,
+            'child_tables' => $childTables,
         ];
+    }
+
+    private function parseChildEntityName(string $options): string
+    {
+        $parts = explode(':', $options);
+        $name = trim($parts[0]);
+
+        $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
+
+        return $name !== '' ? $name : '';
     }
 
     /**
@@ -284,12 +303,12 @@ final class VoltMetadataCompiler
         $segment = $this->sanitizeCacheSegment($entityName);
         $roleSegment = $role === null || $role === '' ? 'global' : $this->sanitizeCacheSegment($role);
 
-        return self::ENTITY_KEY_PREFIX . self::CACHE_VERSION . ':' . $segment . ':' . $roleSegment;
+        return self::ENTITY_KEY_PREFIX . self::CACHE_VERSION . '_' . $segment . '_' . $roleSegment;
     }
 
     private function indexKey(string $entityName): string
     {
-        return self::INDEX_KEY_PREFIX . self::CACHE_VERSION . ':' . $this->sanitizeCacheSegment($entityName);
+        return self::INDEX_KEY_PREFIX . self::CACHE_VERSION . '_' . $this->sanitizeCacheSegment($entityName);
     }
 
     private function rememberIndex(string $entityName, ?string $role, string $cacheKey): void
@@ -346,10 +365,21 @@ final class VoltMetadataCompiler
         return [];
     }
 
+    private static function normalizeEntityName(string $name): string
+    {
+        $name = preg_replace('/(?<!^)[A-Z]/', '_$0', $name) ?? $name;
+        $name = strtolower(trim($name));
+        $name = preg_replace('/[^a-z0-9_]+/', '_', $name) ?? '';
+        $name = preg_replace('/_+/', '_', $name) ?? '';
+        return trim($name, '_');
+    }
+
     private function sanitizeCacheSegment(string $value): string
     {
         $clean = strtolower(trim($value));
-        $clean = preg_replace('/[^a-z0-9:_-]+/', '_', $clean);
+        $clean = preg_replace('/[^a-z0-9_-]+/', '_', $clean);
+        $clean = preg_replace('/_+/', '_', $clean);
+        $clean = trim($clean, '_');
 
         return $clean === '' ? 'default' : $clean;
     }

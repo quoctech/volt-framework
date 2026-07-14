@@ -103,10 +103,58 @@
                                                         </div>
                                                     </div>
                                                 </template>
+                                                <template x-if="field.fieldtype === 'Table'">
+                                                    <div class="w-full" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
+                                                        <table class="w-full border-collapse border border-zinc-300 text-sm">
+                                                            <thead>
+                                                                <tr class="bg-zinc-100">
+                                                                    <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                        <th class="border border-zinc-300 px-2 py-1.5 text-left font-medium" x-text="col.label || col.fieldname"></th>
+                                                                    </template>
+                                                                    <th x-show="!field.read_only" class="border border-zinc-300 px-2 py-1.5 w-10"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <template x-for="(row, rowIdx) in (form[field.fieldname] || [])" :key="rowIdx">
+                                                                    <tr>
+                                                                        <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                            <td class="border border-zinc-300 px-2 py-1">
+                                                                                <template x-if="col.fieldtype === 'Check'">
+                                                                                    <input type="checkbox" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="h-4 w-4 border-zinc-400">
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Select'">
+                                                                                    <select x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                        <option value="">Select</option>
+                                                                                        <template x-for="opt in parseOptions(col.options || '')" :key="opt">
+                                                                                            <option :value="opt" x-text="opt"></option>
+                                                                                        </template>
+                                                                                    </select>
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Int'">
+                                                                                    <input type="number" step="1" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                                <template x-if="col.fieldtype === 'Float'">
+                                                                                    <input type="number" step="any" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                                <template x-if="!['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
+                                                                                    <input type="text" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
+                                                                                </template>
+                                                                            </td>
+                                                                        </template>
+                                                                        <td x-show="!field.read_only" class="border border-zinc-300 px-2 py-1 text-center">
+                                                                            <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" class="text-red-600 hover:text-red-800 text-xs font-bold" title="Remove row">&times;</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                </template>
+                                                            </tbody>
+                                                        </table>
+                                                        <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="mt-1 border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">+ Add Row</button>
+                                                    </div>
+                                                </template>
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code'].includes(field.fieldtype)">
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hrms\Controllers;
 
-use App\Modules\Hrms\Models\EmployeeModel;
+use App\Modules\Hrms\Models\TraningEventModel;
 use CodeIgniter\Controller;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -13,10 +13,10 @@ use Throwable;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
-final class EmployeeController extends Controller
+final class TraningEventController extends Controller
 {
     private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
-    private const AUTONAME_PATTERN = 'EOO-.YYYY.-.#####';
+    private const AUTONAME_PATTERN = 'TE-.YYYY.-#####';
 
     /** @var array<int, array<string, mixed>> */
     private array $fields = [];
@@ -24,39 +24,39 @@ final class EmployeeController extends Controller
     private array $sessions = [];
     /** @var array<string, array<string, string>> */
     private array $linkTargets = [];
-    private EmployeeModel $model;
+    private TraningEventModel $model;
     private BaseConnection $db;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         helper(['url']);
-        $this->model = new EmployeeModel();
+        $this->model = new TraningEventModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":true,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"title","label":"Title","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"content","label":"Content","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
         $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 
     public function index(): string
     {
-        return view('App\Modules\Hrms\Views\employee_list', [
-            'title' => 'Employee List',
-            'dataUrl' => site_url('hrms/api/employee'),
-            'createUrl' => site_url('hrms/employee/create'),
-            'editUrlBase' => site_url('hrms/employee/edit'),
-            'builderUrl' => site_url('desk/entity-builder?entity=employee'),
+        return view('App\Modules\Hrms\Views\traning_event_list', [
+            'title' => 'TraningEvent List',
+            'dataUrl' => site_url('hrms/api/traning_event'),
+            'createUrl' => site_url('hrms/traning_event/create'),
+            'editUrlBase' => site_url('hrms/traning_event/edit'),
+            'builderUrl' => site_url('desk/entity-builder?entity=traning_event'),
             'linkTargets' => $this->linkTargets,
         ]);
     }
 
     public function create(): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'New Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\traning_event_form', [
+            'title' => 'New TraningEvent',
+            'listUrl' => site_url('hrms/traning_event'),
+            'saveUrl' => site_url('hrms/api/traning_event/save'),
+            'loadUrlBase' => site_url('hrms/api/traning_event/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -66,11 +66,11 @@ final class EmployeeController extends Controller
 
     public function edit(string $name): string
     {
-        return view('App\Modules\Hrms\Views\employee_form', [
-            'title' => 'Edit Employee',
-            'listUrl' => site_url('hrms/employee'),
-            'saveUrl' => site_url('hrms/api/employee/save'),
-            'loadUrlBase' => site_url('hrms/api/employee/load'),
+        return view('App\Modules\Hrms\Views\traning_event_form', [
+            'title' => 'Edit TraningEvent',
+            'listUrl' => site_url('hrms/traning_event'),
+            'saveUrl' => site_url('hrms/api/traning_event/save'),
+            'loadUrlBase' => site_url('hrms/api/traning_event/load'),
             'fields' => $this->fields,
             'sessions' => $this->sessions,
             'linkTargets' => $this->linkTargets,
@@ -221,7 +221,7 @@ final class EmployeeController extends Controller
         }
 
         $token = $matches[0];
-        $sequence = $this->nextSequenceValue(strtolower('employee:' . $resolved));
+        $sequence = $this->nextSequenceValue(strtolower('traning_event:' . $resolved));
         $serial = str_pad((string) $sequence, strlen($token), '0', STR_PAD_LEFT);
 
         return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;

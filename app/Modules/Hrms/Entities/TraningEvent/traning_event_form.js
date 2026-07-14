@@ -1,4 +1,4 @@
-function employeeFormApp(boot) {
+function traning_eventFormApp(boot) {
     return {
         title: boot.title || '',
         listUrl: boot.listUrl || '',

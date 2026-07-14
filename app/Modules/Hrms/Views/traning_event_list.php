@@ -18,23 +18,23 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employee_checkinListApp({
+    <div x-data="traning_eventListApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             dataUrl: <?= esc(json_encode($dataUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             createUrl: <?= esc(json_encode($createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode($editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/employee_checkin/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/traning_event/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             columns: <?= esc(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/employee_checkin') ?></p>
+                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/traning_event') ?></p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create EmployeeCheckin</a>
+                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create TraningEvent</a>
             </div>
         </header>
 
@@ -104,6 +104,6 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/EmployeeCheckin/employee_checkin_list.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/TraningEvent/traning_event_list.js'); ?></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-function employeeListApp(boot) {
+function traning_eventListApp(boot) {
     return {
         title: boot.title || '',
         dataUrl: boot.dataUrl || '',

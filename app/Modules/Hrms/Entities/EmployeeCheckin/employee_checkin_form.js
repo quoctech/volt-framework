@@ -29,12 +29,31 @@ function employee_checkinFormApp(boot) {
                     return;
                 }
 
+                if (field.fieldtype === 'Table') {
+                    this.form[field.fieldname] = [];
+                    return;
+                }
+
                 this.form[field.fieldname] = field.default_value ?? '';
             });
 
             if (this.recordName) {
                 this.load();
             }
+        },
+        addChildRow(fieldname) {
+            if (!Array.isArray(this.form[fieldname])) {
+                this.form[fieldname] = [];
+            }
+
+            this.form[fieldname].push({});
+        },
+        removeChildRow(fieldname, index) {
+            if (!Array.isArray(this.form[fieldname])) {
+                return;
+            }
+
+            this.form[fieldname].splice(index, 1);
         },
         parseOptions(options) {
             return String(options || '')
@@ -235,19 +254,25 @@ function employee_checkinFormApp(boot) {
             }
 
             this.fields.forEach((field) => {
-                const value = result.data && Object.prototype.hasOwnProperty.call(result.data, field.fieldname)
-                    ? result.data[field.fieldname]
-                    : (field.default_value ?? '');
-                this.form[field.fieldname] = field.fieldtype === 'Check'
-                    ? String(value) === '1' || value === 1 || value === true
-                    : value;
+                const hasData = result.data && Object.prototype.hasOwnProperty.call(result.data, field.fieldname);
+                const value = hasData ? result.data[field.fieldname] : null;
+
+                if (field.fieldtype === 'Check') {
+                    this.form[field.fieldname] = hasData
+                        ? String(value) === '1' || value === 1 || value === true
+                        : false;
+                } else if (field.fieldtype === 'Table') {
+                    this.form[field.fieldname] = hasData && Array.isArray(value) ? value : [];
+                } else {
+                    this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');
+                }
             });
         },
         async save() {
             const payload = {};
             this.fields.forEach((field) => {
                 const value = this.form[field.fieldname];
-                payload[field.fieldname] = field.fieldtype === 'Check' ? (value ? '1' : '0') : value;
+                payload[field.fieldname] = value;
             });
             if (this.recordName) {
                 payload.name = this.recordName;
@@ -257,11 +282,11 @@ function employee_checkinFormApp(boot) {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Content-Type': 'application/json; charset=UTF-8',
                     Accept: 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: new URLSearchParams(payload).toString(),
+                body: JSON.stringify(payload),
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'ok') {
