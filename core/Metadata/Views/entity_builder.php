@@ -46,8 +46,8 @@
                 </div>
 
                 <div class="mt-4 flex gap-2">
-                    <button @click="activeTab = 'entity'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'entity' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity</button>
                     <button @click="activeTab = 'settings'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'settings' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity Settings</button>
+                    <button @click="activeTab = 'entity'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'entity' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity</button>
                 </div>
             </header>
 

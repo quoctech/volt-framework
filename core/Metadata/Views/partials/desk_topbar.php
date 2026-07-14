@@ -19,23 +19,21 @@ $initial = $currentUserName !== '' ? mb_strtoupper(mb_substr($currentUserName, 0
                 Volt Desk
             </a>
             <nav class="hidden items-center gap-1 text-sm sm:flex">
-                <a
-                    href="<?= site_url('desk') ?>"
-                    class="rounded px-2.5 py-1.5 <?= $deskActive === 'desk' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
-                >Home</a>
-                <a
-                    href="<?= site_url('desk/entities') ?>"
-                    class="rounded px-2.5 py-1.5 <?= $deskActive === 'entities' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
-                >Entity List</a>
-                <?php if ($isAdmin): ?>
+                <?php if ($deskActive !== 'desk'): ?>
                     <a
-                        href="<?= site_url('desk/create-module') ?>"
-                        class="rounded px-2.5 py-1.5 <?= $deskActive === 'create-module' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
-                    >Create Module</a>
-                    <a
-                        href="<?= site_url('desk/entity-builder') ?>"
-                        class="rounded px-2.5 py-1.5 <?= $deskActive === 'entity-builder' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
-                    >Entity Builder</a>
+                        href="<?= site_url('desk/entities') ?>"
+                        class="rounded px-2.5 py-1.5 <?= $deskActive === 'entities' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
+                    >Entity List</a>
+                    <?php if ($isAdmin): ?>
+                        <a
+                            href="<?= site_url('desk/create-module') ?>"
+                            class="rounded px-2.5 py-1.5 <?= $deskActive === 'create-module' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
+                        >Create Module</a>
+                        <a
+                            href="<?= site_url('desk/entity-builder') ?>"
+                            class="rounded px-2.5 py-1.5 <?= $deskActive === 'entity-builder' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
+                        >Entity Builder</a>
+                    <?php endif; ?>
                 <?php endif; ?>
             </nav>
         </div>
