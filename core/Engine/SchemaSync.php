@@ -31,7 +31,7 @@ class SchemaSync
     /**
      * Bốc cấu trúc vật lý thực tế từ Postgres information_schema lên RAM
      */
-    public function getPostgresSchema(string $tableName): array
+    private function getPostgresSchema(string $tableName): array
     {
         $sql = "SELECT column_name, data_type, character_maximum_length, is_nullable 
                 FROM information_schema.columns 
@@ -54,7 +54,7 @@ class SchemaSync
     /**
      * Map kiểu dữ liệu logic của Volt sang kiểu vật lý chuẩn Postgres (Sạch, không rác)
      */
-    public function mapToPostgresType(string $fieldType, ?int $length = null): string
+    private function mapToPostgresType(string $fieldType, ?int $length = null): string
     {
         return match ($fieldType) {
             'Input'      => 'VARCHAR(' . ($length ?? 255) . ')',

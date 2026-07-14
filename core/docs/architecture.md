@@ -447,18 +447,24 @@ core/
 - migration base tables
 - `SchemaSync`
 - `volt:sync`
+- `VoltMetadataCompiler` + Redis cache
+- `MetadataValidator`
+- `VoltModel` (abstract CI4 Model với permission + audit + system fields)
+- `PermissionResolver`
+- `AuditTrailWriter`
+- `AuthService` + Filters (`auth`, `guest`, `apiauth`, `admin`)
+- `EntityBuilderController` + Desk UI (CI4 Views + Alpine.js + Tailwind CSS)
+- `ArtifactScaffolder` sinh Controller/Model/View/JS tự động
 
 Chưa có:
 
-- `VoltModel`
-- metadata validator
-- permission resolver
-- audit writer tự động
-- queue worker
-- admin UI bằng CI4 view + Alpine.js
+- queue worker cho `sys_queue_job`
+- `VoltResourceController` (API trung tâm cho entity)
+- `NamingSeriesGenerator`
+- Child table mode `separate` hoàn chỉnh
 
 ## Tài liệu liên quan
 
-- [`VOLT_FRAMEWORK_RULES.md`](/home/quoctk/Desktop/volt-project/VOLT_FRAMEWORK_RULES.md)
-- [`roadmap.md`](/home/quoctk/Desktop/volt-project/roadmap.md)
-- [`desc-project.md`](/home/quoctk/Desktop/volt-project/desc-project.md)
+- [`VOLT_FRAMEWORK_RULES.md`](VOLT_FRAMEWORK_RULES.md)
+- [`roadmap.md`](roadmap.md)
+- [`desc-project.md`](desc-project.md)

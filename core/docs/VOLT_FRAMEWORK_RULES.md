@@ -17,8 +17,8 @@ Mục tiêu của file này:
 Trước khi viết code, AI hoặc developer phải thực hiện theo thứ tự sau:
 
 1. Đọc file này trước.
-2. Đọc [`architecture.md`](/home/quoctk/Desktop/volt-project/architecture.md) để hiểu kiến trúc tổng thể.
-3. Đọc [`roadmap.md`](/home/quoctk/Desktop/volt-project/roadmap.md) để biết ưu tiên triển khai hiện tại.
+2. Đọc [`architecture.md`](architecture.md) để hiểu kiến trúc tổng thể.
+3. Đọc [`roadmap.md`](roadmap.md) để biết ưu tiên triển khai hiện tại.
 4. Đọc code liên quan trước khi sửa.
 5. Chỉ bắt đầu code khi thay đổi không vi phạm các quy tắc bên dưới.
 

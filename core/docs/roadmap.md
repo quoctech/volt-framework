@@ -317,6 +317,6 @@ Nếu bắt đầu code tiếp từ trạng thái repo hiện tại, thứ tự 
 
 ## Tài liệu liên quan
 
-- [`VOLT_FRAMEWORK_RULES.md`](/home/quoctk/Desktop/volt-project/VOLT_FRAMEWORK_RULES.md)
-- [`architecture.md`](/home/quoctk/Desktop/volt-project/architecture.md)
-- [`desc-project.md`](/home/quoctk/Desktop/volt-project/desc-project.md)
+- [`VOLT_FRAMEWORK_RULES.md`](VOLT_FRAMEWORK_RULES.md)
+- [`architecture.md`](architecture.md)
+- [`desc-project.md`](desc-project.md)
