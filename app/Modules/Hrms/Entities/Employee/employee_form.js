@@ -74,7 +74,7 @@ function employeeFormApp(boot) {
                 const fieldSession = field.session_uid || this.sessions[0]?.uid || 'primary';
                 const fieldColumn = Math.min(4, Math.max(1, Number(field.column || 1)));
                 return fieldSession === sessionUid && fieldColumn === columnNumber;
-            });
+            }).sort((a, b) => a.idx - b.idx);
         },
         inputType(fieldType) {
             if (fieldType === 'Int' || fieldType === 'Float') {

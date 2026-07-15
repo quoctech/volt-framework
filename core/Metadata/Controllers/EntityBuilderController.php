@@ -53,12 +53,22 @@ class EntityBuilderController extends Controller
         $moduleFilter = trim((string) ($this->request->getGet('module') ?? ''));
         $userContext = $this->deskUserContext();
 
-        return view('Volt\\Core\\Metadata\\Views\\entity_list', [
+        $data = [
             'modules' => $this->builderService->listModules(),
             'moduleFilter' => $moduleFilter,
             'entities' => $this->builderService->listEntities($moduleFilter !== '' ? $moduleFilter : null),
             'isAdmin' => $userContext['isAdmin'],
             'currentUserName' => $userContext['currentUserName'],
+        ];
+
+        $content = view('Volt\\Core\\Metadata\\Views\\entity_list', $data);
+
+        return view('Volt\\Core\\Metadata\\Views\\layouts\\desk', [
+            'pageTitle'      => 'Entity List · Volt Desk',
+            'currentUserName' => $userContext['currentUserName'],
+            'isAdmin'        => $userContext['isAdmin'],
+            'deskActive'     => 'entities',
+            'content'        => $content,
         ]);
     }
 

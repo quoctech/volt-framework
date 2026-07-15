@@ -33,8 +33,8 @@ final class EmployeeCheckinController extends Controller
         helper(['url']);
         $this->model = new EmployeeCheckinModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":[]},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"employee.employee_name","is_required":false,"read_only":false,"idx":2,"session_uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"e6f380a8-28e6-4684-8b07-0aa7ea9fefb0","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 

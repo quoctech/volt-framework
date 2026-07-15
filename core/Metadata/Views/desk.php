@@ -27,7 +27,7 @@ $deskActive = 'desk';
             <p class="mt-1 text-sm text-slate-500">Chọn mục bên dưới để làm việc. Entity List nằm ở trang riêng.</p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 <?= $isAdmin ? 'lg:grid-cols-3' : '' ?>">
+        <div class="grid gap-4 sm:grid-cols-2 <?= $isAdmin ? 'lg:grid-cols-4' : '' ?>">
             <a href="<?= site_url('desk/entities') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Browse</p>
                 <h2 class="mt-2 text-xl font-semibold">Entity List</h2>
@@ -36,6 +36,20 @@ $deskActive = 'desk';
             </a>
 
             <?php if ($isAdmin): ?>
+                <a href="<?= site_url('desk/users') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                    <h2 class="mt-2 text-xl font-semibold">User List</h2>
+                    <p class="mt-2 text-sm text-slate-600">Quản lý người dùng và gán role.</p>
+                    <p class="mt-4 text-sm text-slate-500">CRUD user + phân quyền.</p>
+                </a>
+
+                <a href="<?= site_url('desk/roles') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                    <h2 class="mt-2 text-xl font-semibold">Role List</h2>
+                    <p class="mt-2 text-sm text-slate-600">Quản lý role và phân quyền CRUD, Import cho từng entity.</p>
+                    <p class="mt-4 text-sm text-slate-500">Gồm User Role Permission.</p>
+                </a>
+
                 <a href="<?= site_url('desk/create-module') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
                     <h2 class="mt-2 text-xl font-semibold">Create Module</h2>

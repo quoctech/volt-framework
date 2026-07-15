@@ -13,6 +13,7 @@ class UserModel extends Model
     protected $primaryKey       = 'name';
     protected $returnType       = UserEntity::class;
     protected $useSoftDeletes   = false;
+    protected $useAutoIncrement = false;
     protected $protectFields    = true;
     protected $useTimestamps    = false;
     protected $allowedFields    = [

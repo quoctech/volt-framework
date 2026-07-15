@@ -1449,7 +1449,7 @@ function {$entitySnake}FormApp(boot) {
                 const fieldSession = field.session_uid || this.sessions[0]?.uid || '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_UID)}';
                 const fieldColumn = Math.min(4, Math.max(1, Number(field.column || 1)));
                 return fieldSession === sessionUid && fieldColumn === columnNumber;
-            });
+            }).sort((a, b) => a.idx - b.idx);
         },
         inputType(fieldType) {
             if (fieldType === 'Int' || fieldType === 'Float') {
@@ -1814,13 +1814,14 @@ PHP;
                 'label' => (string) ($field['label'] ?? ''),
                 'fieldtype' => (string) ($field['fieldtype'] ?? 'Input'),
                 'options' => (string) ($field['options'] ?? ''),
-                'default_value' => $custom['default_value'] ?? '',
-                'placeholder' => (string) ($custom['placeholder'] ?? ''),
-                'fetch_from' => (string) ($custom['fetch_from'] ?? ''),
+                'default_value' => $field['default_value'] ?? $custom['default_value'] ?? '',
+                'placeholder' => (string) ($field['placeholder'] ?? $custom['placeholder'] ?? ''),
+                'fetch_from' => (string) ($field['fetch_from'] ?? $custom['fetch_from'] ?? ''),
                 'is_required' => (bool) ($field['is_required'] ?? false),
                 'read_only' => (bool) ($field['read_only'] ?? false),
-                'session_uid' => (string) ($custom['session_uid'] ?? self::DEFAULT_SESSION_UID),
-                'column' => min(4, max(1, (int) ($custom['column'] ?? 1))),
+                'idx' => (int) ($field['idx'] ?? 0),
+                'session_uid' => (string) ($field['session_uid'] ?? $custom['session_uid'] ?? self::DEFAULT_SESSION_UID),
+                'column' => min(4, max(1, (int) ($field['column'] ?? $custom['column'] ?? 1))),
                 'custom_meta' => $custom,
             ];
 
@@ -1959,7 +1960,7 @@ PHP;
     private function extractFormSessions(array $compiled): array
     {
         $entity = is_array($compiled['entity'] ?? null) ? $compiled['entity'] : [];
-        $custom = is_array($entity['s_custom_jsonb'] ?? null) ? $entity['s_custom_jsonb'] : [];
+        $custom = is_array($entity['custom_attributes'] ?? null) ? $entity['custom_attributes'] : [];
         $layout = is_array($custom['layout'] ?? null) ? $custom['layout'] : [];
         $sessions = is_array($layout['sessions'] ?? null) ? $layout['sessions'] : [];
 

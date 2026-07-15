@@ -9,6 +9,7 @@ use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Database\RawSql;
 use InvalidArgumentException;
 use Throwable;
+use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Engine\SchemaSync;
@@ -309,6 +310,13 @@ final class EntityBuilderService
             $artifacts = $this->artifactScaffolder->scaffoldEntity($entity['module'], $entity['name'], $compiled);
 
             $this->db->transComplete();
+
+            (new AwesomeBarModel())->registerEntity(
+                (string) ($entity['name'] ?? ''),
+                (string) ($entity['label'] ?? ''),
+                (string) ($entity['module'] ?? ''),
+                'system',
+            );
 
             $this->metadataCache->put($entity['name'], $compiled);
             service('voltMetadataCompiler')->invalidateEntity($entity['name']);

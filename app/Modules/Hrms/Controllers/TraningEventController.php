@@ -33,8 +33,8 @@ final class TraningEventController extends Controller
         helper(['url']);
         $this->model = new TraningEventModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"title","label":"Title","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"content","label":"Content","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"title","label":"Title","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"fa7b17ac-951f-467c-9dab-5fcc426c32a2","column":1,"custom_meta":[]},{"fieldname":"content","label":"Content","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"fa7b17ac-951f-467c-9dab-5fcc426c32a2","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"fa7b17ac-951f-467c-9dab-5fcc426c32a2","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 

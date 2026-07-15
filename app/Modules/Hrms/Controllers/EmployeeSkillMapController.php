@@ -33,8 +33,8 @@ final class EmployeeSkillMapController extends Controller
         helper(['url']);
         $this->model = new EmployeeSkillMapModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[]},{"fieldname":"traning_events","label":"Traning Events","fieldtype":"Table","options":"traning_event:separate","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"session_uid":"primary","column":1,"custom_meta":[],"child_columns":[{"fieldname":"title","label":"Title","fieldtype":"Data"},{"fieldname":"content","label":"Content","fieldtype":"Data"}]}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"primary","title":"Primary","description":"","column_count":1}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee","label":"Nhân Viên","fieldtype":"Link","options":"employee","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"d0ccbda1-bc77-4b14-a13d-37e043302c61","column":1,"custom_meta":[]},{"fieldname":"traning_events","label":"Traning Events","fieldtype":"Table","options":"traning_event:separate","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"d0ccbda1-bc77-4b14-a13d-37e043302c61","column":1,"custom_meta":[],"child_columns":[{"fieldname":"title","label":"Title","fieldtype":"Data"},{"fieldname":"content","label":"Content","fieldtype":"Data"}]}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"d0ccbda1-bc77-4b14-a13d-37e043302c61","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 

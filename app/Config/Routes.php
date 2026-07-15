@@ -34,6 +34,30 @@ $routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' =>
     $routes->get('entities/new', 'EntityBuilderController::index');
 });
 
+$routes->group('desk/users', ['namespace' => 'Volt\Core\Auth\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->get('/', 'UserController::index');
+    $routes->get('create', 'UserController::create');
+    $routes->post('store', 'UserController::store');
+    $routes->get('edit/(:segment)', 'UserController::edit/$1');
+    $routes->post('update/(:segment)', 'UserController::update/$1');
+    $routes->post('delete/(:segment)', 'UserController::delete/$1');
+});
+
+$routes->group('desk/roles', ['namespace' => 'Volt\Core\Role\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->get('/', 'RoleController::index');
+    $routes->get('create', 'RoleController::create');
+    $routes->post('store', 'RoleController::store');
+    $routes->get('edit/(:segment)', 'RoleController::edit/$1');
+    $routes->post('update/(:segment)', 'RoleController::update/$1');
+    $routes->post('delete/(:segment)', 'RoleController::delete/$1');
+    $routes->get('permissions/(:segment)', 'RolePermissionController::index/$1');
+    $routes->post('permissions/(:segment)', 'RolePermissionController::update/$1');
+});
+
+$routes->group('api/awesome-bar', ['namespace' => 'Volt\Core\AwesomeBar\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('search', 'AwesomeBarController::search');
+});
+
 $routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('load/(:segment)', 'EntityBuilderController::load/$1');
     $routes->post('module/save', 'EntityBuilderController::saveModule');

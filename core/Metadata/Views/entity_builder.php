@@ -553,7 +553,7 @@
                     return this.fields.filter((field) => field.session_uid === sessionUid);
                 },
                 sessionFieldsByColumn(sessionUid, columnNumber) {
-                    return this.sessionFields(sessionUid).filter((field) => Number(field.column || 1) === columnNumber);
+                    return this.sessionFields(sessionUid).filter((field) => Number(field.column || 1) === columnNumber).sort((a, b) => a.idx - b.idx);
                 },
                 sessionColumnNumbers(session) {
                     const count = Math.min(4, Math.max(1, Number(session.column_count || 1)));

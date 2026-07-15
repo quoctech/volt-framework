@@ -14,7 +14,7 @@ use Volt\Core\Database\VoltDatabase;
 final class PermissionResolver
 {
     private const CACHE_VERSION = 'v1';
-    private const CACHE_PREFIX = 'volt:permission:matrix:';
+    private const CACHE_PREFIX = 'volt_permission_matrix_';
 
     private BaseConnection $db;
     private CacheInterface $cache;
@@ -219,6 +219,6 @@ final class PermissionResolver
     {
         sort($roles);
 
-        return self::CACHE_PREFIX . self::CACHE_VERSION . ':' . hash('xxh128', implode('|', $roles));
+        return self::CACHE_PREFIX . self::CACHE_VERSION . '_' . hash('xxh128', implode('|', $roles));
     }
 }
