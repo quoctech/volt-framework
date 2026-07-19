@@ -46,7 +46,7 @@ class AwesomeBarController extends Controller
             }
 
             if ($item['item_type'] === 'page') {
-                $adminPages = ['entity_builder', 'create_module', 'user_list', 'role_list'];
+                $adminPages = ['entity_builder', 'create_module', 'user_list', 'role_list', 'system_status'];
                 if (in_array($item['item_name'], $adminPages, true) && ! $actor->isAdmin()) {
                     continue;
                 }

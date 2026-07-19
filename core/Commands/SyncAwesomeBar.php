@@ -19,6 +19,7 @@ class SyncAwesomeBar extends BaseCommand
     {
         $db = VoltDatabase::connection();
         $model = new AwesomeBarModel();
+        $model->seedCorePages();
 
         $rows = $db->table('sys_entity')
             ->select('name, module')

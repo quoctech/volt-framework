@@ -50,6 +50,13 @@ $deskActive = 'desk';
                     <p class="mt-4 text-sm text-slate-500">Gồm User Role Permission.</p>
                 </a>
 
+                <a href="<?= site_url('desk/system-status') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+                    <h2 class="mt-2 text-xl font-semibold">System Status</h2>
+                    <p class="mt-2 text-sm text-slate-600">Kiểm tra nhanh trạng thái runtime, cache, database và các bảng hệ thống theo kiểu dashboard vận hành.</p>
+                    <p class="mt-4 text-sm text-slate-500">Phù hợp để soi lỗi cấu hình và readiness.</p>
+                </a>
+
                 <a href="<?= site_url('desk/create-module') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
                     <h2 class="mt-2 text-xl font-semibold">Create Module</h2>

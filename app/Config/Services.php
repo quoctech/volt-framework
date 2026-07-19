@@ -9,6 +9,7 @@ use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Security\PermissionResolver;
+use Volt\Core\System\Services\SystemStatusService;
 use Volt\Core\Validation\MetadataValidator;
 
 /**
@@ -80,5 +81,14 @@ class Services extends BaseService
         }
 
         return new AuditTrailWriter();
+    }
+
+    public static function voltSystemStatus(?bool $getShared = true): SystemStatusService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltSystemStatus');
+        }
+
+        return new SystemStatusService();
     }
 }

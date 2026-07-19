@@ -5,7 +5,7 @@
  *
  * @var string $currentUserName
  * @var bool   $isAdmin
- * @var string $deskActive  desk|entities|create-module|entity-builder|profile|roles|users
+ * @var string $deskActive  desk|entities|create-module|entity-builder|profile|roles|users|system-status
  */
 $currentUserName = $currentUserName ?? '';
 $isAdmin = $isAdmin ?? false;
@@ -40,6 +40,10 @@ $searchUrl = site_url('api/awesome-bar/search');
                             href="<?= site_url('desk/roles') ?>"
                             class="rounded px-2.5 py-1.5 <?= $deskActive === 'roles' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
                         >Role List</a>
+                        <a
+                            href="<?= site_url('desk/system-status') ?>"
+                            class="rounded px-2.5 py-1.5 <?= $deskActive === 'system-status' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
+                        >System Status</a>
                         <a
                             href="<?= site_url('desk/create-module') ?>"
                             class="rounded px-2.5 py-1.5 <?= $deskActive === 'create-module' ? 'bg-slate-100 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>"
