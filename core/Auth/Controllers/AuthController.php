@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Auth\Controllers;
 
 use CodeIgniter\Controller;
+use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Services\AuthService;
 
 class AuthController extends Controller
@@ -183,13 +184,7 @@ class AuthController extends Controller
             return redirect()->to(site_url('login'));
         }
 
-        return view('auth/profile', [
-            'user' => $user,
-            'isAdmin' => $user->isAdmin(),
-            'currentUserName' => (string) $user->name,
-            'error' => session()->getFlashdata('profile_error'),
-            'success' => session()->getFlashdata('profile_success'),
-        ]);
+        return view('auth/profile', $this->profileViewData($user));
     }
 
     public function updateProfile()
@@ -207,13 +202,9 @@ class AuthController extends Controller
         ];
 
         if (! $this->validate($rules)) {
-            return view('auth/profile', [
-                'user' => $user,
-                'isAdmin' => $user->isAdmin(),
-                'currentUserName' => (string) $user->name,
+            return view('auth/profile', $this->profileViewData($user, [
                 'error' => implode(' ', $this->validator->getErrors()),
-                'success' => null,
-            ]);
+            ]));
         }
 
         $result = $this->authService->changePassword(
@@ -222,15 +213,43 @@ class AuthController extends Controller
         );
 
         if (! $result['ok']) {
-            return view('auth/profile', [
-                'user' => $user,
-                'isAdmin' => $user->isAdmin(),
-                'currentUserName' => (string) $user->name,
+            return view('auth/profile', $this->profileViewData($user, [
                 'error' => $result['message'],
-                'success' => null,
-            ]);
+            ]));
         }
 
         return redirect()->to(site_url('desk/profile'))->with('profile_success', $result['message']);
+    }
+
+    public function generateApiKey()
+    {
+        $user = $this->authService->currentUser();
+
+        if ($user === null) {
+            return redirect()->to(site_url('login'));
+        }
+
+        $keys = $this->authService->generateApiKeySecret($user);
+
+        session()->setFlashdata('new_api_key', $keys['api_key']);
+        session()->setFlashdata('new_api_secret', $keys['api_secret']);
+
+        return redirect()->to(site_url('desk/profile'));
+    }
+
+    private function profileViewData(UserEntity $user, array $extra = []): array
+    {
+        $flashKey = session()->getFlashdata('new_api_key');
+        $flashSecret = session()->getFlashdata('new_api_secret');
+
+        return array_merge([
+            'user'             => $user,
+            'isAdmin'          => $user->isAdmin(),
+            'currentUserName'  => (string) $user->name,
+            'error'            => session()->getFlashdata('profile_error'),
+            'success'          => session()->getFlashdata('profile_success'),
+            'apiKey'           => $flashKey ?? $user->api_key,
+            'newSecret'        => $flashSecret,
+        ], $extra);
     }
 }

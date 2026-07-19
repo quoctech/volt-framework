@@ -16,7 +16,10 @@ class ApiAuthFilter implements FilterInterface
         $authService = Services::voltAuth();
         $token = $authService->extractBearerToken($request);
 
-        if ($authService->authenticateApiToken($token) !== null) {
+        $user = $authService->authenticateApiKeySecret($token)
+            ?? $authService->authenticateApiToken($token);
+
+        if ($user !== null) {
             return null;
         }
 

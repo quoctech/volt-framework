@@ -16,10 +16,10 @@
             "layout": {
                 "sessions": [
                     {
-                        "uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                        "uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                         "title": "Primary",
                         "description": "Main fields",
-                        "column_count": 2
+                        "column_count": 1
                     }
                 ]
             },
@@ -28,7 +28,7 @@
     },
     "fields": [
         {
-            "id": 3,
+            "id": 1,
             "fieldname": "employee_name",
             "label": "Tên Nhân Viên",
             "fieldtype": "Data",
@@ -41,13 +41,13 @@
             "f_custom_jsonb": {
                 "column": 1,
                 "placeholder": "",
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
                 "default_value": ""
             }
         },
         {
-            "id": 5,
+            "id": 3,
             "fieldname": "employee_age",
             "label": "Tuổi Nhân Viên",
             "fieldtype": "Int",
@@ -58,15 +58,15 @@
             "hidden": false,
             "idx": 2,
             "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
             }
         }
     ],
     "field_map": {
         "employee_name": {
-            "id": 3,
+            "id": 1,
             "fieldname": "employee_name",
             "label": "Tên Nhân Viên",
             "fieldtype": "Data",
@@ -79,13 +79,13 @@
             "f_custom_jsonb": {
                 "column": 1,
                 "placeholder": "",
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
                 "default_value": ""
             }
         },
         "employee_age": {
-            "id": 5,
+            "id": 3,
             "fieldname": "employee_age",
             "label": "Tuổi Nhân Viên",
             "fieldtype": "Int",
@@ -96,8 +96,8 @@
             "hidden": false,
             "idx": 2,
             "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
             }
         }
@@ -107,16 +107,16 @@
             "employee_name": {
                 "column": 1,
                 "placeholder": "",
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
                 "default_value": ""
             },
             "employee_age": {
-                "column": 2,
-                "session_uid": "bc3cdfba-d245-4f1a-854b-7ea8f35a4112",
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
             }
         }
     },
-    "compiled_at": "2026-07-19T12:21:08+00:00"
+    "compiled_at": "2026-07-19T12:31:38+00:00"
 }

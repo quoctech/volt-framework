@@ -24,6 +24,8 @@ class UserModel extends Model
         'is_active',
         'api_token_hash',
         'api_token_expires_at',
+        'api_key',
+        'api_secret_hash',
         'last_login_at',
         'failed_login_attempts',
         'locked_until',

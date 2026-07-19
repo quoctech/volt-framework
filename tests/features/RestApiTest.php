@@ -78,6 +78,8 @@ final class RestApiTest extends \CodeIgniter\Test\CIUnitTestCase
             is_active SMALLINT DEFAULT 1,
             api_token_hash VARCHAR(255),
             api_token_expires_at TIMESTAMP,
+            api_key VARCHAR(64) UNIQUE,
+            api_secret_hash VARCHAR(255),
             last_login_at TIMESTAMP,
             failed_login_attempts INTEGER DEFAULT 0,
             locked_until TIMESTAMP,

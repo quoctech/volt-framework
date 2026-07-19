@@ -272,6 +272,57 @@ class AuthService
         return trim($matches[1]);
     }
 
+    public function generateApiKeySecret(UserEntity $user): array
+    {
+        $apiKey = bin2hex(random_bytes(16));
+        $apiSecret = bin2hex(random_bytes(32));
+        $hash = password_hash($apiSecret, PASSWORD_DEFAULT);
+
+        $this->userModel->update($user->name, [
+            'api_key'        => $apiKey,
+            'api_secret_hash' => $hash,
+        ]);
+
+        return [
+            'api_key'    => $apiKey,
+            'api_secret' => $apiSecret,
+        ];
+    }
+
+    public function authenticateApiKeySecret(?string $bearerToken): ?UserEntity
+    {
+        if (! is_string($bearerToken) || $bearerToken === '') {
+            return null;
+        }
+
+        $parts = explode(':', $bearerToken, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        [$apiKey, $apiSecret] = $parts;
+
+        if ($apiKey === '' || $apiSecret === '') {
+            return null;
+        }
+
+        if (! $this->userModel->hasColumn('api_key') || ! $this->userModel->hasColumn('api_secret_hash')) {
+            return null;
+        }
+
+        $user = $this->userModel->where('api_key', $apiKey)->first();
+
+        if (! $user instanceof UserEntity || ! $user->isActive()) {
+            return null;
+        }
+
+        if (! password_verify($apiSecret, (string) $user->api_secret_hash)) {
+            return null;
+        }
+
+        return $user;
+    }
+
     private function startSession(UserEntity $user): void
     {
         $session = session();

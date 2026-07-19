@@ -33,8 +33,8 @@ final class EmployeeController extends Controller
         helper(['url']);
         $this->model = new EmployeeModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","in_list_view":true,"default_value":""}},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","column":2,"custom_meta":{"column":2,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","in_list_view":true}}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"1827bc24-b2ed-414b-8f0f-92ae64e2f16e","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"1827bc24-b2ed-414b-8f0f-92ae64e2f16e","in_list_view":true,"default_value":""}},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"1827bc24-b2ed-414b-8f0f-92ae64e2f16e","column":1,"custom_meta":{"column":1,"session_uid":"1827bc24-b2ed-414b-8f0f-92ae64e2f16e","in_list_view":true}}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"1827bc24-b2ed-414b-8f0f-92ae64e2f16e","title":"Primary","description":"Main fields","column_count":1}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 

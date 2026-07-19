@@ -25,6 +25,7 @@ $routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' =>
 $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('desk/profile', 'AuthController::profile');
     $routes->post('desk/profile', 'AuthController::updateProfile');
+    $routes->post('desk/profile/generate-api-key', 'AuthController::generateApiKey');
 });
 
 $routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
