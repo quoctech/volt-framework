@@ -8,26 +8,29 @@
 $setupRequired = (bool) ($setupRequired ?? false);
 $mode = ($mode ?? '') === 'setup' || $setupRequired ? 'setup' : 'login';
 $isSetup = $mode === 'setup';
+
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$a = $lang['auth'] ?? [];
+$c = $lang['common'] ?? [];
+$htmlLang = $lang['code'] ?? 'en';
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($htmlLang) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= $isSetup ? 'Setup admin' : 'Login' ?> · Volt</title>
+    <title><?= $isSetup ? esc($a['title_setup'] ?? 'Setup admin · Volt') : esc($a['title_login'] ?? 'Login · Volt') ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900">
     <main class="mx-auto flex min-h-screen max-w-md items-center px-4 py-10">
         <div class="w-full border border-slate-300 bg-white p-6 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Volt Framework</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500"><?= esc($a['brand'] ?? 'Volt Framework') ?></p>
             <h1 class="mt-2 text-2xl font-semibold">
-                <?= $isSetup ? 'Tạo admin đầu tiên' : 'Đăng nhập' ?>
+                <?= $isSetup ? esc($a['setup_title'] ?? 'Create first admin') : esc($a['login_title'] ?? 'Sign in') ?>
             </h1>
             <p class="mt-1 text-sm text-slate-500">
-                <?= $isSetup
-                    ? 'Hệ thống chưa có admin. Tạo tài khoản admin để bắt đầu.'
-                    : 'Đăng nhập để vào Desk.' ?>
+                <?= $isSetup ? esc($a['setup_desc'] ?? '') : esc($a['login_desc'] ?? '') ?>
             </p>
 
             <?php if (! empty($error)): ?>
@@ -46,7 +49,7 @@ $isSetup = $mode === 'setup';
                 <form action="<?= site_url('setup') ?>" method="post" class="mt-6 space-y-4">
                     <?= csrf_field() ?>
                     <label class="block">
-                        <span class="mb-1 block text-sm font-medium text-slate-700">Tên admin</span>
+                        <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['admin_name_label'] ?? 'Admin name') ?></span>
                         <input
                             id="setup_name"
                             name="name"
@@ -59,7 +62,7 @@ $isSetup = $mode === 'setup';
                         >
                     </label>
                     <label class="block">
-                        <span class="mb-1 block text-sm font-medium text-slate-700">Mật khẩu</span>
+                        <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['password_label'] ?? 'Password') ?></span>
                         <input
                             id="setup_password"
                             name="password"
@@ -68,11 +71,11 @@ $isSetup = $mode === 'setup';
                             required
                             minlength="8"
                             class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-                            placeholder="Tối thiểu 8 ký tự"
+                            placeholder="<?= esc($a['password_min_hint'] ?? 'At least 8 characters') ?>"
                         >
                     </label>
                     <label class="block">
-                        <span class="mb-1 block text-sm font-medium text-slate-700">Xác nhận mật khẩu</span>
+                        <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['confirm_password_label'] ?? 'Confirm password') ?></span>
                         <input
                             id="setup_password_confirmation"
                             name="password_confirmation"
@@ -81,19 +84,19 @@ $isSetup = $mode === 'setup';
                             required
                             minlength="8"
                             class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-                            placeholder="Nhập lại mật khẩu"
+                            placeholder="<?= esc($a['retype_password_placeholder'] ?? 'Re-type password') ?>"
                         >
                     </label>
                     <button
                         type="submit"
                         class="w-full border border-slate-900 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-                    >Tạo admin</button>
+                    ><?= esc($a['setup_button'] ?? 'Create admin') ?></button>
                 </form>
             <?php else: ?>
                 <form action="<?= site_url('login') ?>" method="post" class="mt-6 space-y-4">
                     <?= csrf_field() ?>
                     <label class="block">
-                        <span class="mb-1 block text-sm font-medium text-slate-700">Tên đăng nhập</span>
+                        <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['username_label'] ?? 'Username') ?></span>
                         <input
                             id="login_name"
                             name="name"
@@ -105,7 +108,7 @@ $isSetup = $mode === 'setup';
                         >
                     </label>
                     <label class="block">
-                        <span class="mb-1 block text-sm font-medium text-slate-700">Mật khẩu</span>
+                        <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['password_label'] ?? 'Password') ?></span>
                         <input
                             id="login_password"
                             name="password"
@@ -119,7 +122,7 @@ $isSetup = $mode === 'setup';
                     <button
                         type="submit"
                         class="w-full border border-slate-900 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-                    >Đăng nhập</button>
+                    ><?= esc($a['login_button'] ?? 'Sign in') ?></button>
                 </form>
             <?php endif; ?>
         </div>

@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use Volt\Core\Auth\Entities\AuthEntity;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Models\UserModel;
+use Volt\Core\Config\Lang\LangService;
 
 class AuthService
 {
@@ -65,7 +66,7 @@ class AuthService
         ]);
 
         if ($auth->setup_required) {
-            $auth->message = 'Hệ thống chưa có admin. Cần setup lần đầu.';
+            $auth->message = LangService::get('auth.no_admin');
 
             return $auth;
         }
@@ -73,20 +74,20 @@ class AuthService
         $user = $this->userModel->findByName($username);
 
         if (! $user || ! $user->isActive()) {
-            $auth->message = 'Tài khoản hoặc mật khẩu không đúng.';
+            $auth->message = LangService::get('auth.invalid_credentials');
 
             return $auth;
         }
 
         if ($this->isLocked($user)) {
-            $auth->message = 'Tài khoản đang tạm khóa do đăng nhập sai nhiều lần.';
+            $auth->message = LangService::get('auth.account_locked');
 
             return $auth;
         }
 
         if (! password_verify($password, $user->password)) {
             $this->registerFailedAttempt($user);
-            $auth->message = 'Tài khoản hoặc mật khẩu không đúng.';
+            $auth->message = LangService::get('auth.invalid_credentials');
 
             return $auth;
         }
@@ -112,13 +113,13 @@ class AuthService
         ]);
 
         if ($this->hasAdmin()) {
-            $auth->message = 'Hệ thống đã có admin rồi.';
+            $auth->message = 'System already has an admin.';
 
             return $auth;
         }
 
         if ($this->userModel->findByName($username)) {
-            $auth->message = 'Tên đăng nhập đã tồn tại.';
+            $auth->message = 'Username already exists.';
 
             return $auth;
         }

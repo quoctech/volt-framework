@@ -3,33 +3,36 @@
 /**
  * @var array<int, \Volt\Core\Auth\Entities\UserEntity> $users
  */
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$u = $lang['users'] ?? [];
+$c = $lang['common'] ?? [];
 ?><div class="space-y-6">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900">Người dùng</h1>
-            <div class="mt-1 text-sm text-slate-600">Quản lý tài khoản người dùng trong hệ thống.</div>
+            <h1 class="text-2xl font-bold text-slate-900"><?= esc($u['title'] ?? 'Users') ?></h1>
+            <div class="mt-1 text-sm text-slate-600"><?= esc($u['description'] ?? '') ?></div>
         </div>
         <a href="<?= site_url('desk/users/create') ?>" class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-            Thêm người dùng
+            <?= esc($u['add_user'] ?? 'Add user') ?>
         </a>
     </div>
 
     <?php if ($users === []): ?>
         <div class="rounded border border-slate-300 bg-white px-6 py-12 text-center">
-            <p class="text-slate-600">Chưa có người dùng nào.</p>
-            <a href="<?= site_url('desk/users/create') ?>" class="mt-4 inline-flex items-center gap-1.5 rounded border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">Thêm người dùng</a>
+            <p class="text-slate-600"><?= esc($u['empty'] ?? 'No users yet.') ?></p>
+            <a href="<?= site_url('desk/users/create') ?>" class="mt-4 inline-flex items-center gap-1.5 rounded border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"><?= esc($u['add_user'] ?? 'Add user') ?></a>
         </div>
     <?php else: ?>
         <div class="overflow-x-auto rounded border border-slate-300 bg-white">
             <table class="min-w-full text-sm">
                 <thead>
                     <tr class="border-b border-slate-300 bg-slate-100">
-                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Người dùng</th>
-                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 md:table-cell">Vai trò</th>
-                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 sm:table-cell">Trạng thái</th>
-                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 lg:table-cell">Lần cuối</th>
-                        <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600">Thao tác</th>
+                        <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600"><?= esc($u['table_user'] ?? 'User') ?></th>
+                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 md:table-cell"><?= esc($u['table_roles'] ?? 'Roles') ?></th>
+                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 sm:table-cell"><?= esc($u['table_status'] ?? 'Status') ?></th>
+                        <th class="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 lg:table-cell"><?= esc($u['table_last_login'] ?? 'Last login') ?></th>
+                        <th class="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600"><?= esc($u['table_actions'] ?? 'Actions') ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,18 +72,18 @@
                             </td>
                             <td class="hidden px-4 py-3 sm:table-cell">
                                 <?php if ($user->is_active): ?>
-                                    <span class="text-slate-800">Kích hoạt</span>
+                                    <span class="text-slate-800"><?= esc($u['active'] ?? 'Active') ?></span>
                                 <?php else: ?>
-                                    <span class="text-slate-500">Vô hiệu</span>
+                                    <span class="text-slate-500"><?= esc($u['inactive'] ?? 'Inactive') ?></span>
                                 <?php endif; ?>
                             </td>
-                            <td class="hidden px-4 py-3 text-slate-600 lg:table-cell"><?= esc($user->last_login_at ?? '—') ?></td>
+                            <td class="hidden px-4 py-3 text-slate-600 lg:table-cell"><?= esc($user->last_login_at ?? $u['never'] ?? '—') ?></td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="<?= site_url("desk/users/edit/{$user->name}") ?>" class="rounded px-2.5 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none">Sửa</a>
-                                    <form action="<?= site_url("desk/users/delete/{$user->name}") ?>" method="post" class="inline" onsubmit="return confirm('Xoá người dùng «<?= esc($user->name) ?>»?')">
+                                    <a href="<?= site_url("desk/users/edit/{$user->name}") ?>" class="rounded px-2.5 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none"><?= esc($u['edit'] ?? 'Edit') ?></a>
+                                    <form action="<?= site_url("desk/users/delete/{$user->name}") ?>" method="post" class="inline" onsubmit="return confirm('<?= esc(str_replace('{name}', $user->name, $u['delete_confirm'] ?? 'Delete user?')) ?>')">
                                         <?= csrf_field() ?>
-                                        <button type="submit" class="rounded px-2.5 py-1 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-700 focus:outline-none">Xoá</button>
+                                        <button type="submit" class="rounded px-2.5 py-1 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-700 focus:outline-none"><?= esc($u['delete'] ?? 'Delete') ?></button>
                                     </form>
                                 </div>
                             </td>

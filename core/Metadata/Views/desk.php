@@ -7,9 +7,13 @@
 $isAdmin = $isAdmin ?? false;
 $currentUserName = $currentUserName ?? '';
 $deskActive = 'desk';
+
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$d = $lang['desk'] ?? [];
+$common = $lang['common'] ?? [];
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,57 +27,64 @@ $deskActive = 'desk';
 
     <main class="mx-auto max-w-5xl p-4 lg:p-8">
         <div class="mb-6">
-            <h1 class="text-2xl font-semibold">Desk</h1>
-            <p class="mt-1 text-sm text-slate-500">Chọn mục bên dưới để làm việc. Entity List nằm ở trang riêng.</p>
+            <h1 class="text-2xl font-semibold"><?= esc($d['title'] ?? 'Desk') ?></h1>
+            <p class="mt-1 text-sm text-slate-500"><?= esc($d['subtitle'] ?? '') ?></p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 <?= $isAdmin ? 'lg:grid-cols-4' : '' ?>">
             <a href="<?= site_url('desk/entities') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Browse</p>
-                <h2 class="mt-2 text-xl font-semibold">Entity List</h2>
-                <p class="mt-2 text-sm text-slate-600">Xem và lọc entity theo module. Admin có thể mở Entity Builder từ danh sách.</p>
-                <p class="mt-4 text-sm text-slate-500">Hiện có <?= esc((string) $entityCount) ?> entity.</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['browse'] ?? 'Browse') ?></p>
+                <h2 class="mt-2 text-xl font-semibold"><?= esc($d['entity_list'] ?? 'Entity List') ?></h2>
+                <p class="mt-2 text-sm text-slate-600"><?= $d['entity_desc'] ?? '' ?></p>
+                <p class="mt-4 text-sm text-slate-500"><?= str_replace('{count}', (string) $entityCount, $d['entity_count'] ?? '') ?></p>
             </a>
 
             <?php if ($isAdmin): ?>
                 <a href="<?= site_url('desk/users') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h2 class="mt-2 text-xl font-semibold">User List</h2>
-                    <p class="mt-2 text-sm text-slate-600">Quản lý người dùng và gán role.</p>
-                    <p class="mt-4 text-sm text-slate-500">CRUD user + phân quyền.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['users'] ?? 'User List') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['users_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['users_hint'] ?? '' ?></p>
                 </a>
 
                 <a href="<?= site_url('desk/roles') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h2 class="mt-2 text-xl font-semibold">Role List</h2>
-                    <p class="mt-2 text-sm text-slate-600">Quản lý role và phân quyền CRUD, Import cho từng entity.</p>
-                    <p class="mt-4 text-sm text-slate-500">Gồm User Role Permission.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['roles'] ?? 'Role List') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['roles_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['roles_hint'] ?? '' ?></p>
                 </a>
 
                 <a href="<?= site_url('desk/system-status') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h2 class="mt-2 text-xl font-semibold">System Status</h2>
-                    <p class="mt-2 text-sm text-slate-600">Kiểm tra nhanh trạng thái runtime, cache, database và các bảng hệ thống theo kiểu dashboard vận hành.</p>
-                    <p class="mt-4 text-sm text-slate-500">Phù hợp để soi lỗi cấu hình và readiness.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['system_status'] ?? 'System Status') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['system_status_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['system_status_hint'] ?? '' ?></p>
+                </a>
+
+                <a href="<?= site_url('desk/system-settings') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($lang['nav']['system_settings'] ?? 'System Settings') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $lang['system']['description'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500">Language / Timezone</p>
                 </a>
 
                 <a href="<?= site_url('desk/create-module') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h2 class="mt-2 text-xl font-semibold">Create Module</h2>
-                    <p class="mt-2 text-sm text-slate-600">Sinh thư mục <code class="text-xs">app/Modules/{Module}</code> và lưu metadata module.</p>
-                    <p class="mt-4 text-sm text-slate-500">Hiện có <?= esc((string) $moduleCount) ?> module.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['create_module'] ?? 'Create Module') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['create_module_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= str_replace('{count}', (string) $moduleCount, $d['create_module_hint'] ?? '') ?></p>
                 </a>
 
                 <a href="<?= site_url('desk/entity-builder') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
-                    <h2 class="mt-2 text-xl font-semibold">Entity Builder</h2>
-                    <p class="mt-2 text-sm text-slate-600">Cấu hình field, session layout, sync schema và scaffold artifact.</p>
-                    <p class="mt-4 text-sm text-slate-500">Chỉ tài khoản admin.</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['entity_builder'] ?? 'Entity Builder') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['entity_builder_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['entity_builder_hint'] ?? '' ?></p>
                 </a>
             <?php else: ?>
                 <div class="border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 sm:col-span-1">
-                    <p class="font-semibold">Quyền hạn chế</p>
-                    <p class="mt-2">Create Module và Entity Builder chỉ dành cho <strong>admin</strong>. Bạn vẫn dùng Entity List để xem metadata.</p>
+                    <p class="font-semibold"><?= esc($d['restricted'] ?? 'Restricted Access') ?></p>
+                    <p class="mt-2"><?= $d['restricted_desc'] ?? '' ?></p>
                 </div>
             <?php endif; ?>
         </div>

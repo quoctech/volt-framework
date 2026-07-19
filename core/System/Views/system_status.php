@@ -11,6 +11,10 @@ $resources = $report['resources'] ?? [];
 $overallStatus = (string) ($report['overallStatus'] ?? 'warning');
 $generatedAt = (string) ($report['generatedAt'] ?? '');
 
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$ss = $lang['system_status_page'] ?? [];
+$common = $lang['common'] ?? [];
+
 $statusClasses = [
     'ok' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
     'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
@@ -18,43 +22,43 @@ $statusClasses = [
 ];
 
 $statusLabels = [
-    'ok' => 'OK',
-    'warning' => 'Warning',
-    'error' => 'Error',
+    'ok' => $ss['ok'] ?? 'OK',
+    'warning' => $ss['warning'] ?? 'Warning',
+    'error' => $ss['error'] ?? 'Error',
 ];
 ?>
 <div class="space-y-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900">Trạng Thái hệ thống</h1>
-            <p class="mt-1 text-sm text-slate-600">Kiểm tra nhanh tình trạng runtime, database, cache và các thành phần cốt lõi của Volt.</p>
+            <h1 class="text-2xl font-bold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
+            <p class="mt-1 text-sm text-slate-600"><?= esc($ss['description'] ?? '') ?></p>
         </div>
         <div class="rounded border px-3 py-2 text-sm <?= esc($statusClasses[$overallStatus] ?? $statusClasses['warning']) ?>">
             <div class="font-semibold"><?= esc($statusLabels[$overallStatus] ?? 'Warning') ?></div>
-            <div class="text-xs">Cập nhật lúc <?= esc($generatedAt) ?></div>
+            <div class="text-xs"><?= esc($ss['updated_at'] ?? 'Updated at') ?> <?= esc($generatedAt) ?></div>
         </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded border border-slate-200 bg-white p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Checks</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($ss['checks'] ?? 'Checks') ?></div>
             <div class="mt-2 text-3xl font-semibold text-slate-900"><?= esc((string) ($summary['total'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-slate-500">Tổng số kiểm tra hệ thống</div>
+            <div class="mt-1 text-sm text-slate-500"><?= esc($ss['total'] ?? 'Total checks') ?></div>
         </div>
         <div class="rounded border border-emerald-200 bg-emerald-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">OK</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700"><?= esc($ss['ok'] ?? 'OK') ?></div>
             <div class="mt-2 text-3xl font-semibold text-emerald-900"><?= esc((string) ($summary['ok'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-emerald-800">Thành phần hoạt động ổn định</div>
+            <div class="mt-1 text-sm text-emerald-800"><?= esc($ss['ok_desc'] ?? 'Component running stable') ?></div>
         </div>
         <div class="rounded border border-amber-200 bg-amber-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Warning</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700"><?= esc($ss['warning'] ?? 'Warning') ?></div>
             <div class="mt-2 text-3xl font-semibold text-amber-900"><?= esc((string) ($summary['warning'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-amber-800">Cần theo dõi hoặc tối ưu thêm</div>
+            <div class="mt-1 text-sm text-amber-800"><?= esc($ss['warning_desc'] ?? 'Needs monitoring or optimization') ?></div>
         </div>
         <div class="rounded border border-rose-200 bg-rose-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Error</div>
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700"><?= esc($ss['error'] ?? 'Error') ?></div>
             <div class="mt-2 text-3xl font-semibold text-rose-900"><?= esc((string) ($summary['error'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-rose-800">Cần xử lý trước khi vận hành</div>
+            <div class="mt-1 text-sm text-rose-800"><?= esc($ss['error_desc'] ?? 'Needs attention before production') ?></div>
         </div>
     </div>
 
@@ -88,7 +92,7 @@ $statusLabels = [
                     <?php endif; ?>
 
                     <p class="mt-4 text-sm text-slate-600">
-                        <span class="font-medium text-slate-900">Khuyến nghị:</span>
+                        <span class="font-medium text-slate-900"><?= esc($ss['recommendation'] ?? 'Recommendation') ?>:</span>
                         <?= esc((string) ($check['recommendation'] ?? '')) ?>
                     </p>
                 </section>
@@ -97,7 +101,7 @@ $statusLabels = [
 
         <div class="space-y-4">
             <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900">Tài nguyên hiện tại</h2>
+                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['current_resources'] ?? 'Current Resources') ?></h2>
                 <dl class="mt-4 space-y-3">
                     <?php foreach ($resources as $item): ?>
                         <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
@@ -109,7 +113,7 @@ $statusLabels = [
             </section>
 
             <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900">Môi trường</h2>
+                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['environment'] ?? 'Environment') ?></h2>
                 <dl class="mt-4 space-y-3">
                     <?php foreach ($environment as $item): ?>
                         <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
@@ -121,7 +125,7 @@ $statusLabels = [
             </section>
 
             <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900">Thống kê hệ thống</h2>
+                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['system_stats'] ?? 'System Statistics') ?></h2>
                 <dl class="mt-4 space-y-3">
                     <?php foreach ($statistics as $item): ?>
                         <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
@@ -133,7 +137,7 @@ $statusLabels = [
             </section>
 
             <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900">PHP extensions</h2>
+                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['php_extensions'] ?? 'PHP Extensions') ?></h2>
                 <dl class="mt-4 space-y-3">
                     <?php foreach ($extensions as $item): ?>
                         <?php $isLoaded = (string) ($item['value'] ?? '') === 'Loaded'; ?>

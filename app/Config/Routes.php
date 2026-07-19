@@ -57,6 +57,8 @@ $routes->group('desk/roles', ['namespace' => 'Volt\Core\Role\Controllers', 'filt
 
 $routes->group('desk', ['namespace' => 'Volt\Core\System\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('system-status', 'SystemStatusController::index');
+    $routes->get('system-settings', 'SystemSettingController::index');
+    $routes->post('system-settings/save', 'SystemSettingController::save');
 });
 
 $routes->group('api/awesome-bar', ['namespace' => 'Volt\Core\AwesomeBar\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {

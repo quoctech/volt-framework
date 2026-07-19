@@ -5,13 +5,17 @@
  *
  * @var string $currentUserName
  * @var bool   $isAdmin
- * @var string $deskActive  desk|entities|create-module|entity-builder|profile|roles|users|system-status
+ * @var string $deskActive  desk|entities|create-module|entity-builder|profile|roles|users|system-status|system-settings
  */
 $currentUserName = $currentUserName ?? '';
 $isAdmin = $isAdmin ?? false;
 $deskActive = $deskActive ?? 'desk';
 $initial = $currentUserName !== '' ? mb_strtoupper(mb_substr($currentUserName, 0, 1)) : '?';
 $searchUrl = site_url('api/awesome-bar/search');
+
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$nav = $lang['nav'] ?? [];
+$common = $lang['common'] ?? [];
 ?>
 <header
     class="border-b border-slate-300 bg-white"
@@ -25,6 +29,17 @@ $searchUrl = site_url('api/awesome-bar/search');
             <a href="<?= site_url('desk') ?>" class="shrink-0 text-sm font-semibold tracking-wide text-slate-900">
                 Volt Desk
             </a>
+
+            <?php if ($isAdmin): ?>
+                <nav class="hidden items-center gap-4 md:flex">
+                    <a href="<?= site_url('desk/system-settings') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-settings' ? 'font-semibold text-slate-900' : '' ?>">
+                        <?= esc($nav['system_settings'] ?? 'System Settings') ?>
+                    </a>
+                    <a href="<?= site_url('desk/system-status') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-status' ? 'font-semibold text-slate-900' : '' ?>">
+                        <?= esc($nav['system_status'] ?? 'System Status') ?>
+                    </a>
+                </nav>
+            <?php endif; ?>
         </div>
 
         <div class="flex items-center gap-3">
@@ -36,7 +51,7 @@ $searchUrl = site_url('api/awesome-bar/search');
                 <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
                 </svg>
-                <span class="hidden sm:inline">Search or jump to...</span>
+                <span class="hidden sm:inline"><?= esc($common['search_or_jump'] ?? 'Search or jump to...') ?></span>
                 <kbd class="hidden rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400 sm:inline-flex">Ctrl K</kbd>
             </button>
 
@@ -71,21 +86,21 @@ $searchUrl = site_url('api/awesome-bar/search');
                 >
                     <div class="border-b border-slate-200 px-3 py-2">
                         <p class="truncate text-sm font-medium text-slate-900"><?= esc($currentUserName) ?></p>
-                        <p class="text-xs text-slate-500"><?= $isAdmin ? 'Admin' : 'User' ?></p>
+                        <p class="text-xs text-slate-500"><?= $isAdmin ? esc($common['admin'] ?? 'Admin') : esc($common['user'] ?? 'User') ?></p>
                     </div>
                     <a
                         href="<?= site_url('desk/profile') ?>"
                         class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         role="menuitem"
                         @click="open = false"
-                    >Edit profile</a>
+                    ><?= esc($nav['profile'] ?? 'Edit Profile') ?></a>
                     <form action="<?= site_url('logout') ?>" method="post">
                         <?= csrf_field() ?>
                         <button
                             type="submit"
                             class="block w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"
                             role="menuitem"
-                        >Logout</button>
+                        ><?= esc($nav['logout'] ?? 'Logout') ?></button>
                     </form>
                 </div>
             </div>
@@ -137,7 +152,7 @@ $searchUrl = site_url('api/awesome-bar/search');
                         @keydown.enter.prevent="goResult()"
                         type="text"
                         class="w-full border-0 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
-                        placeholder="Search documents, pages, modules..."
+                        placeholder="<?= esc($common['search_placeholder'] ?? 'Search documents, pages, modules...') ?>"
                         autocomplete="off"
                     >
                     <div class="flex items-center gap-2">
@@ -152,8 +167,8 @@ $searchUrl = site_url('api/awesome-bar/search');
 
             <div class="border-b border-slate-100 bg-white px-4 py-2">
                 <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                    <span x-text="query.trim() === '' ? 'Quick Access' : 'Search Results'"></span>
-                    <span x-text="results.length > 0 ? `${results.length} item(s)` : 'No selection'"></span>
+                    <span x-text="query.trim() === '' ? '<?= esc($common['quick_access'] ?? 'Quick Access') ?>' : '<?= esc($common['search_results'] ?? 'Search Results') ?>'"></span>
+                    <span x-text="results.length > 0 ? `${results.length} <?= esc($common['items'] ?? 'item(s)') ?>` : '<?= esc($common['no_selection'] ?? 'No selection') ?>'"></span>
                 </div>
             </div>
 
@@ -169,7 +184,7 @@ $searchUrl = site_url('api/awesome-bar/search');
                         <div
                             :class="idx === activeIndex ? 'border-white/10 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-slate-600'"
                             class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold uppercase tracking-wide"
-                            x-text="item.item_type === 'entity' ? 'Doc' : 'Page'"
+                            x-text="item.item_type === 'entity' ? '<?= esc($common['document'] ?? 'Doc') ?>' : '<?= esc($common['page'] ?? 'Page') ?>'"
                         ></div>
 
                         <div class="min-w-0 flex-1">
@@ -179,20 +194,20 @@ $searchUrl = site_url('api/awesome-bar/search');
                                     x-show="item.is_core"
                                     :class="idx === activeIndex ? 'bg-white/10 text-white/80' : 'bg-slate-100 text-slate-500'"
                                     class="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-                                >Core</span>
+                                ><?= esc($common['core'] ?? 'Core') ?></span>
                             </div>
 
                             <p
                                 :class="idx === activeIndex ? 'text-white/70' : 'text-slate-500'"
                                 class="mt-1 truncate text-sm"
-                                x-text="item.description || 'Không có mô tả.'"
+                                x-text="item.description || '<?= esc($common['no_description'] ?? 'No description.') ?>'"
                             ></p>
 
                             <div
                                 :class="idx === activeIndex ? 'text-white/60' : 'text-slate-400'"
                                 class="mt-2 flex items-center gap-2 text-xs"
                             >
-                                <span x-text="item.item_type === 'entity' ? 'Document' : 'Desk page'"></span>
+                                <span x-text="item.item_type === 'entity' ? '<?= esc($common['document'] ?? 'Document') ?>' : '<?= esc($common['page'] ?? 'Desk page') ?>'"></span>
                                 <span>&middot;</span>
                                 <span class="truncate" x-text="item.module || item.route"></span>
                             </div>
@@ -208,29 +223,29 @@ $searchUrl = site_url('api/awesome-bar/search');
                 <div
                     x-show="loading && results.length === 0"
                     class="px-4 py-10 text-center text-sm text-slate-400"
-                >Đang tải kết quả...</div>
+                ><?= esc($common['loading'] ?? 'Loading...') ?></div>
 
                 <div
                     x-show="query.trim() !== '' && results.length === 0 && !loading"
                     class="px-4 py-10 text-center"
                 >
-                    <p class="text-sm font-medium text-slate-700">Không tìm thấy kết quả phù hợp.</p>
-                    <p class="mt-1 text-sm text-slate-400">Thử tìm theo tên entity, module hoặc trang quản trị.</p>
+                    <p class="text-sm font-medium text-slate-700"><?= esc($common['no_results'] ?? 'No matching results found.') ?></p>
+                    <p class="mt-1 text-sm text-slate-400"><?= esc($common['no_results_hint'] ?? '') ?></p>
                 </div>
 
                 <div
                     x-show="query.trim() === '' && results.length === 0 && !loading"
                     class="px-4 py-10 text-center"
                 >
-                    <p class="text-sm font-medium text-slate-700">Bắt đầu gõ để tìm nhanh.</p>
-                    <p class="mt-1 text-sm text-slate-400">Các trang core và entity gần đây sẽ hiện ở đây.</p>
+                    <p class="text-sm font-medium text-slate-700"><?= esc($common['start_typing'] ?? 'Start typing to search quickly.') ?></p>
+                    <p class="mt-1 text-sm text-slate-400"><?= esc($common['start_typing_hint'] ?? '') ?></p>
                 </div>
             </div>
 
             <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-400">
-                <span>&uarr;&darr; điều hướng</span>
-                <span>Enter mở</span>
-                <span>Esc đóng</span>
+                <span>&uarr;&darr; <?= esc($common['navigate'] ?? 'Navigate') ?></span>
+                <span><?= esc($common['open'] ?? 'Enter to open') ?></span>
+                <span><?= esc($common['close'] ?? 'Esc to close') ?></span>
             </div>
         </div>
     </div>

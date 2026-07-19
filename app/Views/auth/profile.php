@@ -20,13 +20,18 @@ if (is_string($roles)) {
     }
 }
 $roles = array_values(array_map('strval', is_array($roles) ? $roles : []));
+
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$p = $lang['profile'] ?? [];
+$c = $lang['common'] ?? [];
+$htmlLang = $lang['code'] ?? 'en';
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($htmlLang) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Edit profile · Volt Desk</title>
+    <title><?= esc($p['title'] ?? 'Edit profile') ?> · Volt Desk</title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
     <style>[x-cloak]{display:none!important}</style>
@@ -36,8 +41,8 @@ $roles = array_values(array_map('strval', is_array($roles) ? $roles : []));
 
     <main class="mx-auto max-w-xl p-4 lg:p-8">
         <div class="mb-6">
-            <h1 class="text-2xl font-semibold">Edit profile</h1>
-            <p class="mt-1 text-sm text-slate-500">Cập nhật mật khẩu tài khoản đang đăng nhập.</p>
+            <h1 class="text-2xl font-semibold"><?= esc($p['edit'] ?? 'Edit profile') ?></h1>
+            <p class="mt-1 text-sm text-slate-500"><?= esc($p['description'] ?? '') ?></p>
         </div>
 
         <?php if (! empty($error)): ?>
@@ -50,31 +55,31 @@ $roles = array_values(array_map('strval', is_array($roles) ? $roles : []));
         <section class="mb-4 border border-slate-300 bg-white p-4">
             <dl class="grid gap-3 text-sm">
                 <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Username</dt>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['username'] ?? 'Username') ?></dt>
                     <dd class="mt-1 font-medium"><?= esc((string) $user->name) ?></dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Roles</dt>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['roles'] ?? 'Roles') ?></dt>
                     <dd class="mt-1"><?= esc($roles !== [] ? implode(', ', $roles) : '—') ?></dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status</dt>
-                    <dd class="mt-1"><?= $user->isActive() ? 'Active' : 'Inactive' ?></dd>
+                    <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['status'] ?? 'Status') ?></dt>
+                    <dd class="mt-1"><?= $user->isActive() ? esc($c['active'] ?? 'Active') : esc($c['inactive'] ?? 'Inactive') ?></dd>
                 </div>
             </dl>
         </section>
 
         <section class="border border-slate-300 bg-white p-4">
-            <h2 class="text-sm font-semibold">API Key</h2>
-            <p class="mt-1 text-xs text-slate-500">Dùng <code class="rounded bg-slate-100 px-1 font-mono">Authorization: Bearer &lt;api_key&gt;:&lt;api_secret&gt;</code> để gọi REST API.</p>
+            <h2 class="text-sm font-semibold"><?= esc($p['api_key'] ?? 'API Key') ?></h2>
+            <p class="mt-1 text-xs text-slate-500"><?= $p['api_instruction'] ?? '' ?></p>
 
             <?php if (! empty($apiKey) && ! empty($newSecret)): ?>
                 <div class="mt-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
-                    <p class="font-semibold text-amber-900">API Key mới được tạo. Hãy sao chép Secret ngay — sẽ không hiển thị lại.</p>
+                    <p class="font-semibold text-amber-900"><?= esc($p['api_new_key_message'] ?? '') ?></p>
                     <dl class="mt-2 grid gap-1 text-xs">
-                        <dt class="font-semibold text-slate-600">API Key</dt>
+                        <dt class="font-semibold text-slate-600"><?= esc($p['api_key_label'] ?? 'API Key') ?></dt>
                         <dd class="font-mono text-slate-900"><?= esc($apiKey) ?></dd>
-                        <dt class="mt-1 font-semibold text-slate-600">API Secret</dt>
+                        <dt class="mt-1 font-semibold text-slate-600"><?= esc($p['api_secret_label'] ?? 'API Secret') ?></dt>
                         <dd class="font-mono text-slate-900"><?= esc($newSecret) ?></dd>
                     </dl>
                 </div>
@@ -86,8 +91,8 @@ $roles = array_values(array_map('strval', is_array($roles) ? $roles : []));
                         <button
                             type="submit"
                             class="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                            onclick="return confirm('Tạo API Key mới sẽ vô hiệu hoá key cũ. Tiếp tục?')"
-                        >Generate new</button>
+                            onclick="return confirm('<?= esc($p['generate_confirm'] ?? '') ?>')"
+                        ><?= esc($p['generate_new'] ?? 'Generate new') ?></button>
                     </form>
                 </div>
             <?php else: ?>
@@ -96,33 +101,33 @@ $roles = array_values(array_map('strval', is_array($roles) ? $roles : []));
                     <button
                         type="submit"
                         class="rounded border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >Generate API Key</button>
+                    ><?= esc($p['generate_api_key'] ?? 'Generate API Key') ?></button>
                 </form>
             <?php endif; ?>
         </section>
 
         <section class="mt-4 border border-slate-300 bg-white p-4">
-            <h2 class="text-sm font-semibold">Change password</h2>
+            <h2 class="text-sm font-semibold"><?= esc($p['change_password'] ?? 'Change password') ?></h2>
             <form method="post" action="<?= site_url('desk/profile') ?>" class="mt-4 grid gap-3">
                 <?= csrf_field() ?>
                 <label class="block">
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Current password</span>
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['current_password'] ?? 'Current password') ?></span>
                     <input type="password" name="current_password" required autocomplete="current-password" class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500">
                 </label>
                 <label class="block">
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">New password</span>
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['new_password'] ?? 'New password') ?></span>
                     <input type="password" name="password" required minlength="8" autocomplete="new-password" class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500">
                 </label>
                 <label class="block">
-                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Confirm new password</span>
+                    <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($p['confirm_password'] ?? 'Confirm new password') ?></span>
                     <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password" class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500">
                 </label>
                 <div class="flex justify-end gap-2 pt-2">
-                    <a href="<?= site_url('desk') ?>" class="border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50">Cancel</a>
+                    <a href="<?= site_url('desk') ?>" class="border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 hover:bg-slate-50"><?= esc($c['cancel'] ?? 'Cancel') ?></a>
                     <button
                         type="submit"
                         class="border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >Save</button>
+                    ><?= esc($c['save'] ?? 'Save') ?></button>
                 </div>
             </form>
         </section>

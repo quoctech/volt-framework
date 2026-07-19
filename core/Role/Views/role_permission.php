@@ -6,27 +6,30 @@
  * @var array<int, string> $entityNames
  */
 $actions = ['read', 'write', 'create', 'delete', 'submit', 'import', 'amend', 'report', 'export', 'print', 'email'];
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$rp = $lang['role_permission'] ?? [];
+$c = $lang['common'] ?? [];
 $actionLabels = [
-    'read'   => 'Read',
-    'write'  => 'Write',
-    'create' => 'Create',
-    'delete' => 'Delete',
-    'submit' => 'Submit',
-    'import' => 'Import',
-    'amend'  => 'Amend',
-    'report' => 'Report',
-    'export' => 'Export',
-    'print'  => 'Print',
-    'email'  => 'Email',
+    'read'   => $c['read'] ?? 'Read',
+    'write'  => $c['write'] ?? 'Write',
+    'create' => $c['create'] ?? 'Create',
+    'delete' => $c['delete'] ?? 'Delete',
+    'submit' => $c['submit'] ?? 'Submit',
+    'import' => $c['import'] ?? 'Import',
+    'amend'  => $c['amend'] ?? 'Amend',
+    'report' => $c['report'] ?? 'Report',
+    'export' => $c['export'] ?? 'Export',
+    'print'  => $c['print'] ?? 'Print',
+    'email'  => $c['email'] ?? 'Email',
 ];
 ?><div>
     <div class="mb-6">
         <a href="<?= site_url('desk/roles') ?>" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-            Back to Role List
+            <?= esc($rp['back'] ?? 'Back to Role List') ?>
         </a>
         <h1 class="mt-2 text-2xl font-semibold text-slate-900"><?= esc($role->label) ?></h1>
-        <p class="mt-1 text-sm text-slate-500">Phân quyền CRUD và các hành động khác. Bỏ chọn tất cả = không có quyền nào.</p>
+        <p class="mt-1 text-sm text-slate-500"><?= esc($rp['description'] ?? '') ?></p>
     </div>
 
     <form method="post" action="<?= site_url("desk/roles/permissions/{$role->name}") ?>">
@@ -36,11 +39,11 @@ $actionLabels = [
             <table class="min-w-full border-collapse text-sm" x-data="permissionGrid()">
                 <thead>
                     <tr class="border-b border-slate-300 bg-slate-50 text-left">
-                        <th class="sticky left-0 z-10 bg-slate-50 py-2.5 pl-4 pr-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Entity</th>
+                        <th class="sticky left-0 z-10 bg-slate-50 py-2.5 pl-4 pr-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500"><?= esc($rp['entity'] ?? 'Entity') ?></th>
                         <?php foreach ($actions as $action): ?>
                             <th class="py-2.5 pr-4 text-center">
                                 <label class="flex cursor-pointer flex-col items-center gap-1">
-                                    <span class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"><?= $actionLabels[$action] ?></span>
+                                    <span class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"><?= esc($actionLabels[$action] ?? $action) ?></span>
                                     <input
                                         type="checkbox"
                                         class="h-3.5 w-3.5 border-slate-400 text-slate-600"
@@ -55,7 +58,7 @@ $actionLabels = [
                     <?php if ($entityNames === []): ?>
                         <tr>
                             <td colspan="<?= count($actions) + 1 ?>" class="py-8 pl-4 text-center text-sm text-slate-400">
-                                Chưa có entity nào. <a href="<?= site_url('desk/entity-builder') ?>" class="text-sky-700 underline">Tạo entity</a> trước.
+                                <?= esc($rp['empty'] ?? 'No entities yet.') ?> <a href="<?= site_url('desk/entity-builder') ?>" class="text-sky-700 underline"><?= esc($rp['create_entity'] ?? 'Create entity') ?></a>.
                             </td>
                         </tr>
                     <?php endif; ?>
@@ -83,9 +86,9 @@ $actionLabels = [
 
         <div class="mt-6 flex items-center gap-3">
             <button type="submit" class="border border-slate-900 bg-slate-900 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
-                Save Permissions
+                <?= esc($rp['save'] ?? 'Save Permissions') ?>
             </button>
-            <a href="<?= site_url('desk/roles') ?>" class="border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">Cancel</a>
+            <a href="<?= site_url('desk/roles') ?>" class="border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"><?= esc($rp['cancel'] ?? 'Cancel') ?></a>
         </div>
     </form>
 </div>

@@ -16,8 +16,11 @@ $isAdmin = $isAdmin ?? false;
 $deskActive = $deskActive ?? 'desk';
 $extraStyles = $extraStyles ?? '';
 $extraScripts = $extraScripts ?? '';
+
+$lang = \Volt\Core\Config\Lang\LangService::load();
+$htmlLang = $lang['code'] ?? 'en';
 ?><!doctype html>
-<html lang="vi">
+<html lang="<?= esc($htmlLang) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

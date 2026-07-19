@@ -9,6 +9,7 @@ use Config\Cache as CacheConfig;
 use Config\Database as DatabaseConfig;
 use Throwable;
 use Volt\Core\Database\VoltDatabase;
+use Volt\Core\System\Services\SystemSettingService;
 
 class SystemStatusService
 {
@@ -26,6 +27,8 @@ class SystemStatusService
      */
     public function getStatusReport(): array
     {
+        $this->applySystemTimezone();
+
         $checks = [
             $this->checkPhpRuntime(),
             $this->checkDatabaseConnection(),
@@ -347,6 +350,12 @@ class SystemStatusService
         $cacheConfig = new CacheConfig();
         $databaseConfig = new DatabaseConfig();
 
+        try {
+            $tz = service('voltSystemSetting')->getTimezone();
+        } catch (Throwable) {
+            $tz = date_default_timezone_get();
+        }
+
         return [
             ['label' => 'Volt', 'value' => 'Core Workspace Build'],
             ['label' => 'CodeIgniter', 'value' => CodeIgniter::CI_VERSION],
@@ -354,8 +363,20 @@ class SystemStatusService
             ['label' => 'Environment', 'value' => ENVIRONMENT],
             ['label' => 'Default DB Driver', 'value' => (string) ($databaseConfig->default['DBDriver'] ?? 'unknown')],
             ['label' => 'Configured Cache', 'value' => $cacheConfig->handler],
-            ['label' => 'Timezone', 'value' => (string) date_default_timezone_get()],
+            ['label' => 'Timezone (System)', 'value' => $tz],
+            ['label' => 'Timezone (PHP)', 'value' => (string) date_default_timezone_get()],
         ];
+    }
+
+    private function applySystemTimezone(): void
+    {
+        try {
+            $tz = service('voltSystemSetting')->getTimezone();
+            if ($tz !== '' && $tz !== 'UTC') {
+                date_default_timezone_set($tz);
+            }
+        } catch (Throwable) {
+        }
     }
 
     /**

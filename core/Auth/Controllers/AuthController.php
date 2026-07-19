@@ -7,6 +7,7 @@ namespace Volt\Core\Auth\Controllers;
 use CodeIgniter\Controller;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Services\AuthService;
+use Volt\Core\Config\Lang\LangService;
 
 class AuthController extends Controller
 {
@@ -70,7 +71,7 @@ class AuthController extends Controller
             return view('auth/login', [
                 'setupRequired' => $auth->setup_required,
                 'mode'          => $auth->setup_required ? 'setup' : 'login',
-                'error'         => $auth->message ?? 'Đăng nhập thất bại.',
+                'error'         => $auth->message ?? LangService::get('auth.login_failed'),
             ]);
         }
 
