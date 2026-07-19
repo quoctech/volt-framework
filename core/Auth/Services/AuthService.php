@@ -320,6 +320,10 @@ class AuthService
             return null;
         }
 
+        if (! $user->isAdmin()) {
+            return null;
+        }
+
         return $user;
     }
 

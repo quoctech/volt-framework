@@ -222,6 +222,10 @@ final class {$entityStudly}ApiController extends BaseApiController
 
     public function index(): ResponseInterface
     {
+        if (! \$this->model->canRead()) {
+            return \$this->respondError('Forbidden', 403);
+        }
+
         \$page = max(1, (int) (\$this->request->getGet('page') ?? 1));
         \$perPage = min(100, max(1, (int) (\$this->request->getGet('per_page') ?? 50)));
         \$query = trim((string) (\$this->request->getGet('q') ?? ''));
@@ -272,6 +276,10 @@ final class {$entityStudly}ApiController extends BaseApiController
 
     public function store(): ResponseInterface
     {
+        if (! \$this->model->canWrite('create')) {
+            return \$this->respondError('Forbidden', 403);
+        }
+
         \$payload = \$this->extractPayload();
         if (! is_array(\$payload)) {
             return \$this->respondError('Invalid JSON payload.', 400);
@@ -306,6 +314,10 @@ final class {$entityStudly}ApiController extends BaseApiController
         \$existing = \$this->model->find(\$id);
         if (! is_array(\$existing)) {
             return \$this->respondNotFound();
+        }
+
+        if (! \$this->model->canWrite('write')) {
+            return \$this->respondError('Forbidden', 403);
         }
 
         \$payload = \$this->extractPayload();
@@ -581,8 +593,13 @@ final class {$entityStudly}Controller extends Controller
         \$this->linkTargets = \$this->resolveLinkTargets();
     }
 
-    public function index(): string
+    public function index(): string|\CodeIgniter\HTTP\ResponseInterface
     {
+        if (! \$this->model->canRead()) {
+            \$this->response->setStatusCode(403);
+            return \$this->response->setBody('<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập trang này.</p>');
+        }
+
         return view('{$viewListPath}', [
             'title' => '{$entityStudly} List',
             'dataUrl' => site_url('{$this->snake($moduleStudly)}/api/{$entitySnake}'),
@@ -593,8 +610,13 @@ final class {$entityStudly}Controller extends Controller
         ]);
     }
 
-    public function create(): string
+    public function create(): string|\CodeIgniter\HTTP\ResponseInterface
     {
+        if (! \$this->model->canWrite('create')) {
+            \$this->response->setStatusCode(403);
+            return \$this->response->setBody('<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập trang này.</p>');
+        }
+
         return view('{$viewFormPath}', [
             'title' => 'New {$entityStudly}',
             'listUrl' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}'),
@@ -607,8 +629,13 @@ final class {$entityStudly}Controller extends Controller
         ]);
     }
 
-    public function edit(string \$name): string
+    public function edit(string \$name): string|\CodeIgniter\HTTP\ResponseInterface
     {
+        if (! \$this->model->canWrite('write')) {
+            \$this->response->setStatusCode(403);
+            return \$this->response->setBody('<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập trang này.</p>');
+        }
+
         return view('{$viewFormPath}', [
             'title' => 'Edit {$entityStudly}',
             'listUrl' => site_url('{$this->snake($moduleStudly)}/{$entitySnake}'),
@@ -623,6 +650,13 @@ final class {$entityStudly}Controller extends Controller
 
     public function data(): ResponseInterface
     {
+        if (! \$this->model->canRead()) {
+            return \$this->response->setStatusCode(403)->setJSON([
+                'status' => 'error',
+                'message' => 'Forbidden',
+            ]);
+        }
+
         \$page = max(1, (int) (\$this->request->getGet('page') ?? 1));
         \$perPage = (int) (\$this->request->getGet('per_page') ?? 50);
         if (! in_array(\$perPage, self::PER_PAGE_OPTIONS, true)) {
@@ -700,6 +734,21 @@ final class {$entityStudly}Controller extends Controller
 
         try {
             \$exists = \$name !== '' && is_array(\$this->model->find(\$name));
+
+            if (\$exists && ! \$this->model->canWrite('write')) {
+                return \$this->response->setStatusCode(403)->setJSON([
+                    'status' => 'error',
+                    'message' => 'Bạn không có quyền chỉnh sửa.',
+                ]);
+            }
+
+            if (! \$exists && ! \$this->model->canWrite('create')) {
+                return \$this->response->setStatusCode(403)->setJSON([
+                    'status' => 'error',
+                    'message' => 'Bạn không có quyền tạo mới.',
+                ]);
+            }
+
             if (! \$exists && \$name === '') {
                 \$name = \$this->generateDocumentName();
                 \$row['name'] = \$name;
@@ -722,9 +771,32 @@ final class {$entityStudly}Controller extends Controller
                 ],
             ]);
         } catch (Throwable \$throwable) {
+            if (\$exists === false && str_contains(\$throwable->getMessage(), 'duplicate key')) {
+                for (\$retry = 0; \$retry < 100; \$retry++) {
+                    \$row['name'] = \$this->generateDocumentName();
+                    try {
+                        \$this->model->insert(\$row);
+                        return \$this->response->setJSON([
+                            'status' => 'ok',
+                            'message' => 'Record created.',
+                            'data' => [
+                                'name' => \$row['name'],
+                            ],
+                        ]);
+                    } catch (Throwable \$retryThrowable) {
+                        if (! str_contains(\$retryThrowable->getMessage(), 'duplicate key')) {
+                            return \$this->response->setStatusCode(422)->setJSON([
+                                'status' => 'error',
+                                'message' => \$retryThrowable->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+            }
+
             return \$this->response->setStatusCode(422)->setJSON([
                 'status' => 'error',
-                'message' => \$throwable->getMessage(),
+                'message' => 'Could not generate unique name after retries.',
             ]);
         }
     }

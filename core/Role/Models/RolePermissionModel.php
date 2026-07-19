@@ -107,13 +107,22 @@ class RolePermissionModel
 
     public function getAllEntityNames(): array
     {
-        $rows = $this->db->table('sys_entity')
+        $fromEntity = $this->db->table('sys_entity')
             ->select('name')
-            ->orderBy('name', 'ASC')
             ->get()
             ->getResultArray();
 
-        return array_map(static fn (array $row): string => (string) ($row['name'] ?? ''), $rows);
+        $fromPermission = $this->db->query("SELECT DISTINCT entity AS name FROM sys_permission")
+            ->getResultArray();
+
+        $names = array_unique(array_merge(
+            array_map(static fn (array $row): string => (string) ($row['name'] ?? ''), $fromEntity),
+            array_map(static fn (array $row): string => (string) ($row['name'] ?? ''), $fromPermission),
+        ));
+
+        sort($names);
+
+        return $names;
     }
 
     private function decodeJson(mixed $value): array

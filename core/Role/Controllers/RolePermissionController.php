@@ -49,18 +49,15 @@ class RolePermissionController extends Controller
             return redirect()->to(site_url('desk/roles'));
         }
 
-        $entities = $this->request->getPost('entities');
+        $submitted = $this->request->getPost('entities');
+        $allEntities = $this->permissionModel->getAllEntityNames();
 
-        if (! is_array($entities)) {
-            return redirect()->to(site_url("desk/roles/permissions/{$role}"));
-        }
+        foreach ($allEntities as $entity) {
+            $actions = (isset($submitted[$entity]) && is_array($submitted[$entity]))
+                ? $submitted[$entity]
+                : [];
 
-        foreach ($entities as $entity => $actions) {
-            if (! is_array($actions)) {
-                continue;
-            }
-
-            $this->permissionModel->savePermissions($role, (string) $entity, $actions);
+            $this->permissionModel->savePermissions($role, $entity, $actions);
         }
 
         service('voltPermissionResolver')->clearAllCache();

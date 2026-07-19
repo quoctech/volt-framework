@@ -21,6 +21,10 @@ final class EmployeeApiController extends BaseApiController
 
     public function index(): ResponseInterface
     {
+        if (! $this->model->canRead()) {
+            return $this->respondError('Forbidden', 403);
+        }
+
         $page = max(1, (int) ($this->request->getGet('page') ?? 1));
         $perPage = min(100, max(1, (int) ($this->request->getGet('per_page') ?? 50)));
         $query = trim((string) ($this->request->getGet('q') ?? ''));
@@ -71,6 +75,10 @@ final class EmployeeApiController extends BaseApiController
 
     public function store(): ResponseInterface
     {
+        if (! $this->model->canWrite('create')) {
+            return $this->respondError('Forbidden', 403);
+        }
+
         $payload = $this->extractPayload();
         if (! is_array($payload)) {
             return $this->respondError('Invalid JSON payload.', 400);
@@ -105,6 +113,10 @@ final class EmployeeApiController extends BaseApiController
         $existing = $this->model->find($id);
         if (! is_array($existing)) {
             return $this->respondNotFound();
+        }
+
+        if (! $this->model->canWrite('write')) {
+            return $this->respondError('Forbidden', 403);
         }
 
         $payload = $this->extractPayload();

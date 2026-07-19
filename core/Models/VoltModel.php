@@ -21,6 +21,7 @@ abstract class VoltModel extends Model
     protected $afterUpdate = ['voltAfterUpdate'];
     protected $beforeDelete = ['voltBeforeDelete'];
     protected $afterDelete = ['voltAfterDelete'];
+    protected $beforeFind = ['voltBeforeFind'];
 
     protected string $entityName = '';
     protected bool $enforcePermissions = true;
@@ -433,6 +434,16 @@ abstract class VoltModel extends Model
     protected function voltAfterDelete(array $data): array
     {
         $this->writeAudit(self::ACTION_DELETE, $data, self::ACTION_DELETE);
+
+        return $data;
+    }
+
+    protected function voltBeforeFind(array $data): array
+    {
+        if (! $this->can(self::ACTION_READ)) {
+            $data['returnData'] = true;
+            $data['data'] = ($data['singleton'] ?? false) ? null : [];
+        }
 
         return $data;
     }

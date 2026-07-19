@@ -15,6 +15,7 @@ final class PermissionResolver
 {
     private const CACHE_VERSION = 'v1';
     private const CACHE_PREFIX = 'volt_permission_matrix_';
+    private const CACHE_VERSION_KEY = 'volt_perm_cache_ver';
 
     private BaseConnection $db;
     private CacheInterface $cache;
@@ -162,7 +163,14 @@ final class PermissionResolver
 
     public function clearAllCache(): void
     {
-        $this->cache->deleteMatching(self::CACHE_PREFIX . self::CACHE_VERSION . '_*');
+        $this->cache->save(self::CACHE_VERSION_KEY, microtime(true), 0);
+    }
+
+    private function getCacheVersion(): string
+    {
+        $cached = $this->cache->get(self::CACHE_VERSION_KEY);
+
+        return $cached !== null ? (string) $cached : '0';
     }
 
     private function ruleAllows(array $rule, string $action, ?string $field = null): bool
@@ -245,7 +253,7 @@ final class PermissionResolver
     {
         sort($roles);
 
-        return self::CACHE_PREFIX . self::CACHE_VERSION . '_' . hash('xxh128', implode('|', $roles));
+        return self::CACHE_PREFIX . self::CACHE_VERSION . '_' . $this->getCacheVersion() . '_' . hash('xxh128', implode('|', $roles));
     }
 
     private function normalizeEntityName(string $name): string
