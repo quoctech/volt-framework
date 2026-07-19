@@ -59,65 +59,22 @@
             "column": 2,
             "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
             "in_list_view": true
-        },
-        "input_3": {
-            "id": 77,
-            "parent": "employee",
-            "fieldname": "input_3",
-            "label": "Input 3",
-            "fieldtype": "Input",
-            "length": 255,
-            "options": "",
-            "reqd": 0,
-            "read_only": 1,
-            "hidden": 0,
-            "idx": 3,
-            "is_child_table": false,
-            "storage_mode": "embedded_jsonb",
-            "column": 1,
-            "placeholder": "",
-            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-            "in_list_view": true,
-            "default_value": ""
-        },
-        "check_4": {
-            "id": 84,
-            "parent": "employee",
-            "fieldname": "check_4",
-            "label": "Check 4",
-            "fieldtype": "Check",
-            "length": null,
-            "options": "",
-            "reqd": 1,
-            "read_only": 0,
-            "hidden": 0,
-            "idx": 4,
-            "is_child_table": false,
-            "storage_mode": "embedded_jsonb",
-            "column": 1,
-            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-            "in_list_view": true,
-            "default_value": ""
         }
     },
     "field_order": [
         "employee_name",
-        "employee_age",
-        "input_3",
-        "check_4"
+        "employee_age"
     ],
     "main_fields": [
         "employee_name",
-        "employee_age",
-        "input_3",
-        "check_4"
+        "employee_age"
     ],
     "child_fields": [],
     "child_tables": [],
     "cache": {
         "key": "volt_metadata_entity_v1_employee_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-15T13:36:05+00:00",
+        "compiledAt": "2026-07-19T09:42:07+00:00",
         "role": null
     },
     "source": {
@@ -156,32 +113,6 @@
                 "read_only": "0",
                 "hidden": "0",
                 "idx": "2"
-            },
-            {
-                "id": "77",
-                "parent": "employee",
-                "fieldname": "input_3",
-                "label": "Input 3",
-                "fieldtype": "Input",
-                "length": "255",
-                "options": "",
-                "reqd": "0",
-                "read_only": "1",
-                "hidden": "0",
-                "idx": "3"
-            },
-            {
-                "id": "84",
-                "parent": "employee",
-                "fieldname": "check_4",
-                "label": "Check 4",
-                "fieldtype": "Check",
-                "length": null,
-                "options": "",
-                "reqd": "1",
-                "read_only": "0",
-                "hidden": "0",
-                "idx": "4"
             }
         ],
         "customRows": [
@@ -189,19 +120,6 @@
                 "apply_to_role": null,
                 "custom_meta": {
                     "fields": {
-                        "check_4": {
-                            "column": 1,
-                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                            "in_list_view": true,
-                            "default_value": ""
-                        },
-                        "input_3": {
-                            "column": 1,
-                            "placeholder": "",
-                            "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
-                            "in_list_view": true,
-                            "default_value": ""
-                        },
                         "employee_age": {
                             "column": 2,
                             "session_uid": "f99a39a2-08fd-43b9-bb16-9ffd0ad9636a",
@@ -220,20 +138,14 @@
         ]
     },
     "derived": {
-        "main_field_count": 4,
+        "main_field_count": 2,
         "child_field_count": 0,
         "field_names": [
             "employee_name",
-            "employee_age",
-            "input_3",
-            "check_4"
+            "employee_age"
         ],
-        "required_fields": [
-            "check_4"
-        ],
+        "required_fields": [],
         "hidden_fields": [],
-        "read_only_fields": [
-            "input_3"
-        ]
+        "read_only_fields": []
     }
 }

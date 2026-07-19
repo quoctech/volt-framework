@@ -6,7 +6,7 @@
 /** @var string $editUrlBase */
 /** @var string $builderUrl */
 /** @var array<string, array<string, string>> $linkTargets */
-$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]', true) ?: [];
+$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data"},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int"}]', true) ?: [];
 ?>
 <!doctype html>
 <html lang="vi">

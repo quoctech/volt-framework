@@ -598,7 +598,7 @@ final class {$entityStudly}Controller extends Controller
                 continue;
             }
 
-            if (\$fieldtype === 'Table') {
+            if (in_array(\$fieldtype, ['Table', 'Child Table (JSONB)'], true)) {
                 \$row[\$fieldname] = is_array(\$value) ? \$value : [];
                 continue;
             }
@@ -1139,7 +1139,7 @@ PHP;
                                                         </div>
                                                     </div>
                                                 </template>
-                                                <template x-if="field.fieldtype === 'Table'">
+                                                <template x-if="field.fieldtype === 'Table' || field.fieldtype === 'Child Table (JSONB)'">
                                                     <div class="w-full" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
                                                         <table class="w-full border-collapse border border-zinc-300 text-sm">
                                                             <thead>
@@ -1190,7 +1190,7 @@ PHP;
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table'].includes(field.fieldtype)">
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>
@@ -1404,7 +1404,7 @@ function {$entitySnake}FormApp(boot) {
                     return;
                 }
 
-                if (field.fieldtype === 'Table') {
+                if (['Table', 'Child Table (JSONB)'].includes(field.fieldtype)) {
                     this.form[field.fieldname] = [];
                     return;
                 }
@@ -1636,7 +1636,7 @@ function {$entitySnake}FormApp(boot) {
                     this.form[field.fieldname] = hasData
                         ? String(value) === '1' || value === 1 || value === true
                         : false;
-                } else if (field.fieldtype === 'Table') {
+                } else if (['Table', 'Child Table (JSONB)'].includes(field.fieldtype)) {
                     this.form[field.fieldname] = hasData && Array.isArray(value) ? value : [];
                 } else {
                     this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');
@@ -1761,12 +1761,12 @@ PHP;
                 continue;
             }
 
-            if (($field['hidden'] ?? false) || ($field['fieldtype'] ?? '') === 'Table') {
+            if (($field['hidden'] ?? false) || in_array(($field['fieldtype'] ?? ''), ['Table', 'Child Table (JSONB)'], true)) {
                 continue;
             }
 
             $custom = is_array($field['f_custom_jsonb'] ?? null) ? $field['f_custom_jsonb'] : [];
-            if (($custom['in_list_view'] ?? false) !== true) {
+            if ((($field['in_list_view'] ?? $custom['in_list_view'] ?? false) !== true)) {
                 continue;
             }
 
@@ -1825,8 +1825,8 @@ PHP;
                 'custom_meta' => $custom,
             ];
 
-            // Với Table field, nhúng child_columns để UI render grid
-            if ($row['fieldtype'] === 'Table') {
+            // Với Table / Child Table (JSONB) field, nhúng child_columns để UI render grid
+            if (in_array($row['fieldtype'], ['Table', 'Child Table (JSONB)'], true)) {
                 $childName = $this->parseChildEntityName($row['options']);
                 $row['child_columns'] = $childColumnsByEntity[$childName] ?? [];
                 $row['column'] = 1;
@@ -1848,7 +1848,7 @@ PHP;
     {
         $childNames = [];
         foreach ($source as $field) {
-            if (($field['fieldtype'] ?? '') !== 'Table') {
+            if (! in_array(($field['fieldtype'] ?? ''), ['Table', 'Child Table (JSONB)'], true)) {
                 continue;
             }
             $childName = $this->parseChildEntityName((string) ($field['options'] ?? ''));
@@ -1960,7 +1960,9 @@ PHP;
     private function extractFormSessions(array $compiled): array
     {
         $entity = is_array($compiled['entity'] ?? null) ? $compiled['entity'] : [];
-        $custom = is_array($entity['custom_attributes'] ?? null) ? $entity['custom_attributes'] : [];
+        $custom = is_array($entity['custom_attributes'] ?? null)
+            ? $entity['custom_attributes']
+            : (is_array($entity['s_custom_jsonb'] ?? null) ? $entity['s_custom_jsonb'] : []);
         $layout = is_array($custom['layout'] ?? null) ? $custom['layout'] : [];
         $sessions = is_array($layout['sessions'] ?? null) ? $layout['sessions'] : [];
 

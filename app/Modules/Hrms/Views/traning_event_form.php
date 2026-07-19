@@ -103,7 +103,7 @@
                                                         </div>
                                                     </div>
                                                 </template>
-                                                <template x-if="field.fieldtype === 'Table'">
+                                                <template x-if="field.fieldtype === 'Table' || field.fieldtype === 'Child Table (JSONB)'">
                                                     <div class="w-full" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
                                                         <table class="w-full border-collapse border border-zinc-300 text-sm">
                                                             <thead>
@@ -154,7 +154,7 @@
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table'].includes(field.fieldtype)">
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>

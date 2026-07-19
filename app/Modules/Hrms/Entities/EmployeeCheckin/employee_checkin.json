@@ -77,7 +77,7 @@
     "cache": {
         "key": "volt_metadata_entity_v1_employee_checkin_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-15T13:36:05+00:00",
+        "compiledAt": "2026-07-19T09:42:07+00:00",
         "role": null
     },
     "source": {

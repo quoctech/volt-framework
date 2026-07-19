@@ -63,7 +63,7 @@ class RolePermissionController extends Controller
             $this->permissionModel->savePermissions($role, (string) $entity, $actions);
         }
 
-        service('voltPermissionResolver')->clearCache($role);
+        service('voltPermissionResolver')->clearAllCache();
 
         return redirect()->to(site_url("desk/roles/permissions/{$role}"));
     }

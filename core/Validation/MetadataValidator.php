@@ -39,6 +39,7 @@ final class MetadataValidator
         'JSON',
         'Link',
         'Table',
+        'Child Table (JSONB)',
     ];
 
     public function assertEntityName(string $entityName): string

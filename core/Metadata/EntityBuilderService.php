@@ -443,7 +443,7 @@ final class EntityBuilderService
                 throw new InvalidArgumentException('Duplicate fieldname detected: ' . $fieldname);
             }
 
-            if (in_array($fieldtype, ['Select', 'Table'], true) && $options === '') {
+            if (in_array($fieldtype, ['Select', 'Table', 'Child Table (JSONB)'], true) && $options === '') {
                 throw new InvalidArgumentException("Field {$fieldname} requires options.");
             }
 
@@ -650,7 +650,7 @@ final class EntityBuilderService
     private function normalizeFieldType(string $value): string
     {
         // Input là kiểu nhập liệu chuẩn, map vật lý như Data để UI gần với Frappe hơn.
-        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table'];
+        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table', 'Child Table (JSONB)'];
 
         if (! in_array($value, $allowed, true)) {
             throw new InvalidArgumentException("Invalid field type: {$value}");

@@ -33,7 +33,7 @@ final class EmployeeController extends Controller
         helper(['url']);
         $this->model = new EmployeeModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":[]},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":2,"custom_meta":[]},{"fieldname":"input_3","label":"Input 3","fieldtype":"Input","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":true,"idx":3,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":[]},{"fieldname":"check_4","label":"Check 4","fieldtype":"Check","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":4,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":[]}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":[]},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":2,"custom_meta":[]}]', true) ?: [];
         $this->sessions = json_decode('[{"uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
@@ -302,7 +302,7 @@ final class EmployeeController extends Controller
                 continue;
             }
 
-            if ($fieldtype === 'Table') {
+            if (in_array($fieldtype, ['Table', 'Child Table (JSONB)'], true)) {
                 $row[$fieldname] = is_array($value) ? $value : [];
                 continue;
             }

@@ -86,8 +86,9 @@ class SchemaSync
             'MultiSelect' => 'JSONB',
             'JSON'       => 'JSONB',
             'Link'       => 'VARCHAR(100)',
-            'Table'      => 'JSONB',
-            default      => 'TEXT'
+            'Table'              => 'JSONB',
+            'Child Table (JSONB)' => 'JSONB',
+            default              => 'TEXT'
         };
     }
 

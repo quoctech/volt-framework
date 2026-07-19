@@ -26,12 +26,12 @@ final class PermissionResolver
         $this->db = $db ?? VoltDatabase::connection();
         $this->cache = $cache ?? Services::cache();
         $this->authService = $authService ?? service('voltAuth');
-        $this->cacheTtl = (int) env('volt.permission.cacheTtl', 86400);
+        $this->cacheTtl = (int) env('volt.permission.cacheTtl', 300);
     }
 
     public function can(string $entity, string $action, ?string $state = null, ?string $field = null, ?UserEntity $user = null): bool
     {
-        $entity = trim($entity);
+        $entity = $this->normalizeEntityName($entity);
         $action = trim($action);
 
         if ($entity === '' || $action === '') {
@@ -59,11 +59,11 @@ final class PermissionResolver
         $rules = [];
 
         if (isset($entityRules[$stateKey])) {
-            $rules[] = $entityRules[$stateKey];
+            $rules = array_merge($rules, $entityRules[$stateKey]);
         }
 
         if ($stateKey !== '*' && isset($entityRules['*'])) {
-            $rules[] = $entityRules['*'];
+            $rules = array_merge($rules, $entityRules['*']);
         }
 
         foreach ($rules as $rule) {
@@ -73,6 +73,29 @@ final class PermissionResolver
         }
 
         return false;
+    }
+
+    public function hasEntityPermission(string $entity, ?UserEntity $user = null): bool
+    {
+        $entity = $this->normalizeEntityName($entity);
+
+        if ($entity === '') {
+            return false;
+        }
+
+        $actor = $this->resolveActor($user);
+
+        if (! $actor instanceof UserEntity) {
+            return false;
+        }
+
+        if ($actor->isAdmin()) {
+            return true;
+        }
+
+        $matrix = $this->matrixForUser($actor);
+
+        return isset($matrix[$entity]) && is_array($matrix[$entity]) && $matrix[$entity] !== [];
     }
 
     /**
@@ -134,9 +157,12 @@ final class PermissionResolver
 
     public function clearCache(?string $role = null): void
     {
-        if ($role !== null && $role !== '') {
-            $this->cache->delete($this->cacheKeyForRoles([$role]));
-        }
+        $this->clearAllCache();
+    }
+
+    public function clearAllCache(): void
+    {
+        $this->cache->deleteMatching(self::CACHE_PREFIX . self::CACHE_VERSION . '_*');
     }
 
     private function ruleAllows(array $rule, string $action, ?string $field = null): bool
@@ -220,5 +246,10 @@ final class PermissionResolver
         sort($roles);
 
         return self::CACHE_PREFIX . self::CACHE_VERSION . '_' . hash('xxh128', implode('|', $roles));
+    }
+
+    private function normalizeEntityName(string $name): string
+    {
+        return strtolower(trim($name));
     }
 }

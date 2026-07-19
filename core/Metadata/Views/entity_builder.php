@@ -257,7 +257,7 @@
 
                                 <div x-show="requiresOptions(selectedField.fieldtype)" x-cloak>
                                     <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Options</label>
-                                    <template x-if="selectedField.fieldtype === 'Link' || selectedField.fieldtype === 'Table'">
+                                    <template x-if="selectedField.fieldtype === 'Link' || selectedField.fieldtype === 'Table' || selectedField.fieldtype === 'Child Table (JSONB)'">
                                         <div class="relative" @click.outside="closeLinkEntityPicker()">
                                             <input
                                                 :value="selectedField.fieldtype === 'Table' ? stripSeparateSuffix(selectedField.options) : selectedField.options"
@@ -266,7 +266,7 @@
                                                 @input="syncLinkEntityFilter(); handleEntityInput($event)"
                                                 type="text"
                                                 class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500"
-                                                :placeholder="selectedField.fieldtype === 'Table' ? 'Select child entity' : 'Select linked entity'"
+                                                :placeholder="selectedField.fieldtype === 'Table' || selectedField.fieldtype === 'Child Table (JSONB)' ? 'Select child entity' : 'Select linked entity'"
                                             >
                                             <div x-show="linkEntityDropdownOpen" x-cloak class="absolute left-0 right-0 top-12 z-20 border border-zinc-300 bg-white shadow-sm">
                                                 <div class="max-h-64 overflow-auto p-1">
@@ -281,7 +281,7 @@
                                             </div>
                                         </div>
                                     </template>
-                                    <template x-if="selectedField.fieldtype !== 'Link' && selectedField.fieldtype !== 'Table'">
+                                    <template x-if="selectedField.fieldtype !== 'Link' && selectedField.fieldtype !== 'Table' && selectedField.fieldtype !== 'Child Table (JSONB)'">
                                         <textarea x-model="selectedField.options" rows="5" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
                                     </template>
                                 </div>
@@ -427,8 +427,8 @@
                     fieldUid: null,
                     targetFieldUid: null,
                 },
-                fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Input', 'Link', 'Table'],
-                normalizedFieldTypes: ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table'],
+                fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Input', 'Link', 'Table', 'Child Table (JSONB)'],
+                normalizedFieldTypes: ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Table', 'Child Table (JSONB)'],
                 namingPresets: [
                     { value: 'HASH', label: 'HASH' },
                     { value: 'CUSTOM', label: 'Custom series' },
@@ -724,7 +724,7 @@
                     }
                 },
                 requiresOptions(fieldType) {
-                    return ['Select', 'Table', 'Link'].includes(fieldType);
+                    return ['Select', 'Table', 'Link', 'Child Table (JSONB)'].includes(fieldType);
                 },
                 stripSeparateSuffix(options) {
                     if (!options) return '';
@@ -754,7 +754,7 @@
                 filteredLinkEntityOptions() {
                     const raw = String(this.linkEntityFilter || this.selectedField?.options || '').trim();
                     const keyword = raw.replace(/:separate$/, '').toLowerCase();
-                    const isTable = this.selectedField?.fieldtype === 'Table';
+                    const isTable = this.selectedField?.fieldtype === 'Table' || this.selectedField?.fieldtype === 'Child Table (JSONB)';
                     return this.entityOptions
                         .filter((entityOption) => entityOption.name !== this.entity.name)
                         .filter((entityOption) => {
@@ -820,7 +820,7 @@
                         return 'draft\nsubmitted\ncancelled';
                     }
 
-                    if (fieldType === 'Table' || fieldType === 'Link') {
+                    if (fieldType === 'Table' || fieldType === 'Link' || fieldType === 'Child Table (JSONB)') {
                         return 'target_entity_name';
                     }
 

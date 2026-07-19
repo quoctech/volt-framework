@@ -29,7 +29,7 @@ function employee_skill_mapFormApp(boot) {
                     return;
                 }
 
-                if (field.fieldtype === 'Table') {
+                if (['Table', 'Child Table (JSONB)'].includes(field.fieldtype)) {
                     this.form[field.fieldname] = [];
                     return;
                 }
@@ -261,7 +261,7 @@ function employee_skill_mapFormApp(boot) {
                     this.form[field.fieldname] = hasData
                         ? String(value) === '1' || value === 1 || value === true
                         : false;
-                } else if (field.fieldtype === 'Table') {
+                } else if (['Table', 'Child Table (JSONB)'].includes(field.fieldtype)) {
                     this.form[field.fieldname] = hasData && Array.isArray(value) ? value : [];
                 } else {
                     this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');

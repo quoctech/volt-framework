@@ -302,7 +302,7 @@ final class EmployeeSkillMapController extends Controller
                 continue;
             }
 
-            if ($fieldtype === 'Table') {
+            if (in_array($fieldtype, ['Table', 'Child Table (JSONB)'], true)) {
                 $row[$fieldname] = is_array($value) ? $value : [];
                 continue;
             }

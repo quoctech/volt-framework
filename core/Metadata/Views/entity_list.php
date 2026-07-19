@@ -54,11 +54,11 @@ $resolver = service('voltPermissionResolver');
                     $recordListUrl = $moduleSnake !== '' && $entityName !== ''
                         ? site_url("{$moduleSnake}/{$entityName}")
                         : '';
-                    $canRead = $isAdmin || ($entityName !== '' && $resolver->can($entityName, 'read'));
+                    $hasAccess = $isAdmin || ($entityName !== '' && $resolver->hasEntityPermission($entityName));
                     ?>
                     <tr class="border-b border-slate-200 transition hover:bg-slate-50">
                         <td class="py-2.5 pl-4 pr-4">
-                            <?php if ($canRead && $recordListUrl !== ''): ?>
+                            <?php if ($hasAccess && $recordListUrl !== ''): ?>
                                 <a href="<?= $recordListUrl ?>" class="font-medium text-sky-700 underline hover:text-sky-800">
                                     <?= esc($entityName) ?>
                                 </a>
