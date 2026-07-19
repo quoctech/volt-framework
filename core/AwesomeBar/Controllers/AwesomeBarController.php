@@ -22,10 +22,6 @@ class AwesomeBarController extends Controller
     {
         $q = trim((string) ($this->request->getGet('q') ?? ''));
 
-        if ($q === '') {
-            return $this->response->setJSON(['results' => []]);
-        }
-
         $actor = service('voltAuth')->currentUser();
 
         if ($actor === null) {

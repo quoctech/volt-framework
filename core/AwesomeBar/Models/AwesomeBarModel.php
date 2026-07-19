@@ -21,7 +21,7 @@ class AwesomeBarModel
         $keyword = trim($keyword);
 
         if ($keyword === '') {
-            return [];
+            return $this->suggest();
         }
 
         $builder = $this->db->table('sys_awesome_bar')
@@ -40,6 +40,29 @@ class AwesomeBarModel
         }
 
         $rows = $builder->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => [
+            'id'          => (int) ($row['id'] ?? 0),
+            'item_type'   => (string) ($row['item_type'] ?? ''),
+            'item_name'   => (string) ($row['item_name'] ?? ''),
+            'label'       => (string) ($row['label'] ?? ''),
+            'description' => (string) ($row['description'] ?? ''),
+            'route'       => (string) ($row['route'] ?? ''),
+            'module'      => (string) ($row['module'] ?? ''),
+            'is_core'     => (bool) ($row['is_core'] ?? false),
+        ], $rows);
+    }
+
+    public function suggest(int $limit = 8): array
+    {
+        $rows = $this->db->table('sys_awesome_bar')
+            ->select('id, item_type, item_name, label, description, route, module, is_core')
+            ->orderBy('is_core', 'DESC')
+            ->orderBy('updated_at', 'DESC')
+            ->orderBy('label', 'ASC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
 
         return array_map(static fn (array $row): array => [
             'id'          => (int) ($row['id'] ?? 0),
@@ -117,20 +140,29 @@ class AwesomeBarModel
                 ->get()
                 ->getRow();
 
+            $payload = [
+                'label'       => $page['label'],
+                'description' => $page['description'],
+                'route'       => $page['route'],
+                'module'      => $page['module'],
+                'is_core'     => 1,
+                'owner'       => 'system',
+                'updated_at'  => date('Y-m-d H:i:s'),
+            ];
+
             if (! $existing) {
                 $this->db->table('sys_awesome_bar')->insert([
                     'item_type'   => 'page',
                     'item_name'   => $page['item_name'],
-                    'label'       => $page['label'],
-                    'description' => $page['description'],
-                    'route'       => $page['route'],
-                    'module'      => $page['module'],
-                    'is_core'     => 1,
-                    'owner'       => 'system',
+                    ...$payload,
                     'created_at'  => date('Y-m-d H:i:s'),
-                    'updated_at'  => date('Y-m-d H:i:s'),
                 ]);
+                continue;
             }
+
+            $this->db->table('sys_awesome_bar')
+                ->where('id', $existing->id)
+                ->update($payload);
         }
     }
 
