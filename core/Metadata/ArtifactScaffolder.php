@@ -96,7 +96,12 @@ final class ArtifactScaffolder
         $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_LIST_SCRIPT), $this->buildEntityListScript($entitySnake));
         $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_FORM_SCRIPT), $this->buildEntityFormScript($entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_MODELS, $entityStudly . 'Model.php'), $this->buildEntityModel($moduleStudly, $entityStudly, $entitySnake));
+        $this->writeIfMissing(
+            $this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, 'BaseApiController.php'),
+            $this->buildBaseApiController($moduleStudly)
+        );
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'Controller.php'), $this->buildEntityController($moduleStudly, $entityStudly, $entitySnake, $compiled));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'ApiController.php'), $this->buildEntityApiController($moduleStudly, $entityStudly, $entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_list.php'), $this->buildEntityListView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $dataUrl, $createUrl, $editUrl, $moduleSnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'), $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl));
         $this->writeFile(
@@ -108,7 +113,249 @@ final class ArtifactScaffolder
             'list_url' => $listUrl,
             'data_url' => $dataUrl,
             'create_url' => $createUrl,
+            'rest_api_base' => '/' . $moduleSnake . '/rest/' . $entitySnake,
         ];
+    }
+
+    private function buildBaseApiController(string $moduleStudly): string
+    {
+        return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\\{$moduleStudly}\Controllers;
+
+use CodeIgniter\Controller;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
+
+abstract class BaseApiController extends Controller
+{
+    public function initController(\CodeIgniter\HTTP\RequestInterface \$request, \CodeIgniter\HTTP\ResponseInterface \$response, LoggerInterface \$logger)
+    {
+        parent::initController(\$request, \$response, \$logger);
+    }
+
+    protected function respondSuccess(mixed \$data, int \$code = 200): ResponseInterface
+    {
+        return \$this->response->setStatusCode(\$code)->setJSON([
+            'data' => \$data,
+        ]);
+    }
+
+    protected function respondError(string \$message, int \$code = 400): ResponseInterface
+    {
+        return \$this->response->setStatusCode(\$code)->setJSON([
+            'status' => 'error',
+            'message' => \$message,
+        ]);
+    }
+
+    protected function respondNotFound(string \$message = 'Record not found.'): ResponseInterface
+    {
+        return \$this->respondError(\$message, 404);
+    }
+
+    protected function respondValidationError(array \$errors): ResponseInterface
+    {
+        return \$this->response->setStatusCode(422)->setJSON([
+            'status' => 'error',
+            'message' => 'Validation failed.',
+            'errors' => \$errors,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function extractPayload(): ?array
+    {
+        if (\$this->request->is('json')) {
+            try {
+                \$payload = \$this->request->getJSON(true);
+                return is_array(\$payload) ? \$payload : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> \$payload
+     * @param list<string> \$allowedFields
+     * @return array<string, mixed>
+     */
+    protected function filterAllowedFields(array \$payload, array \$allowedFields): array
+    {
+        return array_intersect_key(\$payload, array_flip(\$allowedFields));
+    }
+}
+PHP;
+    }
+
+    private function buildEntityApiController(string $moduleStudly, string $entityStudly, string $entitySnake): string
+    {
+        return <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\\{$moduleStudly}\Controllers;
+
+use App\Modules\\{$moduleStudly}\Models\\{$entityStudly}Model;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
+use Throwable;
+
+final class {$entityStudly}ApiController extends BaseApiController
+{
+    private {$entityStudly}Model \$model;
+
+    public function initController(\CodeIgniter\HTTP\RequestInterface \$request, \CodeIgniter\HTTP\ResponseInterface \$response, LoggerInterface \$logger)
+    {
+        parent::initController(\$request, \$response, \$logger);
+        \$this->model = new {$entityStudly}Model();
+    }
+
+    public function index(): ResponseInterface
+    {
+        \$page = max(1, (int) (\$this->request->getGet('page') ?? 1));
+        \$perPage = min(100, max(1, (int) (\$this->request->getGet('per_page') ?? 50)));
+        \$query = trim((string) (\$this->request->getGet('q') ?? ''));
+
+        \$builder = \$this->model->builder();
+
+        if (\$query !== '') {
+            \$pk = \$this->model->primaryKey;
+            \$builder->groupStart();
+            \$builder->like(\$pk, \$query);
+            foreach (\$this->model->allowedFields as \$field) {
+                if (\$field === \$pk) {
+                    continue;
+                }
+                \$builder->orLike(\$field, \$query);
+            }
+            \$builder->groupEnd();
+        }
+
+        \$countBuilder = clone \$builder;
+        \$total = (int) \$countBuilder->countAllResults(false);
+        \$rows = \$builder
+            ->orderBy('modified', 'DESC')
+            ->limit(\$perPage, (\$page - 1) * \$perPage)
+            ->get()
+            ->getResultArray();
+
+        return \$this->response->setJSON([
+            'data' => \$rows,
+            'meta' => [
+                'page'       => \$page,
+                'per_page'   => \$perPage,
+                'total'      => \$total,
+                'total_pages' => max(1, (int) ceil(\$total / \$perPage)),
+            ],
+        ]);
+    }
+
+    public function show(string \$id): ResponseInterface
+    {
+        \$row = \$this->model->find(\$id);
+        if (! is_array(\$row)) {
+            return \$this->respondNotFound();
+        }
+
+        return \$this->respondSuccess(\$row);
+    }
+
+    public function store(): ResponseInterface
+    {
+        \$payload = \$this->extractPayload();
+        if (! is_array(\$payload)) {
+            return \$this->respondError('Invalid JSON payload.', 400);
+        }
+
+        \$allowedFields = \$this->model->allowedFields;
+        if (\$allowedFields !== []) {
+            \$payload = \$this->filterAllowedFields(\$payload, \$allowedFields);
+        }
+
+        try {
+            \$id = \$this->model->insert(\$payload);
+            if (\$id === false) {
+                \$errors = \$this->model->errors();
+                if (! empty(\$errors)) {
+                    return \$this->respondValidationError(\$errors);
+                }
+
+                return \$this->respondError('Unable to create record.', 422);
+            }
+
+            \$record = \$this->model->find(\$id);
+
+            return \$this->respondSuccess(\$record, 201);
+        } catch (Throwable \$throwable) {
+            return \$this->respondError(\$throwable->getMessage(), 422);
+        }
+    }
+
+    public function update(string \$id): ResponseInterface
+    {
+        \$existing = \$this->model->find(\$id);
+        if (! is_array(\$existing)) {
+            return \$this->respondNotFound();
+        }
+
+        \$payload = \$this->extractPayload();
+        if (! is_array(\$payload)) {
+            return \$this->respondError('Invalid JSON payload.', 400);
+        }
+
+        \$allowedFields = \$this->model->allowedFields;
+        if (\$allowedFields !== []) {
+            \$payload = \$this->filterAllowedFields(\$payload, \$allowedFields);
+        }
+        unset(\$payload[\$this->model->primaryKey]);
+
+        try {
+            if (! \$this->model->update(\$id, \$payload)) {
+                \$errors = \$this->model->errors();
+                if (! empty(\$errors)) {
+                    return \$this->respondValidationError(\$errors);
+                }
+
+                return \$this->respondError('Unable to update record.', 422);
+            }
+
+            \$record = \$this->model->find(\$id);
+
+            return \$this->respondSuccess(\$record);
+        } catch (Throwable \$throwable) {
+            return \$this->respondError(\$throwable->getMessage(), 422);
+        }
+    }
+
+    public function destroy(string \$id): ResponseInterface
+    {
+        \$existing = \$this->model->find(\$id);
+        if (! is_array(\$existing)) {
+            return \$this->respondNotFound();
+        }
+
+        try {
+            \$this->model->delete(\$id);
+
+            return \$this->response->setStatusCode(200)->setJSON([
+                'status' => 'ok',
+            ]);
+        } catch (Throwable \$throwable) {
+            return \$this->respondError(\$throwable->getMessage(), 422);
+        }
+    }
+}
+PHP;
     }
 
     private function buildEntityHookClass(string $moduleStudly, string $entityStudly): string
@@ -1689,6 +1936,13 @@ JS;
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', '{$entity['studly']}Controller::load/$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', '{$entity['studly']}Controller::save');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', '{$entity['studly']}Controller::delete/$1');";
+
+            // RESTful API routes
+            $routeLines[] = "\$routes->get('rest/{$entity['snake']}', '{$entity['studly']}ApiController::index');";
+            $routeLines[] = "\$routes->get('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::show/$1');";
+            $routeLines[] = "\$routes->post('rest/{$entity['snake']}', '{$entity['studly']}ApiController::store');";
+            $routeLines[] = "\$routes->put('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::update/$1');";
+            $routeLines[] = "\$routes->delete('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::destroy/$1');";
         }
 
         $body = implode("\n    ", $routeLines);

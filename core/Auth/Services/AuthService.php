@@ -128,7 +128,7 @@ class AuthService
             'password'         => password_hash($password, PASSWORD_DEFAULT),
             'roles'            => ['admin'],
             'user_metadata'    => ['bootstrap_admin' => true],
-            'is_active'        => true,
+            'is_active'        => 1,
             'failed_login_attempts' => 0,
         ]);
 

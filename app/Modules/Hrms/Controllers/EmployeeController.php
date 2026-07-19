@@ -16,7 +16,7 @@ use Volt\Core\Database\VoltDatabase;
 final class EmployeeController extends Controller
 {
     private const PER_PAGE_OPTIONS = [50, 100, 200, 500, 1000, 2500];
-    private const AUTONAME_PATTERN = 'EOO-.YYYY.-.#####';
+    private const AUTONAME_PATTERN = 'E-.YYYY.-#####';
 
     /** @var array<int, array<string, mixed>> */
     private array $fields = [];
@@ -33,8 +33,8 @@ final class EmployeeController extends Controller
         helper(['url']);
         $this->model = new EmployeeModel();
         $this->db = VoltDatabase::connection();
-        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":1,"custom_meta":[]},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","column":2,"custom_meta":[]}]', true) ?: [];
-        $this->sessions = json_decode('[{"uid":"f99a39a2-08fd-43b9-bb16-9ffd0ad9636a","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
+        $this->fields = json_decode('[{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":1,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","column":1,"custom_meta":{"column":1,"placeholder":"","session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","in_list_view":true,"default_value":""}},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int","options":"","default_value":"","placeholder":"","fetch_from":"","is_required":false,"read_only":false,"idx":2,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","column":2,"custom_meta":{"column":2,"session_uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","in_list_view":true}}]', true) ?: [];
+        $this->sessions = json_decode('[{"uid":"bc3cdfba-d245-4f1a-854b-7ea8f35a4112","title":"Primary","description":"Main fields","column_count":2}]', true) ?: [];
         $this->linkTargets = $this->resolveLinkTargets();
     }
 
