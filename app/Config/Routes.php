@@ -69,4 +69,5 @@ $routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Control
     $routes->get('load/(:segment)', 'EntityBuilderController::load/$1');
     $routes->post('module/save', 'EntityBuilderController::saveModule');
     $routes->post('save', 'EntityBuilderController::save');
+    $routes->post('delete/(:segment)', 'EntityBuilderController::delete/$1');
 });

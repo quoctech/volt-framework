@@ -150,6 +150,41 @@ class EntityBuilderController extends Controller
         }
     }
 
+    public function delete(string $entityName): ResponseInterface
+    {
+        try {
+            $payload = $this->extractPayload();
+            $password = is_array($payload) ? trim((string) ($payload['password'] ?? '')) : '';
+
+            if ($password === '') {
+                throw new InvalidArgumentException('Password is required.');
+            }
+
+            $confirmation = service('voltAuth')->confirmCurrentPassword($password);
+            if (($confirmation['ok'] ?? false) !== true) {
+                throw new InvalidArgumentException((string) ($confirmation['message'] ?? 'Password confirmation failed.'));
+            }
+
+            $result = $this->builderService->deleteEntity($entityName);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'message' => 'Entity deleted successfully.',
+                'data' => $result,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
     public function saveModule(): ResponseInterface
     {
         $payload = $this->extractPayload();

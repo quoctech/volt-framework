@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Volt\Core\Metadata;
 
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
@@ -115,6 +118,25 @@ final class ArtifactScaffolder
             'create_url' => $createUrl,
             'rest_api_base' => '/' . $moduleSnake . '/rest/' . $entitySnake,
         ];
+    }
+
+    public function removeEntity(string $moduleName, string $entityName): void
+    {
+        $moduleStudly = $this->studly($moduleName);
+        $entityStudly = $this->studly($entityName);
+        $entitySnake = $this->snake($entityName);
+
+        $this->removePath($this->entityArtifactDir($moduleStudly, $entityStudly));
+        $this->removePath($this->moduleFilePath($moduleStudly, self::DIR_MODELS, $entityStudly . 'Model.php'));
+        $this->removePath($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'Controller.php'));
+        $this->removePath($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'ApiController.php'));
+        $this->removePath($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_list.php'));
+        $this->removePath($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'));
+
+        $this->writeFile(
+            $this->moduleFilePath($moduleStudly, self::DIR_CONFIG, self::FILE_ROUTES),
+            $this->buildModuleRoutesFile($moduleStudly, $this->snake($moduleName), $this->discoverModuleEntities($this->moduleSubPath($moduleStudly, self::DIR_ENTITIES)))
+        );
     }
 
     private function buildBaseApiController(string $moduleStudly): string
@@ -2347,6 +2369,46 @@ PHP;
     {
         if (file_put_contents($path, $content) === false) {
             throw new RuntimeException('Unable to write file: ' . $path);
+        }
+    }
+
+    private function removePath(string $path): void
+    {
+        if (is_file($path)) {
+            if (! @unlink($path) && file_exists($path)) {
+                throw new RuntimeException('Unable to delete file: ' . $path);
+            }
+
+            return;
+        }
+
+        if (! is_dir($path)) {
+            return;
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $target = $item->getPathname();
+
+            if ($item->isDir()) {
+                if (! @rmdir($target) && is_dir($target)) {
+                    throw new RuntimeException('Unable to delete directory: ' . $target);
+                }
+
+                continue;
+            }
+
+            if (! @unlink($target) && file_exists($target)) {
+                throw new RuntimeException('Unable to delete file: ' . $target);
+            }
+        }
+
+        if (! @rmdir($path) && is_dir($path)) {
+            throw new RuntimeException('Unable to delete directory: ' . $path);
         }
     }
 

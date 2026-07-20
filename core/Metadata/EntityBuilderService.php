@@ -338,6 +338,63 @@ final class EntityBuilderService
     }
 
     /**
+     * @return array{deleted:list<string>,dropped_tables:list<string>}
+     */
+    public function deleteEntity(string $entityName): array
+    {
+        $entityName = $this->normalizeEntityName($entityName);
+        if ($entityName === '') {
+            throw new InvalidArgumentException('Entity name is required.');
+        }
+
+        $deletionPlan = $this->buildDeletionPlan($entityName);
+        $blockedBy = $this->findIncomingReferences($deletionPlan);
+        if ($blockedBy !== []) {
+            throw new InvalidArgumentException('Entity is referenced by: ' . implode(', ', $blockedBy));
+        }
+
+        $droppedTables = [];
+
+        try {
+            $this->db->transException(true)->transStart();
+
+            foreach ($deletionPlan as $item) {
+                $name = (string) $item['name'];
+
+                $this->dropEntityTables($name, $droppedTables);
+                $this->db->table('sys_entity_field')->where('parent', $name)->delete();
+                $this->db->table('sys_entity_custom')->where('entity_name', $name)->delete();
+                $this->db->table('sys_entity')->where('name', $name)->delete();
+            }
+
+            $this->db->transComplete();
+        } catch (Throwable $throwable) {
+            try {
+                $this->db->transRollback();
+            } catch (Throwable) {
+            }
+
+            throw $throwable;
+        }
+
+        $awesomeBar = new AwesomeBarModel();
+        foreach ($deletionPlan as $item) {
+            $name = (string) $item['name'];
+            $module = (string) $item['module'];
+
+            $this->artifactScaffolder->removeEntity($module, $name);
+            $awesomeBar->removeEntity($name);
+            $this->metadataCache->delete($name);
+            service('voltMetadataCompiler')->invalidateEntity($name);
+        }
+
+        return [
+            'deleted' => array_values(array_map(static fn (array $item): string => (string) $item['name'], $deletionPlan)),
+            'dropped_tables' => array_values(array_unique($droppedTables)),
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $entity
      *
      * @return array<string, mixed>
@@ -626,6 +683,143 @@ final class EntityBuilderService
         }
 
         return array_is_list($decoded) ? [] : $decoded;
+    }
+
+    /**
+     * @return list<array{name:string,module:string}>
+     */
+    private function buildDeletionPlan(string $entityName): array
+    {
+        $queue = [$entityName];
+        $plan = [];
+        $seen = [];
+
+        while ($queue !== []) {
+            $current = array_shift($queue);
+            if (! is_string($current) || $current === '' || isset($seen[$current])) {
+                continue;
+            }
+
+            $row = $this->db->table('sys_entity')
+                ->select('name, module')
+                ->where('name', $current)
+                ->get()
+                ->getRowArray();
+
+            if (! is_array($row)) {
+                throw new InvalidArgumentException("Entity not found: {$current}");
+            }
+
+            $seen[$current] = true;
+            $plan[] = [
+                'name' => (string) $row['name'],
+                'module' => (string) $row['module'],
+            ];
+
+            foreach ($this->findOwnedChildEntities((string) $row['name']) as $childEntity) {
+                if (! isset($seen[$childEntity])) {
+                    $queue[] = $childEntity;
+                }
+            }
+        }
+
+        return $plan;
+    }
+
+    /**
+     * @param list<array{name:string,module:string}> $deletionPlan
+     * @return list<string>
+     */
+    private function findIncomingReferences(array $deletionPlan): array
+    {
+        $targetNames = array_values(array_map(static fn (array $item): string => (string) $item['name'], $deletionPlan));
+        if ($targetNames === []) {
+            return [];
+        }
+
+        $fields = $this->db->table('sys_entity_field')
+            ->select('parent, fieldtype, options')
+            ->whereIn('fieldtype', ['Link', 'Table', 'Child Table (JSONB)'])
+            ->get()
+            ->getResultArray();
+
+        $blockedBy = [];
+        foreach ($fields as $field) {
+            $parent = (string) ($field['parent'] ?? '');
+            if ($parent === '' || in_array($parent, $targetNames, true)) {
+                continue;
+            }
+
+            $target = $this->parseReferencedEntityName((string) ($field['options'] ?? ''));
+            if ($target !== '' && in_array($target, $targetNames, true)) {
+                $blockedBy[] = $parent;
+            }
+        }
+
+        $blockedBy = array_values(array_unique($blockedBy));
+        sort($blockedBy);
+
+        return $blockedBy;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function findOwnedChildEntities(string $entityName): array
+    {
+        $fields = $this->db->table('sys_entity_field')
+            ->select('fieldtype, options')
+            ->where('parent', $entityName)
+            ->where('fieldtype', 'Table')
+            ->get()
+            ->getResultArray();
+
+        $children = [];
+        foreach ($fields as $field) {
+            $options = (string) ($field['options'] ?? '');
+            if (! str_contains($options, ':separate')) {
+                continue;
+            }
+
+            $childEntity = $this->parseReferencedEntityName($options);
+            if ($childEntity !== '' && $this->entityExists($childEntity)) {
+                $children[] = $childEntity;
+            }
+        }
+
+        return array_values(array_unique($children));
+    }
+
+    private function entityExists(string $entityName): bool
+    {
+        return $this->db->table('sys_entity')->where('name', $entityName)->countAllResults() > 0;
+    }
+
+    private function parseReferencedEntityName(string $options): string
+    {
+        $candidate = trim(strtolower($options));
+        if ($candidate === '') {
+            return '';
+        }
+
+        $candidate = preg_replace('/:separate$/', '', $candidate) ?? $candidate;
+
+        return $this->normalizeEntityName($candidate);
+    }
+
+    /**
+     * @param list<string> $droppedTables
+     */
+    private function dropEntityTables(string $entityName, array &$droppedTables): void
+    {
+        foreach ([TableNameResolver::entity($entityName), TableNameResolver::legacyEntity($entityName)] as $tableName) {
+            if ($tableName === '') {
+                continue;
+            }
+
+            $this->db->query('DROP TABLE IF EXISTS ' . $tableName);
+            $droppedTables[] = $tableName;
+        }
     }
 
     private function normalizeEntityName(string $value): string

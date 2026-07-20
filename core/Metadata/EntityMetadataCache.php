@@ -46,6 +46,23 @@ final class EntityMetadataCache
         }
     }
 
+    public function delete(string $entityName): void
+    {
+        try {
+            $client = $this->client();
+
+            if ($client instanceof Redis) {
+                $client->del($this->key($entityName));
+
+                return;
+            }
+
+            $client->del([$this->key($entityName)]);
+        } catch (Throwable) {
+            // Metadata cache is an optimization only; delete flow must continue even if Redis is unavailable.
+        }
+    }
+
     private function key(string $entityName): string
     {
         return 'volt:metadata:' . strtolower($entityName);

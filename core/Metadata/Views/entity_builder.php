@@ -4,6 +4,31 @@
 /** @var array<int, array{name:string,label:string,module:string}> $entityOptions */
 /** @var array<string, array<int, array{fieldname:string,label:string,fieldtype:string}>> $entityFieldCatalog */
 /** @var string $initialEntityName */
+$deleteModalBody = static function (): string {
+    ob_start();
+    ?>
+    <p class="text-sm text-zinc-700">
+        Bạn có chắc muốn xóa entity <span class="font-semibold" x-text="entity.name || 'this entity'"></span> không?
+    </p>
+    <p class="text-sm text-zinc-600">Nhập mật khẩu hiện tại để xác nhận thao tác xóa.</p>
+    <label class="block">
+        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Password</span>
+        <input x-model="deletePassword" @keydown.enter.prevent="destroyEntity()" type="password" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+    </label>
+    <?php
+    return (string) ob_get_clean();
+};
+
+$deleteModalFooter = static function (): string {
+    ob_start();
+    ?>
+    <button @click="closeDeleteModal()" type="button" class="border border-zinc-300 px-4 py-2 text-base text-zinc-700 hover:bg-zinc-50">Cancel</button>
+    <button @click="destroyEntity()" type="button" class="border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-800 hover:bg-red-100">
+        Confirm Delete
+    </button>
+    <?php
+    return (string) ob_get_clean();
+};
 ?>
 <!doctype html>
 <html lang="vi">
@@ -26,6 +51,7 @@
             'initialEntityName' => $initialEntityName,
             'loadUrl' => site_url('api/entity-builder/load'),
             'saveUrl' => site_url('api/entity-builder/save'),
+            'deleteUrl' => site_url('api/entity-builder/delete'),
             'deskUrl' => site_url('desk'),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         x-init="init()"
@@ -220,6 +246,18 @@
                                 </label>
                             </div>
                         </div>
+
+                        <div x-show="canDeleteEntity()" x-cloak class="mt-6 border-t border-zinc-200 pt-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
+                                    <p class="mt-1 text-sm text-zinc-600">Xóa entity sẽ xóa metadata, bảng dữ liệu và artifact đã sinh trong module.</p>
+                                </div>
+                                <button @click="openDeleteModal()" type="button" class="border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-800 hover:bg-red-100">
+                                    Delete Entity
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -387,6 +425,15 @@
         <div x-show="flash.message" x-cloak class="fixed bottom-4 right-4 border border-zinc-300 bg-white px-4 py-3 text-base shadow-sm" :class="flash.type === 'error' ? 'text-red-700' : 'text-zinc-800'">
             <span x-text="flash.message"></span>
         </div>
+
+        <?= view('Volt\\Core\\Metadata\\Views\\partials\\modal', [
+            'modalState' => 'deleteModalOpen',
+            'title' => 'Delete Entity',
+            'bodyHtml' => $deleteModalBody(),
+            'footerHtml' => $deleteModalFooter(),
+            'closeAction' => 'closeDeleteModal()',
+            'maxWidthClass' => 'max-w-md',
+        ]) ?>
     </div>
 
     <script>
@@ -397,6 +444,7 @@
                 entityFieldCatalog: boot.entityFieldCatalog || {},
                 loadUrl: boot.loadUrl,
                 saveUrl: boot.saveUrl,
+                deleteUrl: boot.deleteUrl,
                 deskUrl: boot.deskUrl,
                 entity: {
                     name: '',
@@ -422,6 +470,8 @@
                 customPatchText: '{}',
                 entityListUrl: '',
                 flash: { type: 'info', message: '' },
+                deleteModalOpen: false,
+                deletePassword: '',
                 dragState: {
                     kind: null,
                     fieldUid: null,
@@ -604,6 +654,17 @@
                 canOpenEntityList() {
                     return this.buildEntityListUrl() !== '';
                 },
+                canDeleteEntity() {
+                    return this.slugify(this.entity.name) !== '' && this.slugify(this.entity.module) !== '';
+                },
+                openDeleteModal() {
+                    this.deletePassword = '';
+                    this.deleteModalOpen = true;
+                },
+                closeDeleteModal() {
+                    this.deleteModalOpen = false;
+                    this.deletePassword = '';
+                },
                 buildEntityListUrl() {
                     if (this.entityListUrl) {
                         return this.entityListUrl;
@@ -624,6 +685,43 @@
                     }
 
                     window.location.href = url;
+                },
+                async destroyEntity() {
+                    const entityName = this.slugify(this.entity.name);
+                    if (!entityName) {
+                        this.toast('error', 'Entity name is required.');
+                        return;
+                    }
+
+                    if (!String(this.deletePassword || '').trim()) {
+                        this.toast('error', 'Password is required.');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(this.requestUrl(`${this.deleteUrl}/${encodeURIComponent(entityName)}`), {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({
+                                password: this.deletePassword,
+                            }),
+                        });
+                        const result = await response.json();
+
+                        if (!response.ok || result.status !== 'ok') {
+                            throw new Error(result.message || 'Delete failed.');
+                        }
+
+                        this.closeDeleteModal();
+                        window.location.href = this.requestUrl(`${this.deskUrl}/entities`);
+                    } catch (error) {
+                        this.toast('error', error.message || 'Unable to delete entity.');
+                    }
                 },
                 addFieldFromAnchor(fieldType, anchor) {
                     const parsedAnchor = this.parseFieldTypeAnchor(anchor);

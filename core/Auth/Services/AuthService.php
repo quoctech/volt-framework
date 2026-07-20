@@ -185,6 +185,24 @@ class AuthService
         return ['ok' => true, 'message' => 'Đã cập nhật mật khẩu.'];
     }
 
+    /**
+     * @return array{ok:bool,message:string}
+     */
+    public function confirmCurrentPassword(string $password): array
+    {
+        $user = $this->currentUser();
+
+        if (! $user instanceof UserEntity) {
+            return ['ok' => false, 'message' => 'Bạn chưa đăng nhập.'];
+        }
+
+        if (! password_verify($password, (string) $user->password)) {
+            return ['ok' => false, 'message' => 'Mật khẩu không đúng.'];
+        }
+
+        return ['ok' => true, 'message' => 'Xác nhận thành công.'];
+    }
+
     public function issueApiToken(UserEntity $user): string
     {
         $token = bin2hex(random_bytes(32));
