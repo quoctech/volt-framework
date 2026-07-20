@@ -27,6 +27,7 @@ final class VoltCleanEntities extends BaseCommand
         try {
             $scan = $this->scanCandidates();
         } catch (\Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'entity_cleanup', 'volt_clean_entities_scan_failed');
             CLI::error('Không thể quét entity cleanup candidates: ' . $throwable->getMessage());
 
             return;
@@ -64,6 +65,7 @@ final class VoltCleanEntities extends BaseCommand
                 CLI::write("Đã xóa {$label}.", 'green');
                 $deleted++;
             } catch (\Throwable $throwable) {
+                service('voltErrorLog')->logException($throwable, ['candidate' => $candidate], 'entity_cleanup', 'volt_clean_entities_artifact_delete_failed');
                 CLI::error("Lỗi khi xóa {$label}: {$throwable->getMessage()}");
                 $failed++;
             }
@@ -84,6 +86,7 @@ final class VoltCleanEntities extends BaseCommand
                 CLI::write("Đã xóa {$label}.", 'green');
                 $deleted++;
             } catch (\Throwable $throwable) {
+                service('voltErrorLog')->logException($throwable, ['candidate' => $candidate], 'entity_cleanup', 'volt_clean_entities_table_delete_failed');
                 CLI::error("Lỗi khi xóa {$label}: {$throwable->getMessage()}");
                 $failed++;
             }

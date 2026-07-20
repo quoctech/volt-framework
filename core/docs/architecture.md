@@ -129,6 +129,11 @@ Gồm:
 6. `sys_sequence`
 7. `sys_audit_trail`
 8. `sys_queue_job`
+9. `sys_module`
+10. `sys_role`
+11. `sys_awesome_bar`
+12. `sys_setting`
+13. `sys_error_log`
 
 ### 4.2 Vai trò từng bảng
 
@@ -140,6 +145,34 @@ Gồm:
 - `sys_sequence`: bộ đếm sinh mã
 - `sys_audit_trail`: nhật ký thay đổi dữ liệu
 - `sys_queue_job`: hàng đợi tác vụ nền
+- `sys_module`: danh mục module runtime
+- `sys_role`: danh mục role
+- `sys_awesome_bar`: index điều hướng và search nhanh
+- `sys_setting`: cấu hình runtime của hệ thống
+- `sys_error_log`: nhật ký lỗi hệ thống phục vụ observability
+
+### 4.3 Error Logs
+
+Volt có tầng Error Logs riêng bên cạnh logger mặc định của CI4:
+
+- bảng lưu trữ: `sys_error_log`
+- service ghi log: `service('voltErrorLog')`
+- mục tiêu: lưu lỗi nghiệp vụ/runtime quan trọng ngay trong DB để admin và tooling có thể truy vết tập trung
+
+Payload chuẩn hiện tại gồm:
+
+- `level`, `channel`, `code`
+- `message`
+- `context` dạng `JSONB`
+- `file`, `line`, `trace`
+- `request_uri`, `request_method`, `ip_address`, `user_agent`
+- `actor`, `created_at`
+
+Quy ước sử dụng:
+
+- `write()` cho lỗi hoặc cảnh báo đã chuẩn hóa
+- `logException()` khi đang cầm `Throwable`
+- vẫn giữ logger CI4 làm fallback nếu việc ghi `sys_error_log` thất bại
 
 ## Metadata model
 
@@ -444,6 +477,7 @@ core/
 Đã có:
 
 - autoload `Volt\Core`
+- Core migrations chạy theo namespace `Volt\Core`. Dùng `php spark volt:core-migrate` để apply schema core và `php spark volt:core-migrate-status` để kiểm tra trạng thái.
 - migration base tables
 - `SchemaSync`
 - `volt:sync`

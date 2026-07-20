@@ -41,7 +41,8 @@ final class EntityMetadataCache
             }
 
             $client->set($this->key($entityName), $payload);
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['entity' => $entityName], 'metadata_cache', 'metadata_cache_put_failed');
             // Metadata cache is an optimization only; save flow must continue even if Redis is unavailable.
         }
     }
@@ -58,7 +59,8 @@ final class EntityMetadataCache
             }
 
             $client->del([$this->key($entityName)]);
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['entity' => $entityName], 'metadata_cache', 'metadata_cache_delete_failed');
             // Metadata cache is an optimization only; delete flow must continue even if Redis is unavailable.
         }
     }

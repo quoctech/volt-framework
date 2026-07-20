@@ -330,9 +330,17 @@ final class EntityBuilderService
         } catch (Throwable $throwable) {
             try {
                 $this->db->transRollback();
-            } catch (Throwable) {
+            } catch (Throwable $rollbackThrowable) {
+                service('voltErrorLog')->logException($rollbackThrowable, [
+                    'entity' => $entity['name'] ?? null,
+                    'operation' => 'saveEntityRollback',
+                ], 'entity_builder', 'entity_builder_save_rollback_failed');
             }
 
+            service('voltErrorLog')->logException($throwable, [
+                'entity' => $entity['name'] ?? null,
+                'module' => $entity['module'] ?? null,
+            ], 'entity_builder', 'entity_builder_save_transaction_failed');
             throw $throwable;
         }
     }
@@ -371,9 +379,16 @@ final class EntityBuilderService
         } catch (Throwable $throwable) {
             try {
                 $this->db->transRollback();
-            } catch (Throwable) {
+            } catch (Throwable $rollbackThrowable) {
+                service('voltErrorLog')->logException($rollbackThrowable, [
+                    'entity' => $entityName,
+                    'operation' => 'deleteEntityRollback',
+                ], 'entity_builder', 'entity_builder_delete_rollback_failed');
             }
 
+            service('voltErrorLog')->logException($throwable, [
+                'entity' => $entityName,
+            ], 'entity_builder', 'entity_builder_delete_transaction_failed');
             throw $throwable;
         }
 

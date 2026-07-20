@@ -106,11 +106,13 @@ class EntityBuilderController extends Controller
                 'data'   => $payload,
             ]);
         } catch (InvalidArgumentException $exception) {
+            service('voltErrorLog')->logException($exception, ['entity' => $entityName], 'entity_builder', 'entity_builder_load_invalid_argument');
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => $exception->getMessage(),
             ]);
         } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['entity' => $entityName], 'entity_builder', 'entity_builder_load_failed');
             return $this->response->setStatusCode(500)->setJSON([
                 'status'  => 'error',
                 'message' => $throwable->getMessage(),
@@ -138,11 +140,13 @@ class EntityBuilderController extends Controller
                 'data'    => $result,
             ]);
         } catch (InvalidArgumentException $exception) {
+            service('voltErrorLog')->logException($exception, ['payload' => $payload], 'entity_builder', 'entity_builder_save_invalid_argument');
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => $exception->getMessage(),
             ]);
         } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['payload' => $payload], 'entity_builder', 'entity_builder_save_failed');
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => $throwable->getMessage(),
@@ -173,11 +177,13 @@ class EntityBuilderController extends Controller
                 'data' => $result,
             ]);
         } catch (InvalidArgumentException $exception) {
+            service('voltErrorLog')->logException($exception, ['entity' => $entityName], 'entity_builder', 'entity_builder_delete_invalid_argument');
             return $this->response->setStatusCode(422)->setJSON([
                 'status' => 'error',
                 'message' => $exception->getMessage(),
             ]);
         } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['entity' => $entityName], 'entity_builder', 'entity_builder_delete_failed');
             return $this->response->setStatusCode(422)->setJSON([
                 'status' => 'error',
                 'message' => $throwable->getMessage(),
@@ -205,11 +211,13 @@ class EntityBuilderController extends Controller
                 'data'    => $result,
             ]);
         } catch (InvalidArgumentException $exception) {
+            service('voltErrorLog')->logException($exception, ['payload' => $payload], 'entity_builder', 'entity_builder_module_save_invalid_argument');
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => $exception->getMessage(),
             ]);
         } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['payload' => $payload], 'entity_builder', 'entity_builder_module_save_failed');
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => $throwable->getMessage(),

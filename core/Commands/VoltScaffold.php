@@ -103,6 +103,10 @@ class VoltScaffold extends BaseCommand
 
             return true;
         } catch (\Throwable $e) {
+            service('voltErrorLog')->logException($e, [
+                'module' => $moduleName,
+                'entity' => $entityName,
+            ], 'entity_scaffold', 'volt_scaffold_failed');
             CLI::error("  Error: {$e->getMessage()}");
             return false;
         }

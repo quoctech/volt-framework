@@ -96,7 +96,8 @@ class LangService
             try {
                 $setting = service('voltSystemSetting');
                 return $setting->get('language', self::DEFAULT_LANG);
-            } catch (\Throwable) {
+            } catch (\Throwable $throwable) {
+                service('voltErrorLog')->logException($throwable, [], 'lang', 'lang_resolve_failed');
             }
         }
 

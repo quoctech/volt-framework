@@ -21,6 +21,7 @@ class AwesomeBarController extends Controller
     public function search(): ResponseInterface
     {
         $q = trim((string) ($this->request->getGet('q') ?? ''));
+        $this->awesomeBarModel->seedCorePages();
 
         $actor = service('voltAuth')->currentUser();
 
@@ -44,6 +45,10 @@ class AwesomeBarController extends Controller
             if ($item['item_type'] === 'page') {
                 $adminPages = ['entity_builder', 'create_module', 'user_list', 'role_list', 'system_status'];
                 if (in_array($item['item_name'], $adminPages, true) && ! $actor->isAdmin()) {
+                    continue;
+                }
+
+                if ($item['item_name'] === 'error_logs' && ! $actor->isAdmin() && ! $resolver->can('error_logs', 'read', null, null, $actor)) {
                     continue;
                 }
             }

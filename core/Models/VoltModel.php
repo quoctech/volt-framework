@@ -373,7 +373,8 @@ abstract class VoltModel extends Model
         try {
             $compiler = service('voltMetadataCompiler');
             $this->compiledMetadata = $compiler->compileEntity($entityName);
-        } catch (\Throwable) {
+        } catch (\Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['entity' => $entityName], 'volt_model', 'volt_model_metadata_load_failed');
             $this->compiledMetadata = [];
         }
 

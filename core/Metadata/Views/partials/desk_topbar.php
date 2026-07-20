@@ -12,6 +12,9 @@ $isAdmin = $isAdmin ?? false;
 $deskActive = $deskActive ?? 'desk';
 $initial = $currentUserName !== '' ? mb_strtoupper(mb_substr($currentUserName, 0, 1)) : '?';
 $searchUrl = site_url('api/awesome-bar/search');
+$currentActor = service('voltAuth')->currentUser();
+$permissionResolver = service('voltPermissionResolver');
+$canViewErrorLogs = $currentActor !== null && ($currentActor->isAdmin() || $permissionResolver->can('error_logs', 'read', null, null, $currentActor));
 
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $nav = $lang['nav'] ?? [];
@@ -30,14 +33,21 @@ $common = $lang['common'] ?? [];
                 Volt Desk
             </a>
 
-            <?php if ($isAdmin): ?>
+            <?php if ($isAdmin || $canViewErrorLogs): ?>
                 <nav class="hidden items-center gap-4 md:flex">
-                    <a href="<?= site_url('desk/system-settings') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-settings' ? 'font-semibold text-slate-900' : '' ?>">
-                        <?= esc($nav['system_settings'] ?? 'System Settings') ?>
-                    </a>
-                    <a href="<?= site_url('desk/system-status') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-status' ? 'font-semibold text-slate-900' : '' ?>">
-                        <?= esc($nav['system_status'] ?? 'System Status') ?>
-                    </a>
+                    <?php if ($isAdmin): ?>
+                        <a href="<?= site_url('desk/system-settings') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-settings' ? 'font-semibold text-slate-900' : '' ?>">
+                            <?= esc($nav['system_settings'] ?? 'System Settings') ?>
+                        </a>
+                        <a href="<?= site_url('desk/system-status') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-status' ? 'font-semibold text-slate-900' : '' ?>">
+                            <?= esc($nav['system_status'] ?? 'System Status') ?>
+                        </a>
+                    <?php endif; ?>
+                    <?php if ($canViewErrorLogs): ?>
+                        <a href="<?= site_url('desk/error-logs') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'error-logs' ? 'font-semibold text-slate-900' : '' ?>">
+                            <?= esc($nav['error_logs'] ?? 'Error Logs') ?>
+                        </a>
+                    <?php endif; ?>
                 </nav>
             <?php endif; ?>
         </div>

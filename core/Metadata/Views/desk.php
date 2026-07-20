@@ -7,6 +7,9 @@
 $isAdmin = $isAdmin ?? false;
 $currentUserName = $currentUserName ?? '';
 $deskActive = 'desk';
+$currentActor = service('voltAuth')->currentUser();
+$permissionResolver = service('voltPermissionResolver');
+$canViewErrorLogs = $currentActor !== null && ($currentActor->isAdmin() || $permissionResolver->can('error_logs', 'read', null, null, $currentActor));
 
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $d = $lang['desk'] ?? [];
@@ -31,7 +34,7 @@ $common = $lang['common'] ?? [];
             <p class="mt-1 text-sm text-slate-500"><?= esc($d['subtitle'] ?? '') ?></p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 <?= $isAdmin ? 'lg:grid-cols-4' : '' ?>">
+        <div class="grid gap-4 sm:grid-cols-2 <?= ($isAdmin || $canViewErrorLogs) ? 'lg:grid-cols-4' : '' ?>">
             <a href="<?= site_url('desk/entities') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['browse'] ?? 'Browse') ?></p>
                 <h2 class="mt-2 text-xl font-semibold"><?= esc($d['entity_list'] ?? 'Entity List') ?></h2>
@@ -86,6 +89,15 @@ $common = $lang['common'] ?? [];
                     <p class="font-semibold"><?= esc($d['restricted'] ?? 'Restricted Access') ?></p>
                     <p class="mt-2"><?= $d['restricted_desc'] ?? '' ?></p>
                 </div>
+            <?php endif; ?>
+
+            <?php if ($canViewErrorLogs): ?>
+                <a href="<?= site_url('desk/error-logs') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['system'] ?? 'System') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['error_logs'] ?? 'Error Logs') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['error_logs_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['error_logs_hint'] ?? '' ?></p>
+                </a>
             <?php endif; ?>
         </div>
     </main>

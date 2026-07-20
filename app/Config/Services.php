@@ -9,6 +9,7 @@ use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Security\PermissionResolver;
+use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
 use Volt\Core\System\Services\SystemStatusService;
 use Volt\Core\Validation\MetadataValidator;
@@ -100,5 +101,14 @@ class Services extends BaseService
         }
 
         return new SystemSettingService();
+    }
+
+    public static function voltErrorLog(?bool $getShared = true): ErrorLogService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltErrorLog');
+        }
+
+        return new ErrorLogService();
     }
 }

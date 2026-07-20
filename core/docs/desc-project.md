@@ -15,13 +15,14 @@ Volt Framework là một ERP engine `metadata-driven` xây trên:
 Các phần đã có trong code:
 
 - Namespace `Volt\Core` map vào thư mục [`core`](../).
-- Migration tạo 9 bảng hệ thống `sys_*` (`sys_entity`, `sys_entity_field`, `sys_entity_custom`, `sys_user`, `sys_permission`, `sys_sequence`, `sys_audit_trail`, `sys_queue_job`, `sys_module`).
+- Migration tạo 10 bảng hệ thống `sys_*` (`sys_entity`, `sys_entity_field`, `sys_entity_custom`, `sys_user`, `sys_permission`, `sys_sequence`, `sys_audit_trail`, `sys_queue_job`, `sys_module`, `sys_error_log`).
 - `SchemaSync` — đồng bộ metadata → bảng vật lý Postgres (CREATE/ALTER TABLE).
 - `VoltMetadataCompiler` — compile metadata từ 3 bảng `sys_*`, cache vào Redis.
 - `MetadataValidator` — validate entity name, field name, field type, module.
 - `VoltModel` — abstract model lõi với permission check, audit trail, system fields.
 - `PermissionResolver` — role-based permission matrix từ `sys_permission` + Redis cache.
 - `AuditTrailWriter` — ghi delta `{before, after, changes}` vào `sys_audit_trail`.
+- `ErrorLogService` — ghi lỗi runtime vào `sys_error_log` để phục vụ truy vết vận hành.
 - `AuthService` + 4 Filters (`auth`, `guest`, `apiauth`, `admin`) — login/logout/setup/admin/API token.
 - `EntityBuilderService` + `EntityBuilderController` — tạo module, entity, sync schema, sinh artifact.
 - `ArtifactScaffolder` — sinh Controller/Model/View/JS Alpine vào `app/Modules/...`.
@@ -74,6 +75,7 @@ volt-project/
 ### 1. Autoload và tổ chức mã nguồn
 
 - [`../../app/Config/Autoload.php`](../../app/Config/Autoload.php) đăng ký namespace `Volt\Core` trỏ đến `ROOTPATH . 'core'`.
+- Database schema của core nằm trong [`../../core/Database/Migrations`](../../core/Database/Migrations) và được chạy bằng `php spark volt:core-migrate`.
 - Điều này cho phép tách phần mở rộng của Volt khỏi `app/` mặc định của CodeIgniter.
 
 ### 2. Cấu hình database
@@ -84,7 +86,7 @@ volt-project/
 
 ### 3. Migration nền tảng
 
-Migration [`../Database/Migrations/2026-07-06-103833_CreateVoltBaseTables.php`](../Database/Migrations/2026-07-06-103833_CreateVoltBaseTables.php) đang tạo 8 bảng lõi:
+Migration nền tảng + migration bổ sung hiện đang tạo 10 bảng lõi:
 
 1. `sys_entity`
 2. `sys_entity_field`
@@ -94,8 +96,18 @@ Migration [`../Database/Migrations/2026-07-06-103833_CreateVoltBaseTables.php`](
 6. `sys_sequence`
 7. `sys_audit_trail`
 8. `sys_queue_job`
+9. `sys_module`
+10. `sys_error_log`
 
-Các bảng này tạo nền cho metadata, phân quyền, đánh số chứng từ, audit và hàng đợi tác vụ.
+Các bảng này tạo nền cho metadata, phân quyền, đánh số chứng từ, audit, hàng đợi tác vụ và theo dõi lỗi hệ thống.
+
+`sys_error_log` hiện lưu:
+
+- `level`, `channel`, `code`
+- `message`, `context`
+- `file`, `line`, `trace`
+- `request_uri`, `request_method`, `ip_address`, `user_agent`
+- `actor`, `created_at`
 
 ### 4. Schema sync engine
 
@@ -136,12 +148,38 @@ Chức năng:
 - Đồng bộ một entity cụ thể từ metadata.
 - Hoặc quét toàn bộ entity trong `sys_entity`.
 
+Lệnh cleanup hiện có thêm:
+
+```bash
+php spark volt:clean-entities
+```
+
+Chức năng:
+
+- quét artifact entity dư thừa trong `app/Modules/.../Entities`
+- đối chiếu bảng `tab_*` vật lý và metadata `sys_entity`
+- hỏi tương tác `y/n` trước khi xóa từng candidate
+
+Lệnh migrate cho riêng core:
+
+```bash
+php spark volt:core-migrate
+php spark volt:core-migrate-status
+```
+
+Chức năng:
+
+- `volt:core-migrate`: chạy toàn bộ migrations thuộc namespace `Volt\Core`
+- `volt:core-migrate-status`: hiển thị trạng thái đã chạy/chưa chạy của các migration core
+- dùng khi cần setup hoặc nâng cấp schema hệ thống như `sys_entity`, `sys_setting`, `sys_error_log`
+
 ## Luồng hoạt động hiện tại
 
 1. Khai báo entity trong `sys_entity`.
 2. Khai báo field trong `sys_entity_field`.
 3. Chạy `php spark volt:sync <EntityName>` hoặc `php spark volt:sync --all`.
 4. `SchemaSync` đọc metadata và tạo hoặc vá bảng vật lý trong PostgreSQL.
+5. Khi runtime core bắt được exception ở các nhánh đã hook, gọi `service('voltErrorLog')->write(...)` hoặc `logException(...)` để ghi vào `sys_error_log`.
 
 ## Điểm lệch giữa ý tưởng và code hiện tại
 

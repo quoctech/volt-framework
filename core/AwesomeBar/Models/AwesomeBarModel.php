@@ -130,6 +130,7 @@ class AwesomeBarModel
             ['item_name' => 'user_list',       'label' => 'User List',       'description' => 'Quản lý người dùng',                            'route' => 'desk/users',            'module' => null],
             ['item_name' => 'role_list',       'label' => 'Role List',       'description' => 'Quản lý role và phân quyền',                    'route' => 'desk/roles',            'module' => null],
             ['item_name' => 'system_status',   'label' => 'System Status',   'description' => 'Kiểm tra trạng thái runtime, cache và database', 'route' => 'desk/system-status',    'module' => null],
+            ['item_name' => 'error_logs',      'label' => 'Error Logs',      'description' => 'Xem nhật ký lỗi hệ thống và stack trace runtime', 'route' => 'desk/error-logs',       'module' => null],
             ['item_name' => 'desk',            'label' => 'Desk',            'description' => 'Trang chủ Volt Desk',                           'route' => 'desk',                  'module' => null],
         ];
 
@@ -175,5 +176,15 @@ class AwesomeBarModel
             ->getResultArray();
 
         return array_map(static fn (array $row): string => (string) ($row['item_name'] ?? ''), $rows);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function corePermissionEntities(): array
+    {
+        return [
+            'error_logs',
+        ];
     }
 }

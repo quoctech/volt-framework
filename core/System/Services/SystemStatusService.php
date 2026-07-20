@@ -148,6 +148,7 @@ class SystemStatusService
                     : 'Nên dùng PostgreSQL cho runtime chính để đúng kiến trúc Volt.',
             ];
         } catch (Throwable $exception) {
+            service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_database_check_failed');
             return [
                 'title'       => 'Database connection',
                 'status'      => 'error',
@@ -204,6 +205,7 @@ class SystemStatusService
                     : 'Cân nhắc chuyển `cache.handler` sang `redis` để đúng kiến trúc đã mô tả.',
             ];
         } catch (Throwable $exception) {
+            service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_cache_check_failed');
             return [
                 'title'       => 'Cache layer',
                 'status'      => 'error',
@@ -309,6 +311,7 @@ class SystemStatusService
             'sys_module',
             'sys_role',
             'sys_awesome_bar',
+            'sys_error_log',
         ];
 
         try {
@@ -332,6 +335,7 @@ class SystemStatusService
                     : 'Chạy migration còn thiếu trước khi dùng các chức năng quản trị.',
             ];
         } catch (Throwable $exception) {
+            service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_core_tables_check_failed');
             return [
                 'title'       => 'Core system tables',
                 'status'      => 'error',
@@ -352,7 +356,8 @@ class SystemStatusService
 
         try {
             $tz = service('voltSystemSetting')->getTimezone();
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'system_status', 'system_status_environment_timezone_failed');
             $tz = date_default_timezone_get();
         }
 
@@ -375,7 +380,8 @@ class SystemStatusService
             if ($tz !== '' && $tz !== 'UTC') {
                 date_default_timezone_set($tz);
             }
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'system_status', 'system_status_apply_timezone_failed');
         }
     }
 
@@ -402,7 +408,8 @@ class SystemStatusService
                 ['label' => 'Roles', 'value' => (string) $db->table('sys_role')->countAllResults()],
                 ['label' => 'Queue Jobs', 'value' => (string) $db->table('sys_queue_job')->countAllResults()],
             ];
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'system_status', 'system_status_statistics_failed');
         }
 
         return $stats;

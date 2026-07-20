@@ -61,6 +61,10 @@ $routes->group('desk', ['namespace' => 'Volt\Core\System\Controllers', 'filter' 
     $routes->post('system-settings/save', 'SystemSettingController::save');
 });
 
+$routes->group('desk', ['namespace' => 'Volt\Core\System\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('error-logs', 'ErrorLogController::index');
+});
+
 $routes->group('api/awesome-bar', ['namespace' => 'Volt\Core\AwesomeBar\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('search', 'AwesomeBarController::search');
 });

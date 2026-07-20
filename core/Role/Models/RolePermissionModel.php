@@ -9,6 +9,10 @@ use Volt\Core\Database\VoltDatabase;
 
 class RolePermissionModel
 {
+    private const CORE_PERMISSION_ENTITIES = [
+        'error_logs',
+    ];
+
     private BaseConnection $db;
 
     public function __construct()
@@ -118,6 +122,7 @@ class RolePermissionModel
         $names = array_unique(array_merge(
             array_map(static fn (array $row): string => (string) ($row['name'] ?? ''), $fromEntity),
             array_map(static fn (array $row): string => (string) ($row['name'] ?? ''), $fromPermission),
+            self::CORE_PERMISSION_ENTITIES,
         ));
 
         sort($names);

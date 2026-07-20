@@ -2286,7 +2286,8 @@ PHP;
                 }, $rows),
                 static fn (?array $col): bool => $col !== null
             ));
-        } catch (\Throwable) {
+        } catch (\Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'artifact_scaffolder', 'artifact_scaffolder_child_columns_failed');
             return [];
         }
     }

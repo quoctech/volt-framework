@@ -137,6 +137,10 @@ final class VoltMetadataCompiler
                 $this->compileEntity((string) $entity['name'], $role, $forceRefresh);
                 $summary['warmed']++;
             } catch (\Throwable $throwable) {
+                service('voltErrorLog')->logException($throwable, [
+                    'entity' => $entity['name'] ?? null,
+                    'role' => $role,
+                ], 'metadata_compiler', 'metadata_compiler_warm_failed');
                 $summary['failed']++;
                 $summary['errors'][] = [
                     'entity' => $entity['name'] ?? null,

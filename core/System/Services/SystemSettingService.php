@@ -41,7 +41,8 @@ class SystemSettingService
                     'updated_at'  => date('Y-m-d H:i:s'),
                 ]);
             }
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['key' => $key], 'system_setting', 'system_setting_set_failed');
         }
     }
 
@@ -65,7 +66,8 @@ class SystemSettingService
             foreach ($rows as $row) {
                 self::$cache[(string) $row['key']] = (string) ($row['value'] ?? '');
             }
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'system_setting', 'system_setting_all_failed');
         }
 
         return self::$cache;

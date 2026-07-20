@@ -186,6 +186,7 @@ Hạng mục:
 
 - viết `AuditTrailWriter`
 - chuẩn hóa logger và error handling
+- bổ sung `sys_error_log` + `ErrorLogService` để lưu lỗi runtime vào DB
 - ghi actor, action, entity, document id, timestamp, delta
 - ẩn thông tin nhạy cảm ở production
 
@@ -197,6 +198,7 @@ Hạng mục:
 Tiêu chí hoàn thành:
 
 - thay đổi dữ liệu quan trọng có thể truy vết đầy đủ
+- lỗi runtime ở các nhánh core quan trọng có thể tra cứu lại trong `sys_error_log`
 
 ## Phase 6: Child table và quan hệ dữ liệu
 
