@@ -306,6 +306,183 @@ final class VoltResourceController extends Controller
     }
 
     // ========================================================================
+    //  RESTful JSON API
+    // ========================================================================
+
+    public function restIndex(string $entityName): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        if (! $model->canRead()) {
+            return $this->respondError('Forbidden', 403);
+        }
+
+        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
+        $perPage = min(100, max(1, (int) ($this->request->getGet('per_page') ?? 50)));
+        $query = trim((string) ($this->request->getGet('q') ?? ''));
+
+        $builder = $model->builder();
+
+        if ($query !== '') {
+            $pk = $model->primaryKey;
+            $builder->groupStart();
+            $builder->like($pk, $query);
+            foreach ($model->allowedFields as $field) {
+                if ($field === $pk) {
+                    continue;
+                }
+                $builder->orLike($field, $query);
+            }
+            $builder->groupEnd();
+        }
+
+        $countBuilder = clone $builder;
+        $total = (int) $countBuilder->countAllResults(false);
+        $rows = $builder
+            ->orderBy('modified', 'DESC')
+            ->limit($perPage, ($page - 1) * $perPage)
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'data' => $rows,
+            'meta' => [
+                'page'       => $page,
+                'per_page'   => $perPage,
+                'total'      => $total,
+                'total_pages' => max(1, (int) ceil($total / $perPage)),
+            ],
+        ]);
+    }
+
+    public function restShow(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $row = $model->find($id);
+        if (! is_array($row)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'data' => $row,
+        ]);
+    }
+
+    public function restStore(string $entityName): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        if (! $model->canWrite('create')) {
+            return $this->respondError('Forbidden', 403);
+        }
+
+        $payload = $this->extractPayload();
+        if (! is_array($payload)) {
+            return $this->respondError('Invalid JSON payload.', 400);
+        }
+
+        $allowedFields = $model->allowedFields;
+        if ($allowedFields !== []) {
+            $payload = $this->filterAllowedFields($payload, $allowedFields);
+        }
+
+        try {
+            $id = $model->insert($payload);
+            if ($id === false) {
+                $errors = $model->errors();
+                if (! empty($errors)) {
+                    return $this->response->setStatusCode(422)->setJSON([
+                        'status' => 'error',
+                        'message' => 'Validation failed.',
+                        'errors' => $errors,
+                    ]);
+                }
+
+                return $this->respondError('Unable to create record.', 422);
+            }
+
+            $record = $model->find($id);
+
+            return $this->response->setStatusCode(201)->setJSON([
+                'data' => $record,
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restUpdate(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        if (! $model->canWrite('write')) {
+            return $this->respondError('Forbidden', 403);
+        }
+
+        $payload = $this->extractPayload();
+        if (! is_array($payload)) {
+            return $this->respondError('Invalid JSON payload.', 400);
+        }
+
+        $allowedFields = $model->allowedFields;
+        if ($allowedFields !== []) {
+            $payload = $this->filterAllowedFields($payload, $allowedFields);
+        }
+        unset($payload[$model->primaryKey]);
+
+        try {
+            if (! $model->update($id, $payload)) {
+                $errors = $model->errors();
+                if (! empty($errors)) {
+                    return $this->response->setStatusCode(422)->setJSON([
+                        'status' => 'error',
+                        'message' => 'Validation failed.',
+                        'errors' => $errors,
+                    ]);
+                }
+
+                return $this->respondError('Unable to update record.', 422);
+            }
+
+            $record = $model->find($id);
+
+            return $this->response->setJSON([
+                'data' => $record,
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restDestroy(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        try {
+            $model->delete($id);
+
+            return $this->response->setStatusCode(204);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    // ========================================================================
     //  ENTITY METADATA HELPERS
     // ========================================================================
 
@@ -458,7 +635,7 @@ final class VoltResourceController extends Controller
      */
     private function extractFormSessions(array $compiled): array
     {
-        $custom = is_array($compiled['entity']['s_custom_jsonb'] ?? null) ? $compiled['entity']['s_custom_jsonb'] : [];
+        $custom = is_array($compiled['entity']['custom_attributes'] ?? null) ? $compiled['entity']['custom_attributes'] : [];
         $layout = is_array($custom['layout'] ?? null) ? $custom['layout'] : [];
         $source = is_array($layout['sessions'] ?? null) ? $layout['sessions'] : [];
 
@@ -979,6 +1156,16 @@ final class VoltResourceController extends Controller
         $this->response->setStatusCode(403);
 
         return $this->response->setBody('<h1>403 Forbidden</h1><p>Access denied.</p>');
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param list<string> $allowedFields
+     * @return array<string, mixed>
+     */
+    private function filterAllowedFields(array $payload, array $allowedFields): array
+    {
+        return array_intersect_key($payload, array_flip($allowedFields));
     }
 
     // ========================================================================

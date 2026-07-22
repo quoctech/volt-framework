@@ -1108,6 +1108,13 @@ JS;
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', 'VoltResourceController::show/{$entity['snake']}/\$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', 'VoltResourceController::store/{$entity['snake']}');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', 'VoltResourceController::destroy/{$entity['snake']}/\$1');";
+
+            // RESTful API routes
+            $routeLines[] = "\$routes->get('rest/{$entity['snake']}', 'VoltResourceController::restIndex/{$entity['snake']}');";
+            $routeLines[] = "\$routes->get('rest/{$entity['snake']}/(:segment)', 'VoltResourceController::restShow/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('rest/{$entity['snake']}', 'VoltResourceController::restStore/{$entity['snake']}');";
+            $routeLines[] = "\$routes->put('rest/{$entity['snake']}/(:segment)', 'VoltResourceController::restUpdate/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->delete('rest/{$entity['snake']}/(:segment)', 'VoltResourceController::restDestroy/{$entity['snake']}/\$1');";
         }
 
         $body = implode("\n    ", $routeLines);

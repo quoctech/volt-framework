@@ -14,4 +14,9 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/employee/load/(:segment)', 'VoltResourceController::show/employee/$1');
     $routes->post('api/employee/save', 'VoltResourceController::store/employee');
     $routes->post('api/employee/delete/(:segment)', 'VoltResourceController::destroy/employee/$1');
+    $routes->get('rest/employee', 'VoltResourceController::restIndex/employee');
+    $routes->get('rest/employee/(:segment)', 'VoltResourceController::restShow/employee/$1');
+    $routes->post('rest/employee', 'VoltResourceController::restStore/employee');
+    $routes->put('rest/employee/(:segment)', 'VoltResourceController::restUpdate/employee/$1');
+    $routes->delete('rest/employee/(:segment)', 'VoltResourceController::restDestroy/employee/$1');
 });
