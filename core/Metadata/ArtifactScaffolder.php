@@ -99,12 +99,6 @@ final class ArtifactScaffolder
         $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_LIST_SCRIPT), $this->buildEntityListScript($entitySnake));
         $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_FORM_SCRIPT), $this->buildEntityFormScript($entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_MODELS, $entityStudly . 'Model.php'), $this->buildEntityModel($moduleStudly, $entityStudly, $entitySnake));
-        $this->writeIfMissing(
-            $this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, 'BaseApiController.php'),
-            $this->buildBaseApiController($moduleStudly)
-        );
-        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'Controller.php'), $this->buildEntityController($moduleStudly, $entityStudly, $entitySnake, $compiled));
-        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_CONTROLLERS, $entityStudly . 'ApiController.php'), $this->buildEntityApiController($moduleStudly, $entityStudly, $entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_list.php'), $this->buildEntityListView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $dataUrl, $createUrl, $editUrl, $moduleSnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'), $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl));
         $this->writeFile(
@@ -116,7 +110,6 @@ final class ArtifactScaffolder
             'list_url' => $listUrl,
             'data_url' => $dataUrl,
             'create_url' => $createUrl,
-            'rest_api_base' => '/' . $moduleSnake . '/rest/' . $entitySnake,
         ];
     }
 
@@ -2036,21 +2029,17 @@ JS;
     {
         $routeLines = [];
         foreach ($entities as $entity) {
-            $routeLines[] = "\$routes->get('{$entity['snake']}', '{$entity['studly']}Controller::index');";
-            $routeLines[] = "\$routes->get('{$entity['snake']}/create', '{$entity['studly']}Controller::create');";
-            $routeLines[] = "\$routes->get('{$entity['snake']}/edit/(:segment)', '{$entity['studly']}Controller::edit/$1');";
-            $routeLines[] = "\$routes->get('api/{$entity['snake']}', '{$entity['studly']}Controller::data');";
-            $routeLines[] = "\$routes->get('api/{$entity['snake']}/link-options', '{$entity['studly']}Controller::data');";
-            $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', '{$entity['studly']}Controller::load/$1');";
-            $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', '{$entity['studly']}Controller::save');";
-            $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', '{$entity['studly']}Controller::delete/$1');";
+            // Web (HTML) routes
+            $routeLines[] = "\$routes->get('{$entity['snake']}', 'VoltResourceController::indexView/{$entity['snake']}');";
+            $routeLines[] = "\$routes->get('{$entity['snake']}/create', 'VoltResourceController::createView/{$entity['snake']}');";
+            $routeLines[] = "\$routes->get('{$entity['snake']}/edit/(:segment)', 'VoltResourceController::editView/{$entity['snake']}/\$1');";
 
-            // RESTful API routes
-            $routeLines[] = "\$routes->get('rest/{$entity['snake']}', '{$entity['studly']}ApiController::index');";
-            $routeLines[] = "\$routes->get('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::show/$1');";
-            $routeLines[] = "\$routes->post('rest/{$entity['snake']}', '{$entity['studly']}ApiController::store');";
-            $routeLines[] = "\$routes->put('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::update/$1');";
-            $routeLines[] = "\$routes->delete('rest/{$entity['snake']}/(:segment)', '{$entity['studly']}ApiController::destroy/$1');";
+            // Data API routes
+            $routeLines[] = "\$routes->get('api/{$entity['snake']}', 'VoltResourceController::data/{$entity['snake']}');";
+            $routeLines[] = "\$routes->get('api/{$entity['snake']}/link-options', 'VoltResourceController::linkOptions/{$entity['snake']}');";
+            $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', 'VoltResourceController::show/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', 'VoltResourceController::store/{$entity['snake']}');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', 'VoltResourceController::destroy/{$entity['snake']}/\$1');";
         }
 
         $body = implode("\n    ", $routeLines);
@@ -2066,7 +2055,7 @@ declare(strict_types=1);
 use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection \$routes */
-\$routes->group('{$moduleSnake}', ['namespace' => 'App\\Modules\\{$moduleStudly}\\Controllers', 'filter' => 'auth'], static function (RouteCollection \$routes): void {
+\$routes->group('{$moduleSnake}', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filter' => 'auth'], static function (RouteCollection \$routes): void {
 {$body}});
 PHP;
     }
