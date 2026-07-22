@@ -1,0 +1,122 @@
+{
+    "entity": {
+        "name": "employeeeducation",
+        "module": "hrms",
+        "issingle": 0,
+        "istable": 1,
+        "autoname": "HASH",
+        "states": [],
+        "custom_attributes": {
+            "label": "Employee Education",
+            "layout": {
+                "sessions": [
+                    {
+                        "uid": "primary",
+                        "title": "Primary",
+                        "column_count": 1
+                    }
+                ]
+            },
+            "is_submittable": false
+        }
+    },
+    "fields": {
+        "school_name": [],
+        "degree": [],
+        "year": []
+    },
+    "field_order": [
+        "school_name",
+        "degree",
+        "year"
+    ],
+    "main_fields": [
+        "school_name",
+        "degree",
+        "year"
+    ],
+    "child_fields": [],
+    "child_tables": [],
+    "cache": {
+        "key": "volt_metadata_entity_v1_employeeeducation_global",
+        "ttl": 86400,
+        "compiledAt": "2026-07-22T16:53:36+00:00",
+        "role": null
+    },
+    "source": {
+        "entity": {
+            "name": "employeeeducation",
+            "module": "hrms",
+            "issingle": "0",
+            "istable": "1",
+            "autoname": "HASH",
+            "states": "[]",
+            "custom_attributes": "{\"label\": \"Employee Education\", \"layout\": {\"sessions\": [{\"uid\": \"primary\", \"title\": \"Primary\", \"column_count\": 1}]}, \"is_submittable\": false}"
+        },
+        "fields": [
+            {
+                "id": "83",
+                "parent": "employeeeducation",
+                "fieldname": "school_name",
+                "label": "School Name",
+                "fieldtype": "Data",
+                "length": null,
+                "options": "",
+                "reqd": "1",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "1"
+            },
+            {
+                "id": "84",
+                "parent": "employeeeducation",
+                "fieldname": "degree",
+                "label": "Degree",
+                "fieldtype": "Data",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "2"
+            },
+            {
+                "id": "85",
+                "parent": "employeeeducation",
+                "fieldname": "year",
+                "label": "Year",
+                "fieldtype": "Int",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "3"
+            }
+        ],
+        "customRows": [
+            {
+                "apply_to_role": null,
+                "custom_meta": {
+                    "fields": {
+                        "year": [],
+                        "degree": [],
+                        "school_name": []
+                    }
+                }
+            }
+        ]
+    },
+    "derived": {
+        "main_field_count": 3,
+        "child_field_count": 0,
+        "field_names": [
+            "school_name",
+            "degree",
+            "year"
+        ],
+        "required_fields": [],
+        "hidden_fields": [],
+        "read_only_fields": []
+    }
+}

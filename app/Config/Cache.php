@@ -207,14 +207,19 @@ class Cache extends BaseConfig
         $this->prefix        = (string) env('cache.prefix', $this->prefix);
         $this->ttl           = (int) env('cache.ttl', $this->ttl);
 
+        $password = env('cache.redis.password', $this->redis['password']);
+
         $this->redis = [
             'host'       => (string) env('cache.redis.host', $this->redis['host']),
-            'password'   => env('cache.redis.password', $this->redis['password']),
             'port'       => (int) env('cache.redis.port', $this->redis['port']),
             'timeout'    => (int) env('cache.redis.timeout', $this->redis['timeout']),
             'async'      => filter_var(env('cache.redis.async', $this->redis['async']), FILTER_VALIDATE_BOOL),
             'persistent' => filter_var(env('cache.redis.persistent', $this->redis['persistent']), FILTER_VALIDATE_BOOL),
             'database'   => (int) env('cache.redis.database', $this->redis['database']),
         ];
+
+        if (is_string($password) && $password !== '') {
+            $this->redis['password'] = $password;
+        }
     }
 }

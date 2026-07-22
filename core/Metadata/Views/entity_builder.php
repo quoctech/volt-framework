@@ -477,8 +477,8 @@ $deleteModalFooter = static function (): string {
                     fieldUid: null,
                     targetFieldUid: null,
                 },
-            fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Input', 'Link', 'Password', 'Table', 'Child Table (JSONB)'],
-            normalizedFieldTypes: ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Password', 'Table', 'Child Table (JSONB)'],
+            fieldTypes: ['Data', 'Int', 'Float', 'Check', 'Date', 'Text', 'Select', 'Code', 'Input', 'Link', 'Password', 'Attach', 'Attach Image', 'Table', 'Child Table (JSONB)'],
+            normalizedFieldTypes: ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Password', 'Attach', 'Attach Image', 'Table', 'Child Table (JSONB)'],
                 namingPresets: [
                     { value: 'HASH', label: 'HASH' },
                     { value: 'CUSTOM', label: 'Custom series' },

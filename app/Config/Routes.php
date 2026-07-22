@@ -75,3 +75,11 @@ $routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Control
     $routes->post('save', 'EntityBuilderController::save');
     $routes->post('delete/(:segment)', 'EntityBuilderController::delete/$1');
 });
+
+$routes->group('api/file', ['namespace' => 'Volt\Core\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->post('upload', 'FileController::upload');
+    $routes->get('download/(:segment)', 'FileController::download/$1');
+    $routes->post('delete/(:segment)', 'FileController::delete/$1');
+    $routes->get('list/(:segment)/(:segment)', 'FileController::listByEntity/$1/$2');
+    $routes->get('list/(:segment)/(:segment)/(:segment)', 'FileController::listByEntity/$1/$2/$3');
+});

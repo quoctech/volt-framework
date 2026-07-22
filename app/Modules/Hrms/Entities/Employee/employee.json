@@ -40,10 +40,10 @@
             "idx": 1,
             "f_custom_jsonb": {
                 "column": 1,
-                "placeholder": "",
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
-                "default_value": ""
+                "default_value": "",
+                "placeholder": ""
             }
         },
         {
@@ -62,6 +62,57 @@
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
             }
+        },
+        {
+            "id": null,
+            "fieldname": "attach_4",
+            "label": "Attach 4",
+            "fieldtype": "Attach",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 3,
+            "f_custom_jsonb": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            }
+        },
+        {
+            "id": null,
+            "fieldname": "attach_image_5",
+            "label": "Attach Image 5",
+            "fieldtype": "Attach Image",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 4,
+            "f_custom_jsonb": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            }
+        },
+        {
+            "id": 88,
+            "fieldname": "education",
+            "label": "Education",
+            "fieldtype": "Table",
+            "length": null,
+            "options": "EmployeeEducation:separate",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 5,
+            "f_custom_jsonb": {
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "in_list_view": false
+            }
         }
     ],
     "field_map": {
@@ -78,10 +129,10 @@
             "idx": 1,
             "f_custom_jsonb": {
                 "column": 1,
-                "placeholder": "",
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
-                "default_value": ""
+                "default_value": "",
+                "placeholder": ""
             }
         },
         "employee_age": {
@@ -100,23 +151,89 @@
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
             }
+        },
+        "attach_4": {
+            "id": null,
+            "fieldname": "attach_4",
+            "label": "Attach 4",
+            "fieldtype": "Attach",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 3,
+            "f_custom_jsonb": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            }
+        },
+        "attach_image_5": {
+            "id": null,
+            "fieldname": "attach_image_5",
+            "label": "Attach Image 5",
+            "fieldtype": "Attach Image",
+            "length": null,
+            "options": "",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 4,
+            "f_custom_jsonb": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            }
+        },
+        "education": {
+            "id": 88,
+            "fieldname": "education",
+            "label": "Education",
+            "fieldtype": "Table",
+            "length": null,
+            "options": "EmployeeEducation:separate",
+            "is_required": false,
+            "read_only": false,
+            "hidden": false,
+            "idx": 5,
+            "f_custom_jsonb": {
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "in_list_view": false
+            }
         }
     },
     "custom_patch": {
         "fields": {
             "employee_name": {
                 "column": 1,
-                "placeholder": "",
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true,
-                "default_value": ""
+                "default_value": "",
+                "placeholder": ""
             },
             "employee_age": {
                 "column": 2,
                 "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
                 "in_list_view": true
+            },
+            "attach_4": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            },
+            "attach_image_5": {
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "column": 2,
+                "in_list_view": false
+            },
+            "education": {
+                "column": 1,
+                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                "in_list_view": false
             }
         }
     },
-    "compiled_at": "2026-07-22T16:21:28+00:00"
+    "compiled_at": "2026-07-22T16:53:58+00:00"
 }

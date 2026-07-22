@@ -859,7 +859,7 @@ final class EntityBuilderService
     private function normalizeFieldType(string $value): string
     {
         // Input là kiểu nhập liệu chuẩn, map vật lý như Data để UI gần với Frappe hơn.
-        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Password', 'Table', 'Child Table (JSONB)'];
+        $allowed = ['Input', 'Data', 'Int', 'Float', 'Select', 'Check', 'Text', 'Date', 'Link', 'Code', 'Password', 'Attach', 'Attach Image', 'Table', 'Child Table (JSONB)'];
 
         if (! in_array($value, $allowed, true)) {
             throw new InvalidArgumentException("Invalid field type: {$value}");

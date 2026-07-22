@@ -602,7 +602,16 @@ PHP;
                                                 <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
                                                     <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
                                                 </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)'].includes(field.fieldtype)">
+                                                <template x-if="field.fieldtype === 'Attach' || field.fieldtype === 'Attach Image'">
+                                                    <div class="flex items-center gap-2" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
+                                                        <template x-if="form[field.fieldname]">
+                                                            <a :href="fileDownloadUrl(form[field.fieldname])" target="_blank" class="inline-flex items-center gap-1 text-sky-700 underline text-sm" x-text="'View ' + (form[field.fieldname] || '').substring(0, 8) + '...'"></a>
+                                                        </template>
+                                                        <input type="file" :accept="field.fieldtype === 'Attach Image' ? 'image/*' : ''" @change="handleFileSelect(field, \$event)" class="block w-full text-sm text-zinc-500 file:mr-2 file:border file:border-zinc-300 file:px-2 file:py-1 file:text-sm file:bg-zinc-50 file:hover:bg-zinc-100" :disabled="field.read_only" :required="field.is_required && !form[field.fieldname]">
+                                                        <div x-show="form[field.fieldname + '__uploading']" x-cloak class="text-xs text-zinc-500">Uploading...</div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)', 'Attach', 'Attach Image'].includes(field.fieldtype)">
                                                     <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                                 </template>
                                             </label>
@@ -795,6 +804,7 @@ function {$entitySnake}FormApp(boot) {
         fields: boot.fields || [],
         sessions: boot.sessions || [],
         linkTargets: boot.linkTargets || {},
+        uploadUrl: '',
         form: {},
         linkLookups: {},
         requestUrl(url) {
@@ -806,6 +816,8 @@ function {$entitySnake}FormApp(boot) {
             return window.location.origin + resolved.pathname + resolved.search + resolved.hash;
         },
         init() {
+            this.uploadUrl = this.requestUrl('/api/file/upload');
+
             if (!Array.isArray(this.sessions) || this.sessions.length === 0) {
                 this.sessions = [{ uid: '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_UID)}', title: '{$this->escapePhpSingleQuoted(self::DEFAULT_SESSION_TITLE)}', description: '', column_count: 1 }];
             }
@@ -841,6 +853,55 @@ function {$entitySnake}FormApp(boot) {
             }
 
             this.form[fieldname].splice(index, 1);
+        },
+        fileDownloadUrl(fileName) {
+            if (!fileName || String(fileName).trim() === '') {
+                return '#';
+            }
+
+            return this.requestUrl('/api/file/download/' + encodeURIComponent(String(fileName).trim()));
+        },
+        async handleFileSelect(field, event) {
+            const fileInput = event.target;
+            const file = fileInput?.files?.[0];
+            if (!file || !field) {
+                return;
+            }
+
+            this.form[field.fieldname + '__uploading'] = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                if (field.attached_to_entity) {
+                    formData.append('attached_to_entity', field.attached_to_entity);
+                }
+                if (field.attached_to_field) {
+                    formData.append('attached_to_field', field.attached_to_field);
+                }
+
+                const response = await fetch(this.uploadUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Upload failed.');
+                }
+
+                this.form[field.fieldname] = result.data?.name || '';
+            } catch (error) {
+                console.error(error);
+                alert('File upload failed: ' + (error.message || 'Unknown error'));
+            } finally {
+                this.form[field.fieldname + '__uploading'] = false;
+                fileInput.value = '';
+            }
         },
         parseOptions(options) {
             return String(options || '')
@@ -1376,6 +1437,7 @@ PHP;
         $name = trim($parts[0]);
 
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
+        $name = strtolower($name);
 
         return $name !== '' ? $name : '';
     }

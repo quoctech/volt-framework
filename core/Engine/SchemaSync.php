@@ -25,6 +25,7 @@ class SchemaSync
         "parentfield VARCHAR(100) NOT NULL",
         "parenttype VARCHAR(100) NOT NULL",
         "idx INTEGER DEFAULT 0",
+        "docstatus SMALLINT DEFAULT 0",
         "owner VARCHAR(100) NOT NULL",
         "creation TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
         "modified TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
@@ -89,6 +90,8 @@ class SchemaSync
             'Link'       => 'VARCHAR(100)',
             'Table'              => 'JSONB',
             'Child Table (JSONB)' => 'JSONB',
+            'Attach'             => 'VARCHAR(100)',
+            'Attach Image'       => 'VARCHAR(100)',
             default              => 'TEXT'
         };
     }
@@ -173,26 +176,18 @@ class SchemaSync
         } else {
             // 4. KỊCH BẢN B: Bảng đã tồn tại -> Kiểm tra tính toán DELTA để ALTER TABLE vá cột thiếu
 
-            // Với child table, đảm bảo các cột parent/parentfield/parenttype/idx tồn tại
-            if ($isChild) {
-                $childRefColumns = [
-                    'parent'     => 'VARCHAR(100) NOT NULL',
-                    'parentfield' => 'VARCHAR(100) NOT NULL',
-                    'parenttype' => 'VARCHAR(100) NOT NULL',
-                    'idx'        => 'INTEGER DEFAULT 0',
-                ];
-
-                foreach ($childRefColumns as $colName => $colDef) {
-                    if (isset($currentSchema[$colName])) {
-                        continue;
-                    }
-
-                    $alterSql = "ALTER TABLE {$tableName} ADD COLUMN {$colName} {$colDef}";
-                    $this->db->query($alterSql);
-                    $logs[] = "🛠️ Đã thêm cột child table: {$colName} vào {$tableName}";
+            // Đảm bảo các base columns tồn tại
+            $requiredColumns = $isChild ? self::CHILD_COLUMNS : self::CORE_COLUMNS;
+            foreach ($requiredColumns as $colDef) {
+                $colName = strtolower(explode(' ', $colDef)[0]);
+                if (isset($currentSchema[$colName])) {
+                    continue;
                 }
-
-                // Refresh schema sau khi thêm cột child
+                $alterSql = "ALTER TABLE {$tableName} ADD COLUMN {$colDef}";
+                $this->db->query($alterSql);
+                $logs[] = "🛠️ Đã thêm base column: {$colName} vào {$tableName}";
+            }
+            if ($requiredColumns !== []) {
                 $currentSchema = $this->getPostgresSchema($tableName);
             }
 
@@ -245,6 +240,7 @@ class SchemaSync
         $name = trim($parts[0]);
 
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
+        $name = strtolower($name);
 
         return $name !== '' ? $name : '';
     }

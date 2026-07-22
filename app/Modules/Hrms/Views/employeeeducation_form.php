@@ -19,7 +19,7 @@
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeFormApp({
+    <div x-data="employeeeducationFormApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             listUrl: <?= esc(json_encode($listUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             saveUrl: <?= esc(json_encode($saveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -32,7 +32,7 @@
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500"><?= esc('/hrms/employee') ?></p>
+                <p class="text-zinc-500"><?= esc('/hrms/employeeeducation') ?></p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
@@ -178,6 +178,6 @@
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_form.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employeeeducation/employeeeducation_form.js'); ?></script>
 </body>
 </html>

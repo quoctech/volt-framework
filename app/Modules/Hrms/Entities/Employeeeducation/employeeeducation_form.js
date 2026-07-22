@@ -1,4 +1,4 @@
-function employeeFormApp(boot) {
+function employeeeducationFormApp(boot) {
     return {
         title: boot.title || '',
         listUrl: boot.listUrl || '',

@@ -731,6 +731,7 @@ final class VoltResourceController extends Controller
         $parts = explode(':', $options);
         $name = trim($parts[0]);
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
+        $name = strtolower($name);
 
         return $name !== '' ? $name : '';
     }
