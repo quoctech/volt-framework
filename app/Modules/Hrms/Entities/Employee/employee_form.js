@@ -77,6 +77,10 @@ function employeeFormApp(boot) {
             }).sort((a, b) => a.idx - b.idx);
         },
         inputType(fieldType) {
+            if (fieldType === 'Password') {
+                return 'password';
+            }
+
             if (fieldType === 'Int' || fieldType === 'Float') {
                 return 'number';
             }

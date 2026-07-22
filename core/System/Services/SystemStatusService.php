@@ -8,6 +8,7 @@ use CodeIgniter\CodeIgniter;
 use Config\Cache as CacheConfig;
 use Config\Database as DatabaseConfig;
 use Throwable;
+use Volt\Core\Config\Lang\LangService;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\System\Services\SystemSettingService;
 
@@ -100,9 +101,12 @@ class SystemStatusService
         $status = version_compare(PHP_VERSION, $requiredVersion, '>=') ? 'ok' : 'error';
 
         return [
-            'title'       => 'PHP runtime',
+            'title'       => $this->t('check_php_runtime_title'),
             'status'      => $status,
-            'summary'     => sprintf('PHP %s đang chạy, yêu cầu tối thiểu %s.', PHP_VERSION, $requiredVersion),
+            'summary'     => $this->t('check_php_runtime_summary', [
+                'version' => PHP_VERSION,
+                'required' => $requiredVersion,
+            ]),
             'details'     => [
                 'PHP Version'      => PHP_VERSION,
                 'Required Version' => $requiredVersion,
@@ -111,8 +115,8 @@ class SystemStatusService
                 'Max Execution'    => (string) ini_get('max_execution_time') . 's',
             ],
             'recommendation' => $status === 'ok'
-                ? 'Runtime đáp ứng baseline hiện tại của Volt.'
-                : 'Nâng PHP lên 8.2 hoặc cao hơn để phù hợp `composer.json`.',
+                ? $this->t('check_php_runtime_recommendation_ok')
+                : $this->t('check_php_runtime_recommendation_error'),
         ];
     }
 
@@ -139,22 +143,22 @@ class SystemStatusService
             $details['Platform'] = $db->getPlatform();
 
             return [
-                'title'       => 'Database connection',
+                'title'       => $this->t('check_database_connection_title'),
                 'status'      => $status,
-                'summary'     => 'Kết nối database hoạt động bình thường.',
+                'summary'     => $this->t('check_database_connection_summary_ok'),
                 'details'     => $details,
                 'recommendation' => $status === 'ok'
-                    ? 'Driver hiện tại phù hợp định hướng PostgreSQL của Volt.'
-                    : 'Nên dùng PostgreSQL cho runtime chính để đúng kiến trúc Volt.',
+                    ? $this->t('check_database_connection_recommendation_ok')
+                    : $this->t('check_database_connection_recommendation_warning'),
             ];
         } catch (Throwable $exception) {
             service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_database_check_failed');
             return [
-                'title'       => 'Database connection',
+                'title'       => $this->t('check_database_connection_title'),
                 'status'      => 'error',
-                'summary'     => 'Không thể kết nối database mặc định.',
+                'summary'     => $this->t('check_database_connection_summary_error'),
                 'details'     => $details + ['Error' => $exception->getMessage()],
-                'recommendation' => 'Kiểm tra lại cấu hình `database.default.*` trong `.env` và tình trạng database server.',
+                'recommendation' => $this->t('check_database_connection_recommendation_error'),
             ];
         }
     }
@@ -182,36 +186,36 @@ class SystemStatusService
 
             if (! $saved || $value !== 'ok') {
                 return [
-                    'title'       => 'Cache layer',
+                    'title'       => $this->t('check_cache_layer_title'),
                     'status'      => 'warning',
-                    'summary'     => 'Cache handler khởi tạo được nhưng round-trip lưu/đọc chưa ổn định.',
+                    'summary'     => $this->t('check_cache_layer_summary_roundtrip_warning'),
                     'details'     => $details,
-                    'recommendation' => 'Kiểm tra handler cache chính và khả năng fallback hiện tại.',
+                    'recommendation' => $this->t('check_cache_layer_recommendation_roundtrip_warning'),
                 ];
             }
 
             $status = $config->handler === 'redis' ? 'ok' : 'warning';
             $summary = $config->handler === 'redis'
-                ? 'Cache layer hoạt động và đang ưu tiên Redis.'
-                : 'Cache layer hoạt động nhưng không ưu tiên Redis.';
+                ? $this->t('check_cache_layer_summary_ok')
+                : $this->t('check_cache_layer_summary_warning');
 
             return [
-                'title'       => 'Cache layer',
+                'title'       => $this->t('check_cache_layer_title'),
                 'status'      => $status,
                 'summary'     => $summary,
                 'details'     => $details,
                 'recommendation' => $status === 'ok'
-                    ? 'Metadata cache có thể tận dụng handler hiện tại.'
-                    : 'Cân nhắc chuyển `cache.handler` sang `redis` để đúng kiến trúc đã mô tả.',
+                    ? $this->t('check_cache_layer_recommendation_ok')
+                    : $this->t('check_cache_layer_recommendation_warning'),
             ];
         } catch (Throwable $exception) {
             service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_cache_check_failed');
             return [
-                'title'       => 'Cache layer',
+                'title'       => $this->t('check_cache_layer_title'),
                 'status'      => 'error',
-                'summary'     => 'Không thể dùng cache handler hiện tại.',
+                'summary'     => $this->t('check_cache_layer_summary_error'),
                 'details'     => $details + ['Error' => $exception->getMessage()],
-                'recommendation' => 'Kiểm tra cấu hình cache và dịch vụ backend như Redis hoặc filesystem cache.',
+                'recommendation' => $this->t('check_cache_layer_recommendation_error'),
             ];
         }
     }
@@ -242,15 +246,15 @@ class SystemStatusService
         }
 
         return [
-            'title'       => 'Writable directories',
+            'title'       => $this->t('check_writable_directories_title'),
             'status'      => $errors === [] ? 'ok' : 'error',
             'summary'     => $errors === []
-                ? 'Các thư mục `writable/*` cần thiết đều ghi được.'
-                : 'Một số thư mục `writable/*` chưa sẵn sàng cho runtime.',
+                ? $this->t('check_writable_directories_summary_ok')
+                : $this->t('check_writable_directories_summary_error'),
             'details'     => $details,
             'recommendation' => $errors === []
-                ? 'Filesystem runtime đang ổn định cho log, session, cache và upload.'
-                : 'Kiểm tra quyền ghi cho: ' . implode(', ', $errors) . '.',
+                ? $this->t('check_writable_directories_recommendation_ok')
+                : $this->t('check_writable_directories_recommendation_error', ['items' => implode(', ', $errors)]),
         ];
     }
 
@@ -267,28 +271,28 @@ class SystemStatusService
         }
 
         $status = 'ok';
-        $recommendation = 'CPU load và RAM hiện tại đang trong ngưỡng ổn cho một màn trạng thái quản trị.';
+        $recommendation = $this->t('check_system_resources_recommendation_ok');
 
-        $oneMinuteLoad = $this->extractNumericPrefix($details['CPU Load (1m)'] ?? null);
-        $memoryUsedPercent = $this->extractPercent($details['RAM Used'] ?? null);
+        $oneMinuteLoad = $this->extractNumericPrefix($details[$this->t('resource_cpu_load_1m')] ?? null);
+        $memoryUsedPercent = $this->extractPercent($details[$this->t('resource_ram_used')] ?? null);
 
         if ($oneMinuteLoad !== null && $oneMinuteLoad >= 4.0) {
             $status = 'warning';
-            $recommendation = 'CPU load đang cao. Nên kiểm tra worker nền, truy vấn nặng hoặc traffic tăng đột biến.';
+            $recommendation = $this->t('check_system_resources_recommendation_cpu_warning');
         }
 
         if ($memoryUsedPercent !== null && $memoryUsedPercent >= 90.0) {
             $status = 'error';
-            $recommendation = 'RAM đang gần cạn. Cần xử lý sớm để tránh swap mạnh hoặc lỗi OOM.';
+            $recommendation = $this->t('check_system_resources_recommendation_ram_error');
         } elseif ($memoryUsedPercent !== null && $memoryUsedPercent >= 75.0 && $status !== 'error') {
             $status = 'warning';
-            $recommendation = 'RAM đang dùng ở mức cao. Nên theo dõi tiến trình nền, cache và memory_limit.';
+            $recommendation = $this->t('check_system_resources_recommendation_ram_warning');
         }
 
         return [
-            'title'          => 'System resources',
+            'title'          => $this->t('check_system_resources_title'),
             'status'         => $status,
-            'summary'        => 'Theo dõi nhanh CPU load và RAM đang sử dụng trên máy chủ hiện tại.',
+            'summary'        => $this->t('check_system_resources_summary'),
             'details'        => $details,
             'recommendation' => $recommendation,
         ];
@@ -320,28 +324,28 @@ class SystemStatusService
             $missingTables = array_values(array_diff($requiredTables, $existingTables));
 
             return [
-                'title'       => 'Core system tables',
+                'title'       => $this->t('check_core_tables_title'),
                 'status'      => $missingTables === [] ? 'ok' : 'error',
                 'summary'     => $missingTables === []
-                    ? 'Toàn bộ bảng hệ thống cốt lõi đã tồn tại.'
-                    : 'Thiếu một hoặc nhiều bảng hệ thống cần cho Volt Desk.',
+                    ? $this->t('check_core_tables_summary_ok')
+                    : $this->t('check_core_tables_summary_error'),
                 'details'     => [
-                    'Required Tables' => (string) count($requiredTables),
-                    'Detected Tables' => (string) count($existingTables),
-                    'Missing Tables'  => $missingTables === [] ? 'None' : implode(', ', $missingTables),
+                    $this->t('detail_required_tables') => (string) count($requiredTables),
+                    $this->t('detail_detected_tables') => (string) count($existingTables),
+                    $this->t('detail_missing_tables')  => $missingTables === [] ? $this->t('none') : implode(', ', $missingTables),
                 ],
                 'recommendation' => $missingTables === []
-                    ? 'Metadata, auth và admin tools có đủ nền tảng lưu trữ.'
-                    : 'Chạy migration còn thiếu trước khi dùng các chức năng quản trị.',
+                    ? $this->t('check_core_tables_recommendation_ok')
+                    : $this->t('check_core_tables_recommendation_error'),
             ];
         } catch (Throwable $exception) {
             service('voltErrorLog')->logException($exception, [], 'system_status', 'system_status_core_tables_check_failed');
             return [
-                'title'       => 'Core system tables',
+                'title'       => $this->t('check_core_tables_title'),
                 'status'      => 'error',
-                'summary'     => 'Không thể kiểm tra cấu trúc bảng hệ thống.',
+                'summary'     => $this->t('check_core_tables_summary_exception'),
                 'details'     => ['Error' => $exception->getMessage()],
-                'recommendation' => 'Xác nhận database đã kết nối được trước khi kiểm tra migration.',
+                'recommendation' => $this->t('check_core_tables_recommendation_exception'),
             ];
         }
     }
@@ -426,7 +430,7 @@ class SystemStatusService
         foreach ($extensions as $extension) {
             $details[] = [
                 'label' => $extension,
-                'value' => extension_loaded($extension) ? 'Loaded' : 'Missing',
+                'value' => extension_loaded($extension) ? $this->t('loaded') : $this->t('missing'),
             ];
         }
 
@@ -443,23 +447,23 @@ class SystemStatusService
 
         $items = [
             [
-                'label' => 'CPU Load (1m)',
-                'value' => is_array($load) && isset($load[0]) ? number_format((float) $load[0], 2) : 'n/a',
+                'label' => $this->t('resource_cpu_load_1m'),
+                'value' => is_array($load) && isset($load[0]) ? number_format((float) $load[0], 2) : $this->t('not_available'),
             ],
             [
-                'label' => 'CPU Load (5m)',
-                'value' => is_array($load) && isset($load[1]) ? number_format((float) $load[1], 2) : 'n/a',
+                'label' => $this->t('resource_cpu_load_5m'),
+                'value' => is_array($load) && isset($load[1]) ? number_format((float) $load[1], 2) : $this->t('not_available'),
             ],
             [
-                'label' => 'CPU Load (15m)',
-                'value' => is_array($load) && isset($load[2]) ? number_format((float) $load[2], 2) : 'n/a',
+                'label' => $this->t('resource_cpu_load_15m'),
+                'value' => is_array($load) && isset($load[2]) ? number_format((float) $load[2], 2) : $this->t('not_available'),
             ],
             [
-                'label' => 'PHP Memory Usage',
+                'label' => $this->t('resource_php_memory_usage'),
                 'value' => $this->formatBytes(memory_get_usage(true)),
             ],
             [
-                'label' => 'PHP Peak Memory',
+                'label' => $this->t('resource_php_peak_memory'),
                 'value' => $this->formatBytes(memory_get_peak_usage(true)),
             ],
         ];
@@ -469,33 +473,38 @@ class SystemStatusService
             $usedPercent = $memory['total'] > 0 ? ($usedBytes / $memory['total']) * 100 : 0.0;
 
             $items[] = [
-                'label' => 'RAM Total',
+                'label' => $this->t('resource_ram_total'),
                 'value' => $this->formatBytes($memory['total']),
             ];
             $items[] = [
-                'label' => 'RAM Available',
+                'label' => $this->t('resource_ram_available'),
                 'value' => $this->formatBytes($memory['available']),
             ];
             $items[] = [
-                'label' => 'RAM Used',
+                'label' => $this->t('resource_ram_used'),
                 'value' => $this->formatBytes($usedBytes) . ' (' . number_format($usedPercent, 1) . '%)',
             ];
         } else {
             $items[] = [
-                'label' => 'RAM Total',
-                'value' => 'n/a',
+                'label' => $this->t('resource_ram_total'),
+                'value' => $this->t('not_available'),
             ];
             $items[] = [
-                'label' => 'RAM Available',
-                'value' => 'n/a',
+                'label' => $this->t('resource_ram_available'),
+                'value' => $this->t('not_available'),
             ];
             $items[] = [
-                'label' => 'RAM Used',
-                'value' => 'n/a',
+                'label' => $this->t('resource_ram_used'),
+                'value' => $this->t('not_available'),
             ];
         }
 
         return $items;
+    }
+
+    private function t(string $key, array $params = []): string
+    {
+        return LangService::get('system_status_page.' . $key, $params);
     }
 
     /**

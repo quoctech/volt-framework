@@ -814,11 +814,16 @@ final class {$entityStudly}Controller extends Controller
                         }
                     }
                 }
+
+                return \$this->response->setStatusCode(422)->setJSON([
+                    'status' => 'error',
+                    'message' => 'Could not generate unique name after retries.',
+                ]);
             }
 
             return \$this->response->setStatusCode(422)->setJSON([
                 'status' => 'error',
-                'message' => 'Could not generate unique name after retries.',
+                'message' => \$throwable->getMessage(),
             ]);
         }
     }
@@ -935,6 +940,11 @@ final class {$entityStudly}Controller extends Controller
             }
 
             if (in_array(\$fieldtype, ['Int', 'Float'], true)) {
+                \$row[\$fieldname] = \$value === '' || \$value === null ? null : \$value;
+                continue;
+            }
+
+            if (in_array(\$fieldtype, ['Date', 'Datetime', 'Time'], true)) {
                 \$row[\$fieldname] = \$value === '' || \$value === null ? null : \$value;
                 continue;
             }
@@ -1793,6 +1803,10 @@ function {$entitySnake}FormApp(boot) {
             }).sort((a, b) => a.idx - b.idx);
         },
         inputType(fieldType) {
+            if (fieldType === 'Password') {
+                return 'password';
+            }
+
             if (fieldType === 'Int' || fieldType === 'Float') {
                 return 'number';
             }

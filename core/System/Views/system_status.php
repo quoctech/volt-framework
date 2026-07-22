@@ -4,21 +4,23 @@
 $report = $report ?? [];
 $summary = $report['summary'] ?? ['ok' => 0, 'warning' => 0, 'error' => 0, 'total' => 0];
 $checks = $report['checks'] ?? [];
-$environment = $report['environment'] ?? [];
-$statistics = $report['statistics'] ?? [];
-$extensions = $report['extensions'] ?? [];
 $resources = $report['resources'] ?? [];
 $overallStatus = (string) ($report['overallStatus'] ?? 'warning');
 $generatedAt = (string) ($report['generatedAt'] ?? '');
 
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $ss = $lang['system_status_page'] ?? [];
-$common = $lang['common'] ?? [];
 
 $statusClasses = [
     'ok' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
     'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
     'error' => 'border-rose-200 bg-rose-50 text-rose-800',
+];
+
+$rowClasses = [
+    'ok' => 'border-emerald-100 bg-emerald-50/60',
+    'warning' => 'border-amber-100 bg-amber-50/60',
+    'error' => 'border-rose-100 bg-rose-50/60',
 ];
 
 $statusLabels = [
@@ -27,129 +29,73 @@ $statusLabels = [
     'error' => $ss['error'] ?? 'Error',
 ];
 ?>
-<div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
-            <p class="mt-1 text-sm text-slate-600"><?= esc($ss['description'] ?? '') ?></p>
-        </div>
-        <div class="rounded border px-3 py-2 text-sm <?= esc($statusClasses[$overallStatus] ?? $statusClasses['warning']) ?>">
-            <div class="font-semibold"><?= esc($statusLabels[$overallStatus] ?? 'Warning') ?></div>
-            <div class="text-xs"><?= esc($ss['updated_at'] ?? 'Updated at') ?> <?= esc($generatedAt) ?></div>
-        </div>
-    </div>
-
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded border border-slate-200 bg-white p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($ss['checks'] ?? 'Checks') ?></div>
-            <div class="mt-2 text-3xl font-semibold text-slate-900"><?= esc((string) ($summary['total'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-slate-500"><?= esc($ss['total'] ?? 'Total checks') ?></div>
-        </div>
-        <div class="rounded border border-emerald-200 bg-emerald-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700"><?= esc($ss['ok'] ?? 'OK') ?></div>
-            <div class="mt-2 text-3xl font-semibold text-emerald-900"><?= esc((string) ($summary['ok'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-emerald-800"><?= esc($ss['ok_desc'] ?? 'Component running stable') ?></div>
-        </div>
-        <div class="rounded border border-amber-200 bg-amber-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700"><?= esc($ss['warning'] ?? 'Warning') ?></div>
-            <div class="mt-2 text-3xl font-semibold text-amber-900"><?= esc((string) ($summary['warning'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-amber-800"><?= esc($ss['warning_desc'] ?? 'Needs monitoring or optimization') ?></div>
-        </div>
-        <div class="rounded border border-rose-200 bg-rose-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700"><?= esc($ss['error'] ?? 'Error') ?></div>
-            <div class="mt-2 text-3xl font-semibold text-rose-900"><?= esc((string) ($summary['error'] ?? 0)) ?></div>
-            <div class="mt-1 text-sm text-rose-800"><?= esc($ss['error_desc'] ?? 'Needs attention before production') ?></div>
+<div class="space-y-4">
+    <div class="rounded border border-slate-200 bg-white px-5 py-4">
+        <div class="flex items-center justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="truncate text-xl font-semibold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
+            </div>
+            <div class="flex shrink-0 items-center gap-3 whitespace-nowrap">
+                <span class="inline-flex rounded border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide <?= esc($statusClasses[$overallStatus] ?? $statusClasses['warning']) ?>">
+                    <?= esc($statusLabels[$overallStatus] ?? 'Warning') ?>
+                </span>
+                <span class="text-xs text-slate-500"><?= esc($generatedAt) ?></span>
+            </div>
         </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div class="space-y-4">
-            <?php foreach ($checks as $check): ?>
-                <?php
-                $status = (string) ($check['status'] ?? 'warning');
-                $details = is_array($check['details'] ?? null) ? $check['details'] : [];
-                ?>
-                <section class="rounded border border-slate-200 bg-white p-5">
-                    <div class="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <h2 class="text-lg font-semibold text-slate-900"><?= esc((string) ($check['title'] ?? 'Untitled check')) ?></h2>
-                            <p class="mt-1 text-sm text-slate-600"><?= esc((string) ($check['summary'] ?? '')) ?></p>
-                        </div>
-                        <span class="inline-flex rounded border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide <?= esc($statusClasses[$status] ?? $statusClasses['warning']) ?>">
-                            <?= esc($statusLabels[$status] ?? 'Warning') ?>
-                        </span>
-                    </div>
-
-                    <?php if ($details !== []): ?>
-                        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
-                            <?php foreach ($details as $label => $value): ?>
-                                <div class="rounded bg-slate-50 px-3 py-2">
-                                    <dt class="text-xs uppercase tracking-wide text-slate-500"><?= esc((string) $label) ?></dt>
-                                    <dd class="mt-1 break-all text-sm text-slate-800"><?= esc((string) $value) ?></dd>
-                                </div>
-                            <?php endforeach; ?>
-                        </dl>
-                    <?php endif; ?>
-
-                    <p class="mt-4 text-sm text-slate-600">
-                        <span class="font-medium text-slate-900"><?= esc($ss['recommendation'] ?? 'Recommendation') ?>:</span>
-                        <?= esc((string) ($check['recommendation'] ?? '')) ?>
-                    </p>
-                </section>
+    <?php if ($resources !== []): ?>
+        <div class="grid gap-3 md:grid-cols-4">
+            <?php foreach (array_slice($resources, 0, 4) as $item): ?>
+                <div class="overflow-hidden rounded border border-slate-200 bg-white px-4 py-3">
+                    <div class="truncate text-[11px] uppercase tracking-[0.18em] text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></div>
+                    <div class="truncate text-sm font-semibold text-slate-900"><?= esc((string) ($item['value'] ?? '')) ?></div>
+                </div>
             <?php endforeach; ?>
         </div>
+    <?php endif; ?>
 
-        <div class="space-y-4">
-            <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['current_resources'] ?? 'Current Resources') ?></h2>
-                <dl class="mt-4 space-y-3">
-                    <?php foreach ($resources as $item): ?>
-                        <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                            <dt class="text-sm text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></dt>
-                            <dd class="text-right text-sm font-medium text-slate-900"><?= esc((string) ($item['value'] ?? '')) ?></dd>
-                        </div>
-                    <?php endforeach; ?>
-                </dl>
-            </section>
-
-            <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['environment'] ?? 'Environment') ?></h2>
-                <dl class="mt-4 space-y-3">
-                    <?php foreach ($environment as $item): ?>
-                        <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                            <dt class="text-sm text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></dt>
-                            <dd class="text-right text-sm font-medium text-slate-900"><?= esc((string) ($item['value'] ?? '')) ?></dd>
-                        </div>
-                    <?php endforeach; ?>
-                </dl>
-            </section>
-
-            <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['system_stats'] ?? 'System Statistics') ?></h2>
-                <dl class="mt-4 space-y-3">
-                    <?php foreach ($statistics as $item): ?>
-                        <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                            <dt class="text-sm text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></dt>
-                            <dd class="text-right text-sm font-medium text-slate-900"><?= esc((string) ($item['value'] ?? '')) ?></dd>
-                        </div>
-                    <?php endforeach; ?>
-                </dl>
-            </section>
-
-            <section class="rounded border border-slate-200 bg-white p-5">
-                <h2 class="text-lg font-semibold text-slate-900"><?= esc($ss['php_extensions'] ?? 'PHP Extensions') ?></h2>
-                <dl class="mt-4 space-y-3">
-                    <?php foreach ($extensions as $item): ?>
-                        <?php $isLoaded = (string) ($item['value'] ?? '') === 'Loaded'; ?>
-                        <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                            <dt class="text-sm text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></dt>
-                            <dd class="rounded px-2 py-1 text-xs font-semibold <?= $isLoaded ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800' ?>">
-                                <?= esc((string) ($item['value'] ?? '')) ?>
-                            </dd>
-                        </div>
-                    <?php endforeach; ?>
-                </dl>
-            </section>
+    <div class="grid gap-3 md:grid-cols-4">
+        <div class="overflow-hidden rounded border border-slate-200 bg-white px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.18em] text-slate-500"><?= esc($ss['checks'] ?? 'Checks') ?></div>
+            <div class="mt-1 text-2xl font-semibold text-slate-900"><?= esc((string) ($summary['total'] ?? 0)) ?></div>
         </div>
+        <div class="overflow-hidden rounded border border-emerald-200 bg-white px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.18em] text-emerald-700"><?= esc($ss['ok'] ?? 'OK') ?></div>
+            <div class="mt-1 text-2xl font-semibold text-emerald-900"><?= esc((string) ($summary['ok'] ?? 0)) ?></div>
+        </div>
+        <div class="overflow-hidden rounded border border-amber-200 bg-white px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.18em] text-amber-700"><?= esc($ss['warning'] ?? 'Warning') ?></div>
+            <div class="mt-1 text-2xl font-semibold text-amber-900"><?= esc((string) ($summary['warning'] ?? 0)) ?></div>
+        </div>
+        <div class="overflow-hidden rounded border border-rose-200 bg-white px-4 py-3">
+            <div class="text-xs uppercase tracking-[0.18em] text-rose-700"><?= esc($ss['error'] ?? 'Error') ?></div>
+            <div class="mt-1 text-2xl font-semibold text-rose-900"><?= esc((string) ($summary['error'] ?? 0)) ?></div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto rounded border border-slate-200 bg-white">
+        <div class="grid min-w-[980px] grid-cols-[280px_120px_1fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div><?= esc($ss['checks'] ?? 'Checks') ?></div>
+            <div><?= esc($ss['status'] ?? 'Status') ?></div>
+            <div><?= esc($ss['recommendation'] ?? 'Recommendation') ?></div>
+        </div>
+
+        <?php foreach ($checks as $check): ?>
+            <?php $status = (string) ($check['status'] ?? 'warning'); ?>
+            <div class="grid min-w-[980px] grid-cols-[280px_120px_1fr] gap-3 border-b px-4 py-3 last:border-b-0 <?= esc($rowClasses[$status] ?? $rowClasses['warning']) ?>">
+                <div class="min-w-0 overflow-hidden whitespace-nowrap">
+                    <div class="truncate text-sm font-medium text-slate-900"><?= esc((string) ($check['title'] ?? 'Untitled check')) ?></div>
+                </div>
+                <div class="flex items-center whitespace-nowrap">
+                    <span class="inline-flex rounded border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide <?= esc($statusClasses[$status] ?? $statusClasses['warning']) ?>">
+                        <?= esc($statusLabels[$status] ?? 'Warning') ?>
+                    </span>
+                </div>
+                <div class="min-w-0 overflow-hidden whitespace-nowrap text-sm text-slate-600">
+                    <span class="truncate"><?= esc((string) ($check['summary'] ?? '')) ?> <span class="text-slate-400">•</span> <?= esc((string) ($check['recommendation'] ?? '')) ?></span>
+                </div>
+            </div>
+        <?php endforeach; ?>
     </div>
 </div>

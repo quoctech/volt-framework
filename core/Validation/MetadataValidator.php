@@ -26,6 +26,7 @@ final class MetadataValidator
         'Currency',
         'Data',
         'Text',
+        'Code',
         'Check',
         'Date',
         'Datetime',

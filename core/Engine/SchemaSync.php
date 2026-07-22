@@ -74,6 +74,7 @@ class SchemaSync
             'Currency'   => 'NUMERIC(18, 4)',
             'Data'       => 'VARCHAR(' . ($length ?? 255) . ')',
             'Text'       => 'TEXT',
+            'Code'       => 'TEXT',
             'Check'      => 'SMALLINT',
             'Date'       => 'DATE',
             'Datetime'   => 'TIMESTAMP WITHOUT TIME ZONE',
