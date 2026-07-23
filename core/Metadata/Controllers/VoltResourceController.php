@@ -62,13 +62,16 @@ final class VoltResourceController extends Controller
         $moduleStudly = $this->studly($module);
         $moduleSnake = $this->snake($moduleStudly);
 
+        $meta = $this->getCompiledMeta($entityName);
+
         return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_list", [
-            'title'      => $this->titleize($entityName) . ' List',
-            'dataUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}"),
-            'createUrl'  => site_url("{$moduleSnake}/{$entitySnake}/create"),
-            'editUrlBase' => site_url("{$moduleSnake}/{$entitySnake}/edit"),
-            'builderUrl' => site_url("desk/entity-builder?entity={$entitySnake}"),
-            'linkTargets' => $this->getLinkTargets($entityName),
+            'title'        => $this->titleize($entityName) . ' List',
+            'dataUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}"),
+            'createUrl'    => site_url("{$moduleSnake}/{$entitySnake}/create"),
+            'editUrlBase'  => site_url("{$moduleSnake}/{$entitySnake}/edit"),
+            'builderUrl'   => site_url("desk/entity-builder?entity={$entitySnake}"),
+            'linkTargets'  => $this->getLinkTargets($entityName),
+            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
         ]);
     }
 
@@ -84,15 +87,22 @@ final class VoltResourceController extends Controller
         $moduleStudly = $this->studly($module);
         $moduleSnake = $this->snake($moduleStudly);
 
+        $meta = $this->getCompiledMeta($entityName);
+
         return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_form", [
-            'title'       => 'New ' . $this->titleize($entityName),
-            'listUrl'     => site_url("{$moduleSnake}/{$entitySnake}"),
-            'saveUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
-            'loadUrlBase' => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
-            'fields'      => $this->getFormFields($entityName),
-            'sessions'    => $this->getFormSessions($entityName),
-            'linkTargets' => $this->getLinkTargets($entityName),
-            'recordName'  => '',
+            'title'        => 'New ' . $this->titleize($entityName),
+            'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
+            'saveUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
+            'loadUrlBase'  => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
+            'fields'       => $this->getFormFields($entityName),
+            'sessions'     => $this->getFormSessions($entityName),
+            'linkTargets'  => $this->getLinkTargets($entityName),
+            'recordName'   => '',
+            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
+            'submitUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/submit"),
+            'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
+            'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
+            'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
         ]);
     }
 
@@ -108,15 +118,22 @@ final class VoltResourceController extends Controller
         $moduleStudly = $this->studly($module);
         $moduleSnake = $this->snake($moduleStudly);
 
+        $meta = $this->getCompiledMeta($entityName);
+
         return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_form", [
-            'title'       => 'Edit ' . $this->titleize($entityName),
-            'listUrl'     => site_url("{$moduleSnake}/{$entitySnake}"),
-            'saveUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
-            'loadUrlBase' => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
-            'fields'      => $this->getFormFields($entityName),
-            'sessions'    => $this->getFormSessions($entityName),
-            'linkTargets' => $this->getLinkTargets($entityName),
-            'recordName'  => $id,
+            'title'        => 'Edit ' . $this->titleize($entityName),
+            'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
+            'saveUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
+            'loadUrlBase'  => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
+            'fields'       => $this->getFormFields($entityName),
+            'sessions'     => $this->getFormSessions($entityName),
+            'linkTargets'  => $this->getLinkTargets($entityName),
+            'recordName'   => $id,
+            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
+            'submitUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/submit"),
+            'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
+            'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
+            'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
         ]);
     }
 
@@ -477,6 +494,98 @@ final class VoltResourceController extends Controller
             $model->delete($id);
 
             return $this->response->setStatusCode(204);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restSubmit(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        try {
+            $result = $model->submit($id);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data' => $result,
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restApprove(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        try {
+            $result = $model->approve($id);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data' => $result,
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restCancel(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        try {
+            $result = $model->cancel($id);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data' => $result,
+            ]);
+        } catch (Throwable $throwable) {
+            return $this->respondError($throwable->getMessage(), 422);
+        }
+    }
+
+    public function restAmend(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        $existing = $model->find($id);
+        if (! is_array($existing)) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'status' => 'error',
+                'message' => 'Record not found.',
+            ]);
+        }
+
+        try {
+            $record = $model->amend($id);
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data' => $record,
+            ]);
         } catch (Throwable $throwable) {
             return $this->respondError($throwable->getMessage(), 422);
         }

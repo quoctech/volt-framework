@@ -8,6 +8,10 @@
 /** @var array<int, array<string, mixed>> $fields */
 /** @var array<int, array<string, mixed>> $sessions */
 /** @var array<string, array<string, string>> $linkTargets */
+/** @var bool $isSubmittable */
+/** @var string $submitUrl */
+/** @var string $cancelUrl */
+/** @var string $amendUrl */
 ?>
 <!doctype html>
 <html lang="vi">
@@ -27,16 +31,30 @@
             recordName: <?= esc(json_encode($recordName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             fields: <?= esc(json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             sessions: <?= esc(json_encode($sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            isSubmittable: <?= json_encode($isSubmittable) ?>,
+            submitUrl: <?= esc(json_encode($submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            cancelUrl: <?= esc(json_encode($cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            amendUrl: <?= esc(json_encode($amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
                 <p class="text-zinc-500"><?= esc('/hrms/employee') ?></p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-center gap-2">
+                <template x-if="isSubmittable && recordName">
+                    <span class="rounded border px-2 py-1 text-xs font-medium" x-bind:class="workflowStateBadgeClass" x-text="workflowState || 'Draft'"></span>
+                </template>
                 <a href="<?= esc($listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
                 <button @click="save()" type="button" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Save Item</button>
+                <template x-if="isSubmittable && recordName">
+                    <div class="flex gap-1">
+                        <button @click="submitWorkflow()" type="button" class="border border-amber-500 bg-amber-50 px-3 py-2 text-sm hover:bg-amber-100" x-show="canSubmit">Submit</button>
+                        <button @click="cancelWorkflow()" type="button" class="border border-red-300 px-3 py-2 text-sm hover:bg-red-50" x-show="canCancel">Cancel</button>
+                        <button @click="amendWorkflow()" type="button" class="border border-sky-300 px-3 py-2 text-sm hover:bg-sky-50" x-show="canAmend">Amend</button>
+                    </div>
+                </template>
             </div>
         </header>
 

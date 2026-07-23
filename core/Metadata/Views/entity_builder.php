@@ -74,6 +74,7 @@ $deleteModalFooter = static function (): string {
                 <div class="mt-4 flex gap-2">
                     <button @click="activeTab = 'settings'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'settings' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity Settings</button>
                     <button @click="activeTab = 'entity'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'entity' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity</button>
+                    <button @click="activeTab = 'workflow'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'workflow' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Workflow</button>
                 </div>
             </header>
 
@@ -259,6 +260,169 @@ $deleteModalFooter = static function (): string {
                             </div>
                         </div>
                     </div>
+                </section>
+
+                <section x-show="activeTab === 'workflow'" x-cloak class="bg-zinc-100 p-4">
+                    <div x-show="!entity.is_submittable" class="border border-zinc-300 bg-white p-8 text-center text-zinc-500">
+                        Enable <strong>Submittable</strong> in Entity Settings to configure workflow.
+                    </div>
+                    <template x-if="entity.is_submittable">
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-3 border border-zinc-300 bg-white p-4">
+                                <div class="flex-1">
+                                    <label class="block">
+                                        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('workflow_label')"></span>
+                                        <input x-model="workflow.label" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="t('workflow_label')">
+                                    </label>
+                                </div>
+                                <button @click="toggleLocale()" type="button" class="mt-5 flex items-center gap-1 self-start border border-zinc-300 px-3 py-2 text-xs hover:bg-zinc-50" x-text="locale === 'en' ? '🌐 EN' : '🌐 VI'"></button>
+                            </div>
+
+                            <div class="border border-zinc-300 bg-white p-4">
+                                <div class="mb-3 flex items-center justify-between">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('states')"></p>
+                                    <div class="flex gap-2">
+                                        <button @click="addDefaultWorkflowStates()" type="button" class="border border-zinc-300 px-3 py-1 text-xs hover:bg-zinc-50" x-text="t('add_default')"></button>
+                                        <button @click="addWorkflowState()" type="button" class="border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50" x-text="t('add_state')"></button>
+                                    </div>
+                                </div>
+
+                                <template x-if="workflow.states.length === 0">
+                                    <p class="py-4 text-center text-sm text-zinc-500" x-text="t('no_states')"></p>
+                                </template>
+
+                                <template x-if="workflow.states.length > 0">
+                                    <div class="space-y-3">
+                                        <template x-for="(state, idx) in workflow.states" :key="state.uid">
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <div @click="editedState = (editedState?.uid === state.uid) ? null : state; editedTransition = null" class="relative flex flex-1 cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-shadow hover:shadow-md" :class="editedState?.uid === state.uid ? 'border-zinc-600 shadow-md' : 'border-zinc-200'" :style="{ borderLeftColor: state.color || '#6b7280', borderLeftWidth: '4px' }">
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center gap-2">
+                                                                <input x-model="state.name" type="text" class="min-w-0 flex-1 border-0 border-b border-transparent bg-transparent px-0 py-0.5 text-sm font-medium outline-none hover:border-zinc-300 focus:border-zinc-500" :placeholder="t('state_name')" @click.stop>
+                                                                <span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-zinc-600" x-text="'doc:' + state.docstatus"></span>
+                                                                <span x-show="state.allow_edit" class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700" x-text="t('allow_edit')"></span>
+                                                                <span x-show="state.is_final" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700" x-text="t('is_final')"></span>
+                                                            </div>
+                                                        </div>
+                                                        <button @click.stop="removeWorkflowState(state.uid)" type="button" class="shrink-0 rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600" :title="t('delete_state')">
+                                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div x-show="editedState?.uid === state.uid" x-cloak class="mb-2 mt-1 ml-2 grid grid-cols-6 gap-3 rounded border border-zinc-200 bg-zinc-50 p-3 text-xs">
+                                                    <div>
+                                                        <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('docstatus')"></span>
+                                                        <select x-model="state.docstatus" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                            <option value="0">0</option>
+                                                            <option value="1">1</option>
+                                                            <option value="2">2</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('color')"></span>
+                                                        <select x-model="state.color" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                            <option value="#6b7280">Gray</option>
+                                                            <option value="#3b82f6">Blue</option>
+                                                            <option value="#22c55e">Green</option>
+                                                            <option value="#f59e0b">Amber</option>
+                                                            <option value="#ef4444">Red</option>
+                                                            <option value="#a855f7">Purple</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="flex items-end gap-3">
+                                                        <label class="flex items-center gap-1">
+                                                            <input x-model="state.allow_edit" type="checkbox" class="h-3.5 w-3.5 border-zinc-400">
+                                                            <span x-text="t('allow_edit')"></span>
+                                                        </label>
+                                                        <label class="flex items-center gap-1">
+                                                            <input x-model="state.is_final" type="checkbox" class="h-3.5 w-3.5 border-zinc-400">
+                                                            <span x-text="t('is_final')"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div x-show="!editedState || editedState?.uid !== state.uid" class="ml-2 mt-1 space-y-1">
+                                                    <template x-for="(trans, tidx) in workflow.transitions.filter(t => t.from_state === state.name)" :key="trans.uid || tidx">
+                                                        <div @click="editedTransition = (editedTransition?.uid === trans.uid) ? null : trans; editedState = null" class="flex cursor-pointer items-center gap-2 rounded border border-dashed border-zinc-300 px-3 py-1.5 text-xs transition-colors hover:border-zinc-500" :class="editedTransition?.uid === trans.uid ? 'border-zinc-600 bg-zinc-100' : ''">
+                                                            <span class="text-zinc-400">↳</span>
+                                                            <span class="font-medium text-amber-700" x-text="trans.action || '?'"></span>
+                                                            <span class="text-zinc-400">→</span>
+                                                            <span class="font-medium text-zinc-700" x-text="trans.to_state"></span>
+                                                            <span x-show="trans.label" class="text-zinc-400" x-text="'(' + trans.label + ')'"></span>
+                                                            <button @click.stop="removeWorkflowTransition(trans.uid, tidx)" type="button" class="ml-auto rounded p-0.5 text-zinc-400 hover:text-red-600" :title="t('delete_transition')">
+                                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <div x-show="editedTransition" x-cloak x-transition class="ml-4 grid grid-cols-5 gap-2 rounded border border-zinc-200 bg-white p-2 text-xs">
+                                                        <div>
+                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('from_state')"></span>
+                                                            <span class="block px-2 py-1 text-xs font-medium" x-text="editedTransition?.from_state"></span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('action')"></span>
+                                                            <select x-model="editedTransition.action" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                                <option value="" x-text="t('select_action')"></option>
+                                                                <template x-for="action in availableActions" :key="action.name">
+                                                                    <option :value="action.name" x-text="action.label || action.name"></option>
+                                                                </template>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('to_state')"></span>
+                                                            <select x-model="editedTransition.to_state" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                                <option value="" x-text="t('select_state')"></option>
+                                                                <template x-for="st in workflow.states" :key="st.name">
+                                                                    <option :value="st.name" x-text="st.name || st.label || st.uid"></option>
+                                                                </template>
+                                                            </select>
+                                                        </div>
+                                                        <div class="sm:col-span-2">
+                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('label_opt')"></span>
+                                                            <input x-model="editedTransition.label" type="text" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500" :placeholder="t('label_opt')">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="border border-zinc-300 bg-white p-4">
+                                <div class="mb-3 flex items-center justify-between">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('transitions')"></p>
+                                    <button @click="addWorkflowTransition()" type="button" class="border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50" x-text="t('add_transition')"></button>
+                                </div>
+                                <template x-if="workflow.transitions.length === 0">
+                                    <p class="py-2 text-center text-sm text-zinc-500" x-text="t('no_transitions')"></p>
+                                </template>
+                                <template x-if="workflow.transitions.length > 0">
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="(trans, tidx) in workflow.transitions" :key="trans.uid || tidx">
+                                            <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs" :class="editedTransition?.uid === trans.uid ? 'border-zinc-600 bg-zinc-100' : 'border-zinc-300'">
+                                                <span class="font-medium" x-text="trans.from_state"></span>
+                                                <span class="text-amber-600" x-text="'→'"></span>
+                                                <span class="font-medium" x-text="trans.action || '?'"></span>
+                                                <span class="text-amber-600" x-text="'→'"></span>
+                                                <span class="font-medium" x-text="trans.to_state"></span>
+                                                <button @click="removeWorkflowTransition(trans.uid, tidx)" type="button" class="ml-0.5 rounded-full p-0.5 text-zinc-400 hover:text-red-600">
+                                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="flex items-center gap-2 border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-600">
+                                <span class="h-2 w-2 rounded-full" :class="workflow.states.length > 0 ? 'bg-green-500' : 'bg-zinc-300'"></span>
+                                <span x-text="workflow.states.length > 0 ? (t('workflow_active') + ': ' + (workflow.label || t('states'))) : t('no_states')"></span>
+                            </div>
+                        </div>
+                    </template>
                 </section>
 
                 <aside class="space-y-4 bg-zinc-50 p-4">
@@ -454,6 +618,15 @@ $deleteModalFooter = static function (): string {
                     istable: false,
                     autoname: 'HASH',
                 },
+                workflow: {
+                    id: null,
+                    states: [],
+                    transitions: [],
+                },
+                availableActions: [],
+                locale: document.documentElement.lang?.startsWith('vi') ? 'vi' : 'en',
+                editedState: null,
+                editedTransition: null,
                 namingPreset: 'HASH',
                 activeTab: 'settings',
                 fieldTypeFilter: '',
@@ -505,6 +678,75 @@ $deleteModalFooter = static function (): string {
                 get selectedField() {
                     return this.fields.find((field) => field.uid === this.selectedFieldUid) || null;
                 },
+                t(key) {
+                    const dict = {
+                        en: {
+                            workflow_label: 'Workflow Label',
+                            states: 'States',
+                            transitions: 'Transitions',
+                            add_state: '+ Add State',
+                            add_default: '+ Defaults',
+                            add_transition: '+ Add Transition',
+                            no_states: 'No states defined. Implicit workflow will be used.',
+                            no_transitions: 'No transitions defined.',
+                            docstatus: 'Docstatus',
+                            allow_edit: 'Edit',
+                            is_final: 'Final',
+                            action: 'Action',
+                            from_state: 'From State',
+                            to_state: 'To State',
+                            label_opt: 'Label',
+                            select_state: 'Select state',
+                            select_action: 'Select action',
+                            delete_state: 'Delete',
+                            delete_transition: 'Delete',
+                            workflow_active: 'Workflow active',
+                            state_name: 'Name',
+                            color: 'Color',
+                            save: 'Save',
+                            cancel: 'Cancel',
+                            lang_en: 'English',
+                            lang_vi: 'Tiếng Việt',
+                            confirm_delete_state: 'Delete this state? Existing transitions referencing it will also be removed.',
+                            confirm_delete_transition: 'Delete this transition?',
+                        },
+                        vi: {
+                            workflow_label: 'Nhãn quy trình',
+                            states: 'Trạng thái',
+                            transitions: 'Chuyển tiếp',
+                            add_state: '+ Thêm trạng thái',
+                            add_default: '+ Mặc định',
+                            add_transition: '+ Thêm chuyển tiếp',
+                            no_states: 'Chưa có trạng thái. Quy trình mặc định sẽ được dùng.',
+                            no_transitions: 'Chưa có chuyển tiếp nào.',
+                            docstatus: 'Docstatus',
+                            allow_edit: 'Sửa',
+                            is_final: 'Cuối',
+                            action: 'Hành động',
+                            from_state: 'Từ trạng thái',
+                            to_state: 'Đến trạng thái',
+                            label_opt: 'Nhãn',
+                            select_state: 'Chọn trạng thái',
+                            select_action: 'Chọn hành động',
+                            delete_state: 'Xoá',
+                            delete_transition: 'Xoá',
+                            workflow_active: 'Quy trình đang hoạt động',
+                            state_name: 'Tên',
+                            color: 'Màu',
+                            save: 'Lưu',
+                            cancel: 'Huỷ',
+                            lang_en: 'English',
+                            lang_vi: 'Tiếng Việt',
+                            confirm_delete_state: 'Xoá trạng thái này? Các chuyển tiếp tham chiếu đến nó cũng sẽ bị xoá.',
+                            confirm_delete_transition: 'Xoá chuyển tiếp này?',
+                        },
+                    };
+                    const lang = dict[this.locale] || dict.en;
+                    return lang[key] || key;
+                },
+                toggleLocale() {
+                    this.locale = this.locale === 'en' ? 'vi' : 'en';
+                },
                 resetBuilder() {
                     this.sessions = [this.makeSession('Primary', 'Main fields')];
                     this.selectedSessionUid = this.sessions[0].uid;
@@ -517,6 +759,10 @@ $deleteModalFooter = static function (): string {
                     this.namingPreset = 'HASH';
                     this.lastGeneratedAutoname = 'HASH';
                     this.activeTab = 'settings';
+                    this.workflow = { id: null, states: [], transitions: [] };
+                    this.editedState = null;
+                    this.editedTransition = null;
+                    this.availableActions = [];
                 },
                 normalizeEntityName() {
                     const previousGenerated = this.lastGeneratedAutoname;
@@ -1145,6 +1391,13 @@ $deleteModalFooter = static function (): string {
                         this.selectedFieldUid = this.fields[0]?.uid || null;
                         this.activeTab = 'settings';
 
+                        this.workflow = {
+                            id: payload.workflow?.id || null,
+                            states: Array.isArray(payload.workflow?.states) ? payload.workflow.states.map((s) => ({ ...s, uid: this.uuid() })) : [],
+                            transitions: Array.isArray(payload.workflow?.transitions) ? payload.workflow.transitions.map((t) => ({ ...t, uid: this.uuid() })) : [],
+                        };
+                        this.availableActions = Array.isArray(payload.workflow?.actions) ? payload.workflow.actions : [];
+
                         if (!this.modules.includes(this.entity.module)) {
                             this.modules.push(this.entity.module);
                             this.modules.sort();
@@ -1159,6 +1412,53 @@ $deleteModalFooter = static function (): string {
                         }
                         this.toast('error', error.message || 'Unable to load entity.');
                     }
+                },
+                addDefaultWorkflowStates() {
+                    this.workflow.states = [
+                        { uid: this.uuid(), name: 'Draft', docstatus: 0, allow_edit: true, is_final: false, color: '#6b7280' },
+                        { uid: this.uuid(), name: 'Submitted', docstatus: 1, allow_edit: false, is_final: false, color: '#3b82f6' },
+                        { uid: this.uuid(), name: 'Approved', docstatus: 1, allow_edit: false, is_final: true, color: '#22c55e' },
+                        { uid: this.uuid(), name: 'Cancelled', docstatus: 2, allow_edit: false, is_final: false, color: '#ef4444' },
+                    ];
+                    this.workflow.transitions = [
+                        { uid: this.uuid(), from_state: 'Draft', action: 'Submit', to_state: 'Submitted' },
+                        { uid: this.uuid(), from_state: 'Submitted', action: 'Approve', to_state: 'Approved' },
+                        { uid: this.uuid(), from_state: 'Submitted', action: 'Cancel', to_state: 'Cancelled' },
+                        { uid: this.uuid(), from_state: 'Cancelled', action: 'Amend', to_state: 'Draft' },
+                    ];
+                },
+                addWorkflowState() {
+                    this.workflow.states.push({
+                        uid: this.uuid(),
+                        name: '',
+                        docstatus: 0,
+                        allow_edit: false,
+                        is_final: false,
+                        color: '#6b7280',
+                    });
+                },
+                removeWorkflowState(uid) {
+                    const removed = this.workflow.states.find((s) => s.uid === uid);
+                    this.workflow.states = this.workflow.states.filter((s) => s.uid !== uid);
+                    if (removed) {
+                        this.workflow.transitions = this.workflow.transitions.filter(
+                            (t) => t.from_state !== removed.name && t.to_state !== removed.name,
+                        );
+                    }
+                },
+                addWorkflowTransition() {
+                    if (this.workflow.states.length < 2) return;
+                    const from = this.workflow.states[0];
+                    const to = this.workflow.states[1];
+                    this.workflow.transitions.push({
+                        uid: this.uuid(),
+                        from_state: from.name,
+                        action: '',
+                        to_state: to.name,
+                    });
+                },
+                removeWorkflowTransition(uid) {
+                    this.workflow.transitions = this.workflow.transitions.filter((t) => t.uid !== uid);
                 },
                 extractSessions(entityCustom) {
                     const layout = entityCustom && entityCustom.layout ? entityCustom.layout : {};
@@ -1290,6 +1590,22 @@ $deleteModalFooter = static function (): string {
                     this.entity.label = this.entity.label || this.titleize(entityName);
                     this.entityCustomText = this.prettyJson(entityCustom);
 
+                    const workflowStates = this.workflow.states.map((s) => ({
+                        uid: s.uid,
+                        state: s.name,
+                        docstatus: Number(s.docstatus || 0),
+                        allow_edit: !!s.allow_edit,
+                        is_final: !!s.is_final,
+                        color: s.color || '#6b7280',
+                    }));
+
+                    const workflowTransitions = this.workflow.transitions.map((t) => ({
+                        uid: t.uid,
+                        from_state: t.from_state,
+                        action: t.action,
+                        to_state: t.to_state,
+                    }));
+
                     return {
                         entity: {
                             name: entityName,
@@ -1302,6 +1618,11 @@ $deleteModalFooter = static function (): string {
                         },
                         fields,
                         custom_patch: customPatch,
+                        workflow: {
+                            id: this.workflow.id || null,
+                            states: workflowStates,
+                            transitions: workflowTransitions,
+                        },
                     };
                 },
                 parseJsonObject(text, errorMessage) {

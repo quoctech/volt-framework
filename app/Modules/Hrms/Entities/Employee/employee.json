@@ -1,17 +1,12 @@
 {
-    "entity_name": "employee",
-    "module": "hrms",
-    "table_name": "tab_employee",
     "entity": {
         "name": "employee",
         "module": "hrms",
-        "label": "Employee",
-        "is_submittable": false,
-        "issingle": false,
-        "istable": false,
+        "issingle": 0,
+        "istable": 0,
         "autoname": "E-.YYYY.-#####",
         "states": [],
-        "s_custom_jsonb": {
+        "custom_attributes": {
             "label": "Employee",
             "layout": {
                 "sessions": [
@@ -26,214 +21,307 @@
             "is_submittable": false
         }
     },
-    "fields": [
-        {
-            "id": 1,
-            "fieldname": "employee_name",
-            "label": "Tên Nhân Viên",
-            "fieldtype": "Data",
-            "length": 255,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 1,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true,
-                "default_value": "",
-                "placeholder": ""
-            }
-        },
-        {
-            "id": 3,
-            "fieldname": "employee_age",
-            "label": "Tuổi Nhân Viên",
-            "fieldtype": "Int",
-            "length": null,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 2,
-            "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true
-            }
-        },
-        {
-            "id": null,
-            "fieldname": "attach_4",
-            "label": "Attach 4",
-            "fieldtype": "Attach",
-            "length": null,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 3,
-            "f_custom_jsonb": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            }
-        },
-        {
-            "id": null,
-            "fieldname": "attach_image_5",
-            "label": "Attach Image 5",
-            "fieldtype": "Attach Image",
-            "length": null,
-            "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 4,
-            "f_custom_jsonb": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            }
-        },
-        {
-            "id": 88,
-            "fieldname": "education",
-            "label": "Education",
-            "fieldtype": "Table",
-            "length": null,
-            "options": "EmployeeEducation:separate",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
-            "idx": 5,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": false
-            }
-        }
-    ],
-    "field_map": {
+    "fields": {
         "employee_name": {
             "id": 1,
+            "parent": "employee",
             "fieldname": "employee_name",
             "label": "Tên Nhân Viên",
             "fieldtype": "Data",
             "length": 255,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 1,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true,
-                "default_value": "",
-                "placeholder": ""
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "placeholder": "",
+            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+            "in_list_view": true,
+            "default_value": ""
         },
         "employee_age": {
             "id": 3,
+            "parent": "employee",
             "fieldname": "employee_age",
             "label": "Tuổi Nhân Viên",
             "fieldtype": "Int",
             "length": null,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 2,
-            "f_custom_jsonb": {
-                "column": 2,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 2,
+            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+            "in_list_view": true
         },
         "attach_4": {
-            "id": null,
+            "id": 104,
+            "parent": "employee",
             "fieldname": "attach_4",
             "label": "Attach 4",
             "fieldtype": "Attach",
             "length": null,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 3,
-            "f_custom_jsonb": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 2,
+            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+            "in_list_view": false
         },
         "attach_image_5": {
-            "id": null,
+            "id": 105,
+            "parent": "employee",
             "fieldname": "attach_image_5",
             "label": "Attach Image 5",
             "fieldtype": "Attach Image",
             "length": null,
             "options": "",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 4,
-            "f_custom_jsonb": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            }
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 2,
+            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+            "in_list_view": false
         },
         "education": {
             "id": 88,
+            "parent": "employee",
             "fieldname": "education",
             "label": "Education",
             "fieldtype": "Table",
             "length": null,
             "options": "EmployeeEducation:separate",
-            "is_required": false,
-            "read_only": false,
-            "hidden": false,
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
             "idx": 5,
-            "f_custom_jsonb": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": false
-            }
+            "is_child_table": true,
+            "storage_mode": "separate_table",
+            "column": 1,
+            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+            "in_list_view": false
         }
     },
-    "custom_patch": {
-        "fields": {
-            "employee_name": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true,
-                "default_value": "",
-                "placeholder": ""
-            },
-            "employee_age": {
-                "column": 2,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": true
-            },
-            "attach_4": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            },
-            "attach_image_5": {
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "column": 2,
-                "in_list_view": false
-            },
-            "education": {
-                "column": 1,
-                "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
-                "in_list_view": false
-            }
+    "field_order": [
+        "employee_name",
+        "employee_age",
+        "attach_4",
+        "attach_image_5",
+        "education"
+    ],
+    "main_fields": [
+        "employee_name",
+        "employee_age",
+        "attach_4",
+        "attach_image_5"
+    ],
+    "child_fields": [
+        "education"
+    ],
+    "child_tables": {
+        "education": {
+            "child_entity": "employeeeducation",
+            "storage": "separate_table"
         }
     },
-    "compiled_at": "2026-07-22T16:53:58+00:00"
+    "workflow": {
+        "active": true,
+        "is_submittable": true,
+        "name": "employee_wf",
+        "label": "Employee Workflow",
+        "states": [
+            {
+                "name": "Draft",
+                "workflow": "employee_wf",
+                "label": "Draft",
+                "docstatus": "0",
+                "allow_edit": "1",
+                "is_final": "0",
+                "color": "gray",
+                "idx": "0",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Pending Approval",
+                "workflow": "employee_wf",
+                "label": "Pending Approval",
+                "docstatus": "0",
+                "allow_edit": "0",
+                "is_final": "0",
+                "color": "gray",
+                "idx": "1",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Approved",
+                "workflow": "employee_wf",
+                "label": "Approved",
+                "docstatus": "1",
+                "allow_edit": "0",
+                "is_final": "0",
+                "color": "gray",
+                "idx": "2",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Rejected",
+                "workflow": "employee_wf",
+                "label": "Rejected",
+                "docstatus": "2",
+                "allow_edit": "0",
+                "is_final": "1",
+                "color": "gray",
+                "idx": "3",
+                "custom_attributes": "{}"
+            }
+        ],
+        "states_order": []
+    },
+    "cache": {
+        "key": "volt_metadata_entity_v1_employee_global",
+        "ttl": 86400,
+        "compiledAt": "2026-07-22T17:42:28+00:00",
+        "role": null
+    },
+    "source": {
+        "entity": {
+            "name": "employee",
+            "module": "hrms",
+            "issingle": "0",
+            "istable": "0",
+            "autoname": "E-.YYYY.-#####",
+            "states": "[]",
+            "custom_attributes": "{\"label\": \"Employee\", \"layout\": {\"sessions\": [{\"uid\": \"1827bc24-b2ed-414b-8f0f-92ae64e2f16e\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 2}]}, \"is_submittable\": false}"
+        },
+        "fields": [
+            {
+                "id": "1",
+                "parent": "employee",
+                "fieldname": "employee_name",
+                "label": "Tên Nhân Viên",
+                "fieldtype": "Data",
+                "length": "255",
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "1"
+            },
+            {
+                "id": "3",
+                "parent": "employee",
+                "fieldname": "employee_age",
+                "label": "Tuổi Nhân Viên",
+                "fieldtype": "Int",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "2"
+            },
+            {
+                "id": "104",
+                "parent": "employee",
+                "fieldname": "attach_4",
+                "label": "Attach 4",
+                "fieldtype": "Attach",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "3"
+            },
+            {
+                "id": "105",
+                "parent": "employee",
+                "fieldname": "attach_image_5",
+                "label": "Attach Image 5",
+                "fieldtype": "Attach Image",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "4"
+            },
+            {
+                "id": "88",
+                "parent": "employee",
+                "fieldname": "education",
+                "label": "Education",
+                "fieldtype": "Table",
+                "length": null,
+                "options": "EmployeeEducation:separate",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "5"
+            }
+        ],
+        "customRows": [
+            {
+                "apply_to_role": null,
+                "custom_meta": {
+                    "fields": {
+                        "attach_4": {
+                            "column": 2,
+                            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                            "in_list_view": false
+                        },
+                        "education": {
+                            "column": 1,
+                            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                            "in_list_view": false
+                        },
+                        "employee_age": {
+                            "column": 2,
+                            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                            "in_list_view": true
+                        },
+                        "employee_name": {
+                            "column": 1,
+                            "placeholder": "",
+                            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                            "in_list_view": true,
+                            "default_value": ""
+                        },
+                        "attach_image_5": {
+                            "column": 2,
+                            "session_uid": "1827bc24-b2ed-414b-8f0f-92ae64e2f16e",
+                            "in_list_view": false
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "derived": {
+        "main_field_count": 4,
+        "child_field_count": 1,
+        "field_names": [
+            "employee_name",
+            "employee_age",
+            "attach_4",
+            "attach_image_5",
+            "education"
+        ],
+        "required_fields": [],
+        "hidden_fields": [],
+        "read_only_fields": []
+    }
 }

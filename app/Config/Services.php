@@ -8,6 +8,7 @@ use CodeIgniter\Config\BaseService;
 use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Engine\VoltMetadataCompiler;
+use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Security\PermissionResolver;
 use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
@@ -101,6 +102,15 @@ class Services extends BaseService
         }
 
         return new SystemSettingService();
+    }
+
+    public static function voltWorkflowEngine(?bool $getShared = true): WorkflowEngine
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltWorkflowEngine');
+        }
+
+        return new WorkflowEngine();
     }
 
     public static function voltErrorLog(?bool $getShared = true): ErrorLogService

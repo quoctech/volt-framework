@@ -1,0 +1,306 @@
+{
+    "entity": {
+        "name": "leave",
+        "module": "hrms",
+        "issingle": 0,
+        "istable": 0,
+        "autoname": "L-.YYYY.-#####",
+        "states": [],
+        "custom_attributes": {
+            "label": "Leave",
+            "layout": {
+                "sessions": [
+                    {
+                        "uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+                        "title": "Primary",
+                        "description": "Main fields",
+                        "column_count": 2
+                    }
+                ]
+            },
+            "is_submittable": true
+        }
+    },
+    "fields": {
+        "employee": {
+            "id": 107,
+            "parent": "leave",
+            "fieldname": "employee",
+            "label": "Employee",
+            "fieldtype": "Link",
+            "length": 255,
+            "options": "employee",
+            "reqd": 1,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 1,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "placeholder": "",
+            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+            "in_list_view": true,
+            "default_value": ""
+        },
+        "from_date": {
+            "id": 108,
+            "parent": "leave",
+            "fieldname": "from_date",
+            "label": "From Date",
+            "fieldtype": "Date",
+            "length": null,
+            "options": "",
+            "reqd": 1,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 2,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+            "in_list_view": true
+        },
+        "to_date": {
+            "id": 109,
+            "parent": "leave",
+            "fieldname": "to_date",
+            "label": "To Date",
+            "fieldtype": "Date",
+            "length": null,
+            "options": "",
+            "reqd": 1,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 3,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 2,
+            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+            "in_list_view": true
+        },
+        "reason": {
+            "id": 110,
+            "parent": "leave",
+            "fieldname": "reason",
+            "label": "Reason",
+            "fieldtype": "Text",
+            "length": null,
+            "options": "",
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 4,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb",
+            "column": 1,
+            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+            "in_list_view": false
+        }
+    },
+    "field_order": [
+        "employee",
+        "from_date",
+        "to_date",
+        "reason"
+    ],
+    "main_fields": [
+        "employee",
+        "from_date",
+        "to_date",
+        "reason"
+    ],
+    "child_fields": [],
+    "child_tables": [],
+    "workflow": {
+        "active": true,
+        "is_submittable": true,
+        "name": "leave_wf",
+        "label": "Leave Workflow",
+        "states": [
+            {
+                "name": "Draft",
+                "workflow": "leave_wf",
+                "label": "Draft",
+                "docstatus": "0",
+                "allow_edit": "1",
+                "is_final": "1",
+                "color": "#6b7280",
+                "idx": "0",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Submitted",
+                "workflow": "leave_wf",
+                "label": "Submitted",
+                "docstatus": "1",
+                "allow_edit": "1",
+                "is_final": "1",
+                "color": "#d97706",
+                "idx": "1",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Approved",
+                "workflow": "leave_wf",
+                "label": "Approved",
+                "docstatus": "1",
+                "allow_edit": "0",
+                "is_final": "1",
+                "color": "#16a34a",
+                "idx": "2",
+                "custom_attributes": "{}"
+            },
+            {
+                "name": "Cancelled",
+                "workflow": "leave_wf",
+                "label": "Cancelled",
+                "docstatus": "2",
+                "allow_edit": "0",
+                "is_final": "1",
+                "color": "#dc2626",
+                "idx": "3",
+                "custom_attributes": "{}"
+            }
+        ],
+        "states_order": []
+    },
+    "layout": {
+        "sessions": [
+            {
+                "uid": "primary",
+                "title": "Primary",
+                "description": "",
+                "column_count": 2
+            }
+        ]
+    },
+    "cache": {
+        "key": "volt_metadata_entity_v1_leave_global",
+        "ttl": 86400,
+        "compiledAt": "2026-07-23T14:51:19+00:00",
+        "role": null
+    },
+    "source": {
+        "entity": {
+            "name": "leave",
+            "module": "hrms",
+            "issingle": "0",
+            "istable": "0",
+            "autoname": "L-.YYYY.-#####",
+            "states": "[]",
+            "custom_attributes": "{\"label\": \"Leave\", \"layout\": {\"sessions\": [{\"uid\": \"9a5d1f3a-69b4-43f9-a217-5702c78d08d0\", \"title\": \"Primary\", \"description\": \"Main fields\", \"column_count\": 2}]}, \"is_submittable\": true}"
+        },
+        "fields": [
+            {
+                "id": "107",
+                "parent": "leave",
+                "fieldname": "employee",
+                "label": "Employee",
+                "fieldtype": "Link",
+                "length": "255",
+                "options": "employee",
+                "reqd": "1",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "1"
+            },
+            {
+                "id": "108",
+                "parent": "leave",
+                "fieldname": "from_date",
+                "label": "From Date",
+                "fieldtype": "Date",
+                "length": null,
+                "options": "",
+                "reqd": "1",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "2"
+            },
+            {
+                "id": "109",
+                "parent": "leave",
+                "fieldname": "to_date",
+                "label": "To Date",
+                "fieldtype": "Date",
+                "length": null,
+                "options": "",
+                "reqd": "1",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "3"
+            },
+            {
+                "id": "110",
+                "parent": "leave",
+                "fieldname": "reason",
+                "label": "Reason",
+                "fieldtype": "Text",
+                "length": null,
+                "options": "",
+                "reqd": "0",
+                "read_only": "0",
+                "hidden": "0",
+                "idx": "4"
+            }
+        ],
+        "customRows": [
+            {
+                "apply_to_role": null,
+                "custom_meta": {
+                    "fields": {
+                        "reason": {
+                            "column": 1,
+                            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+                            "in_list_view": false
+                        },
+                        "to_date": {
+                            "column": 2,
+                            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+                            "in_list_view": true
+                        },
+                        "employee": {
+                            "column": 1,
+                            "placeholder": "",
+                            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+                            "in_list_view": true,
+                            "default_value": ""
+                        },
+                        "from_date": {
+                            "column": 1,
+                            "session_uid": "9a5d1f3a-69b4-43f9-a217-5702c78d08d0",
+                            "in_list_view": true
+                        }
+                    },
+                    "layout": {
+                        "sessions": [
+                            {
+                                "uid": "primary",
+                                "title": "Primary",
+                                "description": "",
+                                "column_count": 2
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "derived": {
+        "main_field_count": 4,
+        "child_field_count": 0,
+        "field_names": [
+            "employee",
+            "from_date",
+            "to_date",
+            "reason"
+        ],
+        "required_fields": [
+            "employee",
+            "from_date",
+            "to_date"
+        ],
+        "hidden_fields": [],
+        "read_only_fields": []
+    }
+}

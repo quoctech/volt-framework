@@ -7,7 +7,7 @@
 /** @var string $builderUrl */
 /** @var array<string, array<string, string>> $linkTargets */
 /** @var bool $isSubmittable */
-$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee_name","label":"Tên Nhân Viên","fieldtype":"Data"},{"fieldname":"employee_age","label":"Tuổi Nhân Viên","fieldtype":"Int"}]', true) ?: [];
+$columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"},{"fieldname":"employee","label":"Employee","fieldtype":"Link"},{"fieldname":"from_date","label":"From Date","fieldtype":"Date"},{"fieldname":"to_date","label":"To Date","fieldtype":"Date"}]', true) ?: [];
 if ($isSubmittable) {
     $columns[] = ['fieldname' => 'workflow_state', 'label' => 'State', 'fieldtype' => 'Data'];
 }
@@ -22,27 +22,28 @@ if ($isSubmittable) {
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeListApp({
+    <div x-data="leaveListApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             dataUrl: <?= esc(json_encode($dataUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             createUrl: <?= esc(json_encode($createUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             editUrlBase: <?= esc(json_encode($editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            deleteUrlBase: <?= esc(json_encode(site_url('hrms/api/leave/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             columns: <?= esc(json_encode($columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             isSubmittable: <?= json_encode($isSubmittable) ?>,
-            submitUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/submit'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            cancelUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            amendUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            submitUrlBase: <?= esc(json_encode(site_url('hrms/api/leave/submit'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrlBase: <?= esc(json_encode(site_url('hrms/api/leave/approve'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            cancelUrlBase: <?= esc(json_encode(site_url('hrms/api/leave/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            amendUrlBase: <?= esc(json_encode(site_url('hrms/api/leave/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/employee') ?></p>
+                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/leave') ?></p>
             </div>
             <div class="flex gap-2">
                 <a href="<?= esc($builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create Employee</a>
+                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create Leave</a>
             </div>
         </header>
 
@@ -97,9 +98,10 @@ if ($isSubmittable) {
                                     <div class="flex flex-wrap gap-1">
                                         <button @click="openEdit(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Edit</button>
                                         <button @click="deleteRow(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Delete</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="border border-emerald-500 px-2 py-1 text-emerald-800 hover:bg-emerald-50">Approve</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
                                     </div>
                                 </td>
                             </tr>
@@ -118,6 +120,6 @@ if ($isSubmittable) {
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_list.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Leave/leave_list.js'); ?></script>
 </body>
 </html>

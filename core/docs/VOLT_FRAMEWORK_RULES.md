@@ -91,7 +91,7 @@ Chỉ tự xây lại khi built-in không đáp ứng được yêu cầu kiến
 - Truy cập dữ liệu nghiệp vụ phải đi qua model hoặc service tập trung.
 - Mỗi class chỉ nên có một trách nhiệm chính.
 
-### 2. Chuẩn mã nguồn PHP
+### 2. Chuẩn mã nguồn PHP — PHP 8.5 bắt buộc
 
 - Dùng `declare(strict_types=1);` cho file PHP mới.
 - Tuân thủ `PSR-12`, `PSR-4`.
@@ -100,6 +100,32 @@ Chỉ tự xây lại khi built-in không đáp ứng được yêu cầu kiến
 - Tên bảng, cột, key dữ liệu dùng `snake_case`.
 - Không dùng magic string lặp lại; chuyển thành `const`.
 - Không tạo helper rác hoặc abstraction vô ích.
+
+**PHP 8.5 syntax bắt buộc — cấm style PHP <8.0:**
+
+| Kỹ thuật | Bắt buộc | Thay thế cho |
+|----------|----------|-------------|
+| Constructor property promotion | `public function __construct(private int $id) {}` | Thuộc tính + gán tay |
+| Match expression | `match($x) { 1 => 'a', default => 'b' }` | `switch` |
+| Nullsafe operator | `$user?->getAddress()?->city` | `if ($user !== null)` |
+| Union types | `private int\|string $val` | `@mixed`, không type hint |
+| Readonly property | `public readonly string $name` | Setter riêng |
+| Readonly class (8.2+) | `readonly class Config {}` | Class thường |
+| Property hooks (8.4+) | `public string $name { get => ...; set => ... }` | Getter/setter methods |
+| Named arguments | `find(name: $n, active: true)` | Đối số theo vị trí |
+| `str_starts_with` / `str_contains` | `str_starts_with($s, 'prefix')` | `strpos($s, 'p') === 0` |
+| `mb_trim` / `mb_ucfirst` (8.4+) | `mb_trim($input)` | `trim($input)` |
+| `array_find` / `array_any` / `array_all` (8.4+) | `array_find($arr, fn($x) => ...)` | `foreach` + `if` |
+| `json_validate` (8.3+) | `json_validate($json)` | `json_decode` + check |
+| `mb_trim` (8.4+) | `mb_trim($vietnamese)` | `trim($vietnamese)` |
+
+**Cấm:**
+- `switch` nếu `match` dùng được
+- `array_key_exists` — dùng `array_exists` (PHP 8.4+) hoặc `isset`/`??`
+- Dynamic properties (deprecated 8.2 → error 9.0) — khai báo thuộc tính tường minh
+- `strpos($h, $n) === 0` — dùng `str_starts_with`
+- `!== null` guard cho optional chain — dùng `?->`
+- Getter/setter method nếu property hook đáp ứng được
 
 ### 3. Database và PostgreSQL
 

@@ -239,7 +239,139 @@ final class EntityBuilderService
             'fields'       => $fieldPayloads,
             'custom_patch' => $customMeta,
             'compiled'     => $this->compileMetadata($entityPayload, $fieldPayloads, $customMeta),
+            'workflow'     => $this->loadWorkflow($entityName),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function loadWorkflow(string $entityName): ?array
+    {
+        $row = $this->db->table('sys_workflow')
+            ->where('entity', $entityName)
+            ->get()
+            ->getRowArray();
+
+        if (! is_array($row)) {
+            return null;
+        }
+
+        $workflowName = (string) ($row['name'] ?? '');
+
+        $states = $this->db->table('sys_workflow_state')
+            ->where('workflow', $workflowName)
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $transitions = $this->db->table('sys_workflow_transition')
+            ->where('workflow', $workflowName)
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $actions = $this->db->table('sys_workflow_action')
+            ->get()
+            ->getResultArray();
+
+        return [
+            'name'        => $workflowName,
+            'label'       => (string) ($row['label'] ?? ''),
+            'is_active'   => (bool) ($row['is_active'] ?? true),
+            'states_order' => $this->decodeJsonArray($row['states_order'] ?? '[]'),
+            'states'      => $this->normalizeWorkflowStates($states),
+            'transitions' => $this->normalizeWorkflowTransitions($transitions),
+            'actions'     => $actions,
+        ];
+    }
+
+    public function saveWorkflow(string $entityName, array $workflowPayload): array
+    {
+        $entityName = $this->normalizeEntityName($entityName);
+        if ($entityName === '') {
+            throw new InvalidArgumentException('Entity name is required.');
+        }
+
+        $workflowName = $entityName . '_wf';
+        $label = trim((string) ($workflowPayload['label'] ?? ''));
+        if ($label === '') {
+            $label = $this->titleize($entityName) . ' Workflow';
+        }
+
+        $states = $this->normalizeJsonArray($workflowPayload['states'] ?? []);
+        $transitions = $this->normalizeJsonArray($workflowPayload['transitions'] ?? []);
+
+        $this->db->transStart();
+
+        $this->db->table('sys_workflow')
+            ->set([
+                'name'       => $workflowName,
+                'entity'     => $entityName,
+                'label'      => $label,
+                'is_active'  => 1,
+                'states_order' => json_encode(array_column($states, 'name')),
+                'creation'   => new RawSql('CURRENT_TIMESTAMP'),
+                'modified'   => new RawSql('CURRENT_TIMESTAMP'),
+            ])
+            ->onConstraint('name')
+            ->updateFields(['label', 'is_active', 'states_order', 'modified'])
+            ->upsert();
+
+        $this->db->table('sys_workflow_state')
+            ->where('workflow', $workflowName)
+            ->delete();
+
+        if ($states !== []) {
+            $stateRows = [];
+            foreach ($states as $idx => $state) {
+                if (! is_array($state)) {
+                    continue;
+                }
+                $stateRows[] = [
+                    'name'       => (string) ($state['name'] ?? $state['state'] ?? 'state_' . $idx),
+                    'workflow'   => $workflowName,
+                    'label'      => (string) ($state['label'] ?? ''),
+                    'docstatus'  => (int) ($state['docstatus'] ?? 0),
+                    'allow_edit' => (int) ($state['allow_edit'] ?? 1),
+                    'is_final'   => (int) ($state['is_final'] ?? 0),
+                    'color'      => (string) ($state['color'] ?? 'gray'),
+                    'idx'        => $idx,
+                ];
+            }
+            if ($stateRows !== []) {
+                $this->db->table('sys_workflow_state')->insertBatch($stateRows);
+            }
+        }
+
+        $this->db->table('sys_workflow_transition')
+            ->where('workflow', $workflowName)
+            ->delete();
+
+        if ($transitions !== []) {
+            $transRows = [];
+            foreach ($transitions as $idx => $trans) {
+                if (! is_array($trans)) {
+                    continue;
+                }
+                $transRows[] = [
+                    'name'       => 't_' . $idx,
+                    'workflow'   => $workflowName,
+                    'from_state' => (string) ($trans['from_state'] ?? ''),
+                    'to_state'   => (string) ($trans['to_state'] ?? ''),
+                    'action'     => (string) ($trans['action'] ?? ''),
+                    'label'      => (string) ($trans['label'] ?? ''),
+                    'idx'        => $idx,
+                ];
+            }
+            if ($transRows !== []) {
+                $this->db->table('sys_workflow_transition')->insertBatch($transRows);
+            }
+        }
+
+        $this->db->transComplete();
+
+        return $this->loadWorkflow($entityName) ?? [];
     }
 
     /**
@@ -252,6 +384,7 @@ final class EntityBuilderService
         $entity = $this->normalizeEntityPayload($payload['entity'] ?? []);
         $fields = $this->normalizeFieldPayload($payload['fields'] ?? []);
         $customPatch = $this->normalizeJsonObject($payload['custom_patch'] ?? []);
+        $workflowPayload = $this->normalizeJsonObject($payload['workflow'] ?? []);
 
         if ($entity['name'] === '') {
             throw new InvalidArgumentException('Entity name is required.');
@@ -299,6 +432,11 @@ final class EntityBuilderService
                 ->updateFields(['apply_to_role', 'custom_meta'])
                 ->upsert();
 
+            // Save workflow config nếu entity is_submittable
+            if (($entity['is_submittable'] ?? false) && $workflowPayload !== []) {
+                $this->saveWorkflow($entity['name'], $workflowPayload);
+            }
+
             $sync = new SchemaSync();
             $result = $sync->syncEntity($entity['name']);
             if (($result['status'] ?? 'error') !== 'success') {
@@ -326,6 +464,7 @@ final class EntityBuilderService
                 'fields'   => $fields,
                 'compiled' => $compiled,
                 'artifacts' => $artifacts,
+                'workflow' => $this->loadWorkflow($entity['name']),
             ];
         } catch (Throwable $throwable) {
             try {
@@ -893,5 +1032,65 @@ final class EntityBuilderService
     private function titleize(string $value): string
     {
         return ucwords(str_replace('_', ' ', $value));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $states
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeWorkflowStates(array $states): array
+    {
+        return array_values(array_map(fn(array $s): array => [
+            'name'       => (string) ($s['name'] ?? ''),
+            'label'      => (string) ($s['label'] ?? ''),
+            'docstatus'  => (int) ($s['docstatus'] ?? 0),
+            'allow_edit' => (bool) ($s['allow_edit'] ?? true),
+            'is_final'   => (bool) ($s['is_final'] ?? false),
+            'color'      => (string) ($s['color'] ?? 'gray'),
+        ], $states));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $transitions
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeWorkflowTransitions(array $transitions): array
+    {
+        return array_values(array_map(fn(array $t): array => [
+            'from_state' => (string) ($t['from_state'] ?? ''),
+            'to_state'   => (string) ($t['to_state'] ?? ''),
+            'action'     => (string) ($t['action'] ?? ''),
+            'label'      => (string) ($t['label'] ?? ''),
+        ], $transitions));
+    }
+
+    private function normalizeJsonArray(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($value) ? $value : [];
+    }
+
+    private function decodeJsonArray(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (! is_string($value) || mb_trim($value) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 }

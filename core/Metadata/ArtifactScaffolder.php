@@ -70,6 +70,16 @@ final class ArtifactScaffolder
      *
      * @return array{list_url:string,data_url:string,create_url:string}
      */
+    public function isSubmittableEntity(array $compiled): bool
+    {
+        $entity = $compiled['entity'] ?? [];
+        if (is_array($entity)) {
+            return (bool) ($entity['custom_attributes']['is_submittable'] ?? $compiled['workflow']['is_submittable'] ?? false);
+        }
+
+        return false;
+    }
+
     public function scaffoldEntity(string $moduleName, string $entityName, array $compiled): array
     {
         $moduleSnake  = $this->snake($moduleName);
@@ -100,7 +110,7 @@ final class ArtifactScaffolder
         $this->writeFile($this->entityArtifactFilePath($moduleStudly, $entityStudly, $entitySnake . self::FILE_SUFFIX_FORM_SCRIPT), $this->buildEntityFormScript($entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_MODELS, $entityStudly . 'Model.php'), $this->buildEntityModel($moduleStudly, $entityStudly, $entitySnake));
         $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_list.php'), $this->buildEntityListView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $dataUrl, $createUrl, $editUrl, $moduleSnake));
-        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'), $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl));
+        $this->writeFile($this->moduleFilePath($moduleStudly, self::DIR_VIEWS, $entitySnake . '_form.php'), $this->buildEntityFormView($moduleStudly, $entityStudly, $entitySnake, $compiled, $listUrl, $saveUrl, $loadUrl, $moduleSnake));
         $this->writeFile(
             $this->moduleFilePath($moduleStudly, self::DIR_CONFIG, self::FILE_ROUTES),
             $this->buildModuleRoutesFile($moduleStudly, $moduleSnake, $this->discoverModuleEntities($this->moduleSubPath($moduleStudly, self::DIR_ENTITIES)))
@@ -312,6 +322,11 @@ PHP;
             throw new RuntimeException('Unable to encode list columns.');
         }
 
+        $isSubmittable = $this->isSubmittableEntity($compiled);
+        $submitUrlBase = site_url("{$moduleSnake}/api/{$entitySnake}/submit");
+        $approveUrlBase = site_url("{$moduleSnake}/api/{$entitySnake}/approve");
+        $cancelUrlBase = site_url("{$moduleSnake}/api/{$entitySnake}/cancel");
+        $amendUrlBase  = site_url("{$moduleSnake}/api/{$entitySnake}/amend");
         $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/Entities/{$entityStudly}/{$entitySnake}_list.js'";
 
         return <<<PHP
@@ -323,7 +338,11 @@ PHP;
 /** @var string \$editUrlBase */
 /** @var string \$builderUrl */
 /** @var array<string, array<string, string>> \$linkTargets */
+/** @var bool \$isSubmittable */
 \$columns = json_decode('{$this->escapePhpSingleQuoted($columnsJson)}', true) ?: [];
+if (\$isSubmittable) {
+    \$columns[] = ['fieldname' => 'workflow_state', 'label' => 'State', 'fieldtype' => 'Data'];
+}
 ?>
 <!doctype html>
 <html lang="vi">
@@ -342,7 +361,12 @@ PHP;
             editUrlBase: <?= esc(json_encode(\$editUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             deleteUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/delete'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             columns: <?= esc(json_encode(\$columns, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            isSubmittable: <?= json_encode(\$isSubmittable) ?>,
+            submitUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/submit'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/approve'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            cancelUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            amendUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
@@ -391,18 +415,25 @@ PHP;
                             <tr class="border-b border-zinc-200">
                                 <template x-for="column in columns" :key="column.fieldname">
                                     <td class="px-4 py-3">
-                                        <template x-if="isLinkColumn(column) && canOpenLinkedRecord(column, row)">
+                                        <template x-if="column.fieldname === 'workflow_state'">
+                                            <span class="inline-block rounded border px-2 py-0.5 text-xs font-medium" x-bind:class="workflowStateBadgeClass(String(row.workflow_state || ''))" x-text="row.workflow_state || 'Draft'"></span>
+                                        </template>
+                                        <template x-if="column.fieldname !== 'workflow_state' && isLinkColumn(column) && canOpenLinkedRecord(column, row)">
                                             <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
                                         </template>
-                                        <template x-if="!isLinkColumn(column) || !canOpenLinkedRecord(column, row)">
+                                        <template x-if="column.fieldname !== 'workflow_state' && (!isLinkColumn(column) || !canOpenLinkedRecord(column, row))">
                                             <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
                                         </template>
                                     </td>
                                 </template>
                                 <td class="px-4 py-3">
-                                    <div class="flex gap-2">
+                                    <div class="flex flex-wrap gap-1">
                                         <button @click="openEdit(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Edit</button>
                                         <button @click="deleteRow(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Delete</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="border border-emerald-500 px-2 py-1 text-emerald-800 hover:bg-emerald-50">Approve</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
                                     </div>
                                 </td>
                             </tr>
@@ -430,7 +461,7 @@ PHP;
     /**
      * @param array<string, mixed> $compiled
      */
-    private function buildEntityFormView(string $moduleStudly, string $entityStudly, string $entitySnake, array $compiled, string $listUrl, string $saveUrl, string $loadUrl): string
+    private function buildEntityFormView(string $moduleStudly, string $entityStudly, string $entitySnake, array $compiled, string $listUrl, string $saveUrl, string $loadUrl, string $moduleSnake): string
     {
         $fields = $this->extractFormFields($compiled);
         $sessions = $this->extractFormSessions($compiled);
@@ -443,6 +474,11 @@ PHP;
             throw new RuntimeException('Unable to encode form sessions.');
         }
 
+        $isSubmittable = $this->isSubmittableEntity($compiled);
+        $submitUrl = site_url("{$moduleSnake}/api/{$entitySnake}/submit");
+        $approveUrl = site_url("{$moduleSnake}/api/{$entitySnake}/approve");
+        $cancelUrl = site_url("{$moduleSnake}/api/{$entitySnake}/cancel");
+        $amendUrl  = site_url("{$moduleSnake}/api/{$entitySnake}/amend");
         $scriptPath = "APPPATH . 'Modules/{$moduleStudly}/Entities/{$entityStudly}/{$entitySnake}_form.js'";
 
         return <<<PHP
@@ -456,6 +492,11 @@ PHP;
 /** @var array<int, array<string, mixed>> \$fields */
 /** @var array<int, array<string, mixed>> \$sessions */
 /** @var array<string, array<string, string>> \$linkTargets */
+/** @var bool \$isSubmittable */
+/** @var string \$submitUrl */
+/** @var string \$approveUrl */
+/** @var string \$cancelUrl */
+/** @var string \$amendUrl */
 ?>
 <!doctype html>
 <html lang="vi">
@@ -475,16 +516,32 @@ PHP;
             recordName: <?= esc(json_encode(\$recordName, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             fields: <?= esc(json_encode(\$fields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             sessions: <?= esc(json_encode(\$sessions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            linkTargets: <?= esc(json_encode(\$linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            isSubmittable: <?= json_encode(\$isSubmittable) ?>,
+            submitUrl: <?= esc(json_encode(\$submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrl: <?= esc(json_encode(\$approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            cancelUrl: <?= esc(json_encode(\$cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            amendUrl: <?= esc(json_encode(\$amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc(\$title) ?></h1>
                 <p class="text-zinc-500"><?= esc('{$listUrl}') ?></p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-center gap-2">
+                <template x-if="isSubmittable && recordName">
+                    <span class="rounded border px-2 py-1 text-xs font-medium" x-bind:class="workflowStateBadgeClass" x-text="workflowState || 'Draft'"></span>
+                </template>
                 <a href="<?= esc(\$listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
                 <button @click="save()" type="button" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Save Item</button>
+                <template x-if="isSubmittable && recordName">
+                    <div class="flex gap-1">
+                        <button @click="submitWorkflow()" type="button" class="border border-amber-500 bg-amber-50 px-3 py-2 text-sm hover:bg-amber-100" x-show="canSubmit">Submit</button>
+                        <button @click="approveWorkflow()" type="button" class="border border-emerald-500 bg-emerald-50 px-3 py-2 text-sm hover:bg-emerald-100" x-show="canApprove">Approve</button>
+                        <button @click="cancelWorkflow()" type="button" class="border border-red-300 px-3 py-2 text-sm hover:bg-red-50" x-show="canCancel">Cancel</button>
+                        <button @click="amendWorkflow()" type="button" class="border border-sky-300 px-3 py-2 text-sm hover:bg-sky-50" x-show="canAmend">Amend</button>
+                    </div>
+                </template>
             </div>
         </header>
 
@@ -644,6 +701,11 @@ function {$entitySnake}ListApp(boot) {
         deleteUrlBase: boot.deleteUrlBase || '',
         columns: boot.columns || [],
         linkTargets: boot.linkTargets || {},
+        isSubmittable: !!boot.isSubmittable,
+        submitUrlBase: boot.submitUrlBase || '',
+        approveUrlBase: boot.approveUrlBase || '',
+        cancelUrlBase: boot.cancelUrlBase || '',
+        amendUrlBase: boot.amendUrlBase || '',
         query: '',
         loading: false,
         rows: [],
@@ -750,6 +812,43 @@ function {$entitySnake}ListApp(boot) {
 
             await this.load(this.page);
         },
+        workflowStateBadgeClass(state) {
+            const s = (state || '').toLowerCase();
+            if (s === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (s === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (s === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
+            if (s === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
+            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+        },
+        async workflowAction(name, urlBase) {
+            if (!name) return;
+            const response = await fetch(this.requestUrl(urlBase + '/' + encodeURIComponent(name)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Workflow action failed.');
+                return;
+            }
+            await this.load(this.page);
+        },
+        async submitRow(name) {
+            await this.workflowAction(name, this.submitUrlBase);
+        },
+        async approveRow(name) {
+            await this.workflowAction(name, this.approveUrlBase);
+        },
+        async cancelRow(name) {
+            await this.workflowAction(name, this.cancelUrlBase);
+        },
+        async amendRow(name) {
+            await this.workflowAction(name, this.amendUrlBase);
+        },
         async load(page = 1) {
             this.loading = true;
             this.page = Math.max(1, page);
@@ -804,6 +903,13 @@ function {$entitySnake}FormApp(boot) {
         fields: boot.fields || [],
         sessions: boot.sessions || [],
         linkTargets: boot.linkTargets || {},
+        isSubmittable: !!boot.isSubmittable,
+        submitUrl: boot.submitUrl || '',
+        approveUrl: boot.approveUrl || '',
+        cancelUrl: boot.cancelUrl || '',
+        amendUrl: boot.amendUrl || '',
+        workflowState: '',
+        amendedFrom: '',
         uploadUrl: '',
         form: {},
         linkLookups: {},
@@ -1119,8 +1225,102 @@ function {$entitySnake}FormApp(boot) {
                     this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');
                 }
             });
+            if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'workflow_state')) {
+                this.workflowState = String(result.data.workflow_state || '');
+            }
+            if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'amended_from')) {
+                this.amendedFrom = String(result.data.amended_from || '');
+            }
         },
-        async save() {
+        get canSubmit() {
+            return this.isSubmittable && this.workflowState === 'Draft' && this.recordName !== '';
+        },
+        get canApprove() {
+            return this.isSubmittable && this.workflowState === 'Submitted' && this.recordName !== '';
+        },
+        get canCancel() {
+            return this.isSubmittable && this.workflowState === 'Submitted' && this.recordName !== '';
+        },
+        get canAmend() {
+            return this.isSubmittable && this.workflowState === 'Cancelled' && !this.amendedFrom && this.recordName !== '';
+        },
+        get workflowStateBadgeClass() {
+            const state = (this.workflowState || '').toLowerCase();
+            if (state === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (state === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (state === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
+            if (state === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
+            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+        },
+        async submitWorkflow() {
+            await this.save(true);
+            const response = await fetch(this.requestUrl(this.submitUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Submit failed.');
+                return;
+            }
+            window.location.href = this.listUrl;
+        },
+        async approveWorkflow() {
+            await this.save(true);
+            const response = await fetch(this.requestUrl(this.approveUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Approve failed.');
+                return;
+            }
+            window.location.href = this.listUrl;
+        },
+        async cancelWorkflow() {
+            await this.save(true);
+            const response = await fetch(this.requestUrl(this.cancelUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Cancel failed.');
+                return;
+            }
+            window.location.href = this.listUrl;
+        },
+        async amendWorkflow() {
+            await this.save(true);
+            const response = await fetch(this.requestUrl(this.amendUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Amend failed.');
+                return;
+            }
+            window.location.href = this.listUrl;
+        },
+        async save(silent = false) {
             const payload = {};
             this.fields.forEach((field) => {
                 const value = this.form[field.fieldname];
@@ -1144,7 +1344,9 @@ function {$entitySnake}FormApp(boot) {
             if (!response.ok || result.status !== 'ok') {
                 throw new Error(result.message || 'Unable to save record.');
             }
-            window.location.href = this.listUrl;
+            if (!silent) {
+                window.location.href = this.listUrl;
+            }
         },
     };
 }
@@ -1169,6 +1371,12 @@ JS;
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', 'VoltResourceController::show/{$entity['snake']}/\$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', 'VoltResourceController::store/{$entity['snake']}');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', 'VoltResourceController::destroy/{$entity['snake']}/\$1');";
+
+            // Workflow routes
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/submit/(:segment)', 'VoltResourceController::restSubmit/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/approve/(:segment)', 'VoltResourceController::restApprove/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/cancel/(:segment)', 'VoltResourceController::restCancel/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/amend/(:segment)', 'VoltResourceController::restAmend/{$entity['snake']}/\$1');";
 
             // RESTful API routes
             $routeLines[] = "\$routes->get('rest/{$entity['snake']}', 'VoltResourceController::restIndex/{$entity['snake']}');";

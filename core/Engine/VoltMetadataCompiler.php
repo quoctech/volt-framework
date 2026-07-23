@@ -10,6 +10,7 @@ use Config\Services;
 use InvalidArgumentException;
 use RuntimeException;
 use Volt\Core\Database\VoltDatabase;
+use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Validation\MetadataValidator;
 
 final class VoltMetadataCompiler
@@ -21,6 +22,7 @@ final class VoltMetadataCompiler
     private BaseConnection $db;
     private CacheInterface $cache;
     private MetadataValidator $validator;
+    private WorkflowEngine $workflowEngine;
     private int $cacheTtl;
 
     public function __construct(?BaseConnection $db = null, ?CacheInterface $cache = null)
@@ -28,6 +30,7 @@ final class VoltMetadataCompiler
         $this->db = $db ?? VoltDatabase::connection();
         $this->cache = $cache ?? Services::cache();
         $this->validator = new MetadataValidator();
+        $this->workflowEngine = new WorkflowEngine($this->db);
         $this->cacheTtl = (int) env('volt.metadata.cacheTtl', 86400);
     }
 
@@ -205,6 +208,10 @@ final class VoltMetadataCompiler
             $mainFields[] = $normalized['fieldname'];
         }
 
+        $entityName = (string) ($entity['name'] ?? '');
+        $workflow = $this->workflowEngine->getWorkflow($entityName);
+        $isSubmittable = $this->workflowEngine->isSubmittable($entityName);
+
         return [
             'entity' => $this->validator->normalizeEntityRow($entity),
             'fields' => $fieldMap,
@@ -212,6 +219,14 @@ final class VoltMetadataCompiler
             'main_fields' => $mainFields,
             'child_fields' => $childFields,
             'child_tables' => $childTables,
+            'workflow' => [
+                'active' => $workflow !== null,
+                'is_submittable' => $isSubmittable,
+                'name' => $workflow['name'] ?? null,
+                'label' => $workflow['label'] ?? null,
+                'states' => $workflow['states'] ?? [],
+                'states_order' => $workflow['states_order'] ?? [],
+            ],
         ];
     }
 

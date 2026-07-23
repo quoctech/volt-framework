@@ -7,6 +7,10 @@ function employeeeducationListApp(boot) {
         deleteUrlBase: boot.deleteUrlBase || '',
         columns: boot.columns || [],
         linkTargets: boot.linkTargets || {},
+        isSubmittable: !!boot.isSubmittable,
+        submitUrlBase: boot.submitUrlBase || '',
+        cancelUrlBase: boot.cancelUrlBase || '',
+        amendUrlBase: boot.amendUrlBase || '',
         query: '',
         loading: false,
         rows: [],
@@ -112,6 +116,39 @@ function employeeeducationListApp(boot) {
             }
 
             await this.load(this.page);
+        },
+        workflowStateBadgeClass(state) {
+            const s = (state || '').toLowerCase();
+            if (s === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (s === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (s === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
+            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+        },
+        async workflowAction(name, urlBase) {
+            if (!name) return;
+            const response = await fetch(this.requestUrl(urlBase + '/' + encodeURIComponent(name)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Workflow action failed.');
+                return;
+            }
+            await this.load(this.page);
+        },
+        async submitRow(name) {
+            await this.workflowAction(name, this.submitUrlBase);
+        },
+        async cancelRow(name) {
+            await this.workflowAction(name, this.cancelUrlBase);
+        },
+        async amendRow(name) {
+            await this.workflowAction(name, this.amendUrlBase);
         },
         async load(page = 1) {
             this.loading = true;

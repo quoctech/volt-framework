@@ -8,6 +8,8 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Model;
 use RuntimeException;
 use Volt\Core\Audit\AuditTrailWriter;
+use Volt\Core\Database\VoltDatabase;
+use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Security\PermissionResolver;
@@ -45,6 +47,9 @@ abstract class VoltModel extends Model
     private const ACTION_WRITE = 'write';
     private const ACTION_DELETE = 'delete';
     private const ACTION_READ = 'read';
+    private const ACTION_SUBMIT = 'submit';
+    private const ACTION_CANCEL = 'cancel';
+    private const ACTION_AMEND = 'amend';
 
     private const DEFAULT_OWNER = 'system';
     private const KEY_DATA = 'data';
@@ -64,6 +69,7 @@ abstract class VoltModel extends Model
     private ?PermissionResolver $permissionResolver = null;
     private ?AuditTrailWriter $auditTrailWriter = null;
     private ?MetadataValidator $metadataValidator = null;
+    private ?WorkflowEngine $workflowEngine = null;
     private ?UserEntity $actor = null;
 
     public function setEntityName(string $entityName): static
@@ -132,6 +138,11 @@ abstract class VoltModel extends Model
 
     public function delete($id = null, bool $purge = false): bool
     {
+        $this->db->table($this->table)
+            ->where('amended_from', $id)
+            ->set(['amended_from' => null])
+            ->update();
+
         $this->deleteChildRecords((string) $id);
 
         return parent::delete($id, $purge);
@@ -379,6 +390,180 @@ abstract class VoltModel extends Model
         }
 
         return $this->compiledMetadata;
+    }
+
+    public function submit(string $id, ?string $comment = null): array
+    {
+        $this->assertPermission('submit');
+
+        $engine = $this->workflowEngine();
+        $result = $engine->applyTransition($this->entityName, $id, 'submit', $comment);
+
+        return $result;
+    }
+
+    public function approve(string $id, ?string $comment = null): array
+    {
+        $this->assertPermission('submit');
+
+        $engine = $this->workflowEngine();
+        $result = $engine->applyTransition($this->entityName, $id, 'approve', $comment);
+
+        return $result;
+    }
+
+    public function cancel(string $id, ?string $comment = null): array
+    {
+        $this->assertPermission('cancel');
+
+        $engine = $this->workflowEngine();
+        $result = $engine->applyTransition($this->entityName, $id, 'cancel', $comment);
+
+        return $result;
+    }
+
+    public function amend(string $id): array|object|string|int|null
+    {
+        $this->assertPermission('create');
+
+        $existing = $this->find($id);
+        if (! is_array($existing)) {
+            throw new RuntimeException("Document {$id} not found.");
+        }
+
+        $existingDocstatus = (int) ($existing['docstatus'] ?? 0);
+        if ($existingDocstatus !== 2) {
+            throw new RuntimeException("Only cancelled documents can be amended.");
+        }
+
+        unset($existing['creation'], $existing['modified']);
+        $newName = $this->generateDocumentName();
+        $existing['name'] = $newName;
+        unset($existing['amended_from']);
+        $existing['docstatus'] = 0;
+        $existing['workflow_state'] = 'Draft';
+
+        $newName = $this->insert($existing);
+
+        if (is_array($newName)) {
+            return $newName;
+        }
+
+        $this->update($id, ['amended_from' => $newName]);
+
+        $record = $this->find($newName);
+
+        return is_array($record) ? $record : [];
+    }
+
+    private function generateDocumentName(): string
+    {
+        $db = VoltDatabase::connection();
+        $row = $db->table('sys_entity')
+            ->select('autoname')
+            ->where('name', strtolower($this->entityName))
+            ->get()
+            ->getRowArray();
+
+        $pattern = is_array($row) ? trim((string) ($row['autoname'] ?? '')) : '';
+        if ($pattern === '' || $pattern === 'HASH') {
+            return bin2hex(random_bytes(16));
+        }
+
+        $resolved = strtr($pattern, [
+            '.YYYY.' => gmdate('Y'),
+            '.YY.'   => gmdate('y'),
+            '.MM.'   => gmdate('m'),
+            '.DD.'   => gmdate('d'),
+        ]);
+        $resolved = preg_replace('/([\-\/])\.(#+)/', '$1$2', $resolved) ?? $resolved;
+
+        if (! preg_match('/#+/', $resolved, $matches)) {
+            return $resolved;
+        }
+
+        $token = $matches[0];
+        $key = strtolower($this->snake($this->entityName) . ':' . $resolved);
+
+        $db->transStart();
+        $seqRow = $db->table('sys_sequence')
+            ->where('key', $key)
+            ->get()
+            ->getRowArray();
+        $current = is_array($seqRow) ? (int) ($seqRow['current_value'] ?? 0) : 0;
+        $next = $current + 1;
+        if (is_array($seqRow)) {
+            $db->table('sys_sequence')->where('key', $key)->update(['current_value' => $next]);
+        } else {
+            $db->table('sys_sequence')->insert(['key' => $key, 'current_value' => $next]);
+        }
+        $db->transComplete();
+
+        $serial = str_pad((string) $next, strlen($token), '0', STR_PAD_LEFT);
+
+        return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;
+    }
+
+    private function snake(string $input): string
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $input));
+    }
+
+    protected function assertDocumentEditable(string $id): void
+    {
+        $record = $this->find($id);
+        if (! is_array($record)) {
+            throw new RuntimeException("Document {$id} not found.");
+        }
+
+        $workflowState = (string) ($record['workflow_state'] ?? 'Draft');
+        $engine = $this->workflowEngine();
+        $states = $engine->getStates($this->entityName);
+
+        foreach ($states as $state) {
+            if (! is_array($state)) {
+                continue;
+            }
+            if ((string) ($state['name'] ?? '') !== $workflowState) {
+                continue;
+            }
+            if (! (bool) ($state['allow_edit'] ?? true)) {
+                throw new RuntimeException(
+                    "Document {$id} is in state '{$workflowState}' and cannot be edited."
+                );
+            }
+        }
+    }
+
+    protected function assertWorkflowTransition(string $id, string $action): void
+    {
+        $record = $this->find($id);
+        if (! is_array($record)) {
+            throw new RuntimeException("Document {$id} not found.");
+        }
+
+        $currentState = (string) ($record['workflow_state'] ?? 'Draft');
+        $engine = $this->workflowEngine();
+        $workflow = $engine->getWorkflow($this->entityName);
+
+        if ($workflow === null) {
+            $workflow = $engine->getImplicitWorkflow($this->entityName);
+        }
+
+        if (! $engine->canTransition((string) ($workflow['name'] ?? 'implicit'), $currentState, $action)) {
+            throw new RuntimeException(
+                "Transition '{$action}' not allowed from state '{$currentState}' for document {$id}."
+            );
+        }
+    }
+
+    public function workflowEngine(): WorkflowEngine
+    {
+        if (! $this->workflowEngine instanceof WorkflowEngine) {
+            $this->workflowEngine = service('voltWorkflowEngine');
+        }
+
+        return $this->workflowEngine;
     }
 
     public function setActor(?UserEntity $actor): static

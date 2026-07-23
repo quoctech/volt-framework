@@ -11,17 +11,18 @@
 3. [Database — Hệ thống bảng sys_*](#3-database--hệ-thống-bảng-sys_)
 4. [Metadata System](#4-metadata-system)
 5. [Engine Layer](#5-engine-layer)
-6. [Models](#6-models)
-7. [Controllers](#7-controllers)
-8. [Auth & Security](#8-auth--security)
-9. [Audit & Logging](#9-audit--logging)
-10. [Commands](#10-commands)
-11. [File/Attachment System](#11-fileattachment-system)
-12. [Awesome Bar](#12-awesome-bar)
-13. [Multilingual](#13-multilingual)
-14. [Role & Permission](#14-role--permission)
-15. [Routes](#15-routes)
-16. [Entity Builder — UI](#16-entity-builder--ui)
+6. [Workflow Engine](#6-workflow-engine)
+7. [Models](#7-models)
+8. [Controllers](#8-controllers)
+9. [Auth & Security](#9-auth--security)
+10. [Audit & Logging](#10-audit--logging)
+11. [Commands](#11-commands)
+12. [File/Attachment System](#12-fileattachment-system)
+13. [Awesome Bar](#13-awesome-bar)
+14. [Multilingual](#14-multilingual)
+15. [Role & Permission](#15-role--permission)
+16. [Routes](#16-routes)
+17. [Entity Builder — UI](#17-entity-builder--ui)
 
 ---
 
@@ -98,6 +99,10 @@ Namespace: `Volt\Core` → `core/` (registered in `app/Config/Autoload.php`)
 | `sys_awesome_bar` | Index điều hướng & search |
 | `sys_setting` | Cấu hình runtime |
 | `sys_error_log` | Nhật ký lỗi runtime |
+| `sys_workflow` | Định nghĩa workflow cho entity |
+| `sys_workflow_state` | Trạng thái workflow |
+| `sys_workflow_action` | Hành động workflow (submit, approve, reject, ...) |
+| `sys_workflow_transition` | Chuyển tiếp workflow (from_state → action → to_state) |
 | `sys_file` | File đính kèm |
 | `sys_note` | Ghi chú |
 
@@ -241,6 +246,7 @@ Chức năng:
 - ALTER TABLE ADD COLUMN nếu còn thiếu cột
 - Tự động sync child table entities (separate mode)
 - Map field types → PostgreSQL column types
+- Tự động thêm cột `workflow_state` vào CORE_COLUMNS cho entity hỗ trợ workflow
 
 Flow:
 ```
@@ -290,9 +296,93 @@ Key methods:
 
 ---
 
-## 6. Models
+## 6. Workflow Engine
 
-### 6.1 VoltModel (abstract)
+### 6.1 Tổng quan
+
+Workflow Engine quản lý vòng đời document (Draft → Submitted → Cancelled) cho các entity có flag `is_submittable = true`. Hỗ trợ cả implicit workflow (mặc định) và custom workflow với nhiều trạng thái, hành động, chuyển tiếp.
+
+**Nguyên tắc:**
+- Mỗi entity có thể có 0 hoặc 1 workflow đang active
+- workflow state được lưu trong cột `workflow_state` của bảng dữ liệu (VARCHAR(100), mặc định `'Draft'`)
+- docstatus mapping: 0=Draft, 1=Submitted, 2=Cancelled
+- Khi không có custom workflow, implicit workflow được dùng (Draft → Submitted → Cancelled)
+
+### 6.2 Database tables
+
+| Table | Vai trò |
+|-------|---------|
+| `sys_workflow` | Định nghĩa workflow cho entity |
+| `sys_workflow_state` | Danh sách trạng thái trong workflow |
+| `sys_workflow_action` | Hành động chuẩn (submit, approve, reject, send_back, cancel, amend) |
+| `sys_workflow_transition` | Chuyển tiếp hợp lệ (from → action → to) |
+
+### 6.3 WorkflowEngine
+
+**File:** `core/Engine/WorkflowEngine.php`
+**Service name:** `voltWorkflowEngine`
+
+Key methods:
+| Method | Mô tả |
+|--------|-------|
+| `getWorkflow(entityName)` | Lấy custom workflow active của entity (null nếu không có) |
+| `getImplicitWorkflow(entityName)` | Lấy workflow mặc định 3 trạng thái |
+| `getTransitions(workflow, state)` | Các chuyển tiếp khả dụng từ state hiện tại |
+| `applyTransition(entity, doc, action, comment?)` | Thực thi chuyển tiếp, cập nhật docstatus + workflow_state |
+| `canTransition(workflow, from, action)` | Kiểm tra xem chuyển tiếp có hợp lệ không |
+| `getStates(entityName)` | Danh sách states cho entity |
+| `isSubmittable(entityName)` | Kiểm tra entity có hỗ trợ workflow không |
+
+### 6.4 VoltModel workflow methods
+
+VoltModel bổ sung 4 methods cho workflow:
+
+```php
+$model->submit($id, $comment = null);   // Submit → docstatus=1, workflow_state='Submitted'
+$model->cancel($id, $comment = null);   // Cancel → docstatus=2, workflow_state='Cancelled'
+$model->amend($id);                      // Amend → tạo bản copy mới, docstatus=0, workflow_state='Draft'
+$model->assertDocumentEditable($id);    // Throw nếu doc không editable ở state hiện tại
+$model->assertWorkflowTransition($id, $action);  // Throw nếu action không hợp lệ từ state hiện tại
+```
+
+### 6.5 API endpoints (auto-generated)
+
+Mỗi entity có `is_submittable = true` được sinh thêm 3 API routes:
+
+| Method | Route | Controller |
+|--------|-------|------------|
+| POST | `/{module}/api/{entity}/submit/{id}` | `VoltResourceController::restSubmit` |
+| POST | `/{module}/api/{entity}/cancel/{id}` | `VoltResourceController::restCancel` |
+| POST | `/{module}/api/{entity}/amend/{id}` | `VoltResourceController::restAmend` |
+
+### 6.6 Cấu hình Entity Builder
+
+Trong Entity Builder (Settings tab), checkbox **Submittable**:
+- Khi bật, entity được đánh dấu `is_submittable = true`
+- SchemaSync tự động thêm cột `workflow_state` vào bảng vật lý
+- ArtifactScaffolder sinh routes + model methods hỗ trợ workflow
+- Implicit workflow được kích hoạt mặc định
+
+### 6.7 Custom workflow
+
+Workflow custom được định nghĩa qua migration seed:
+
+```sql
+INSERT INTO sys_workflow (name, entity, label) VALUES ('employee_wf', 'employee', 'Employee Workflow');
+INSERT INTO sys_workflow_state (name, workflow, label, docstatus, allow_edit, is_final, idx) VALUES
+  ('Draft', 'employee_wf', 'Draft', 0, 1, 0, 0),
+  ('Pending Approval', 'employee_wf', 'Pending Approval', 0, 0, 0, 1);
+INSERT INTO sys_workflow_transition (name, workflow, from_state, to_state, action, idx) VALUES
+  ('submit_draft', 'employee_wf', 'Draft', 'Pending Approval', 'submit', 0);
+```
+
+Khi custom workflow tồn tại và `is_active = 1`, engine ưu tiên dùng custom workflow thay vì implicit.
+
+---
+
+## 7. Models
+
+### 7.1 VoltModel (abstract)
 
 **File:** `core/Models/VoltModel.php`
 **Extends:** `CodeIgniter\Model`
@@ -349,7 +439,7 @@ final class EmployeeModel extends VoltModel
 }
 ```
 
-### 6.2 FileModel
+### 7.2 FileModel
 
 **File:** `core/Models/FileModel.php`
 **Table:** `sys_file`
@@ -362,9 +452,9 @@ Chức năng:
 
 ---
 
-## 7. Controllers
+## 8. Controllers
 
-### 7.1 VoltResourceController
+### 8.1 VoltResourceController
 
 **File:** `core/Metadata/Controllers/VoltResourceController.php`
 
@@ -394,7 +484,7 @@ $routes->post('api/{entity}/save', 'VoltResourceController::restStore/$1');
 $routes->post('api/{entity}/delete/(:segment)', 'VoltResourceController::restDestroy/$1/$2');
 ```
 
-### 7.2 FileController
+### 8.2 FileController
 
 **File:** `core/Controllers/FileController.php`
 
@@ -414,9 +504,9 @@ Max file size: 10MB (`MAX_FILE_SIZE`).
 
 ---
 
-## 8. Auth & Security
+## 9. Auth & Security
 
-### 8.1 AuthService
+### 9.1 AuthService
 
 **File:** `core/Auth/Services/AuthService.php`
 
@@ -441,7 +531,7 @@ Key methods:
 | `generateApiKeySecret(user)` | Tạo api_key + api_secret |
 | `authenticateApiKeySecret(token)` | Xác thực bằng api_key:api_secret |
 
-### 8.2 Filters
+### 9.2 Filters
 
 | Filter | File | Mô tả |
 |--------|------|-------|
@@ -450,7 +540,7 @@ Key methods:
 | `admin` | `core/Auth/Filters/AdminFilter.php` | Yêu cầu admin role |
 | `guest` | `core/Auth/Filters/GuestFilter.php` | Chỉ guest mới được truy cập |
 
-### 8.3 UserEntity
+### 9.3 UserEntity
 
 **File:** `core/Auth/Entities/UserEntity.php`
 **Properties:** `name`, `password`, `roles`, `user_metadata`, `is_active`, `failed_login_attempts`, `locked_until`, `last_login_at`, `api_key`, `api_token_hash`, `api_token_expires_at`, `api_secret_hash`
@@ -462,16 +552,16 @@ Key methods:
 | `isActive()` | Kiểm tra active status |
 | `hasRole(role)` | Kiểm tra có role cụ thể không |
 
-### 8.4 User Management
+### 9.4 User Management
 
 Controllers: `AuthController` (login/logout/setup/profile/api) + `UserController` (CRUD users)
 Routes trong `app/Config/Routes.php` — group `/desk/users` với filter `admin`.
 
 ---
 
-## 9. Audit & Logging
+## 10. Audit & Logging
 
-### 9.1 AuditTrailWriter
+### 10.1 AuditTrailWriter
 
 **File:** `core/Audit/AuditTrailWriter.php`
 **Table:** `sys_audit_trail`
@@ -499,7 +589,7 @@ $writer->write('Employee', 'E-2024-00001', 'update', $before, $after);
 }
 ```
 
-### 9.2 ErrorLogService
+### 10.2 ErrorLogService
 
 **File:** `core/System/Services/ErrorLogService.php`
 **Table:** `sys_error_log`
@@ -513,7 +603,7 @@ Service alias: `voltErrorLog`
 
 ---
 
-## 10. Commands
+## 11. Commands
 
 ### volt:sync
 
@@ -558,7 +648,7 @@ Quét và xóa entity artifact dư thừa (tương tác y/n).
 
 ---
 
-## 11. File/Attachment System
+## 12. File/Attachment System
 
 ### sys_file table
 
@@ -598,7 +688,7 @@ GET  /api/file/list/{entity}/{name}/{field?}
 
 ---
 
-## 12. Awesome Bar
+## 13. Awesome Bar
 
 **Namespace:** `Volt\Core\AwesomeBar`
 
@@ -613,7 +703,7 @@ Route: `GET /api/awesome-bar/search` (filter `auth`)
 
 ---
 
-## 13. Multilingual
+## 14. Multilingual
 
 **File:** `core/Config/Lang/LangService.php`
 
@@ -639,7 +729,7 @@ echo \Volt\Core\Config\Lang\LangService::get('common.save');
 
 ---
 
-## 14. Role & Permission
+## 15. Role & Permission
 
 ### Role management
 
@@ -677,7 +767,7 @@ $resolver->can('employee', 'read', null, 'salary'); // Field-level
 
 ---
 
-## 15. Routes
+## 16. Routes
 
 File: `app/Config/Routes.php`
 
@@ -746,7 +836,7 @@ $routes->group('hrms', ['filter' => 'auth'], function (RouteCollection $routes):
 
 ---
 
-## 16. Entity Builder — UI
+## 17. Entity Builder — UI
 
 ### Pages
 

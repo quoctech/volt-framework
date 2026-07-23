@@ -17,6 +17,8 @@ class SchemaSync
         "owner VARCHAR(100) NOT NULL",
         "creation TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
         "modified TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "workflow_state VARCHAR(100) DEFAULT 'Draft'",
+        "amended_from VARCHAR(100)",
     ];
 
     private const CHILD_COLUMNS = [

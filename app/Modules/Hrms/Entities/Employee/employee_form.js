@@ -8,6 +8,11 @@ function employeeFormApp(boot) {
         fields: boot.fields || [],
         sessions: boot.sessions || [],
         linkTargets: boot.linkTargets || {},
+        isSubmittable: !!boot.isSubmittable,
+        submitUrl: boot.submitUrl || '',
+        cancelUrl: boot.cancelUrl || '',
+        amendUrl: boot.amendUrl || '',
+        workflowState: '',
         uploadUrl: '',
         form: {},
         linkLookups: {},
@@ -323,6 +328,74 @@ function employeeFormApp(boot) {
                     this.form[field.fieldname] = hasData ? value : (field.default_value ?? '');
                 }
             });
+            if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'workflow_state')) {
+                this.workflowState = String(result.data.workflow_state || '');
+            }
+        },
+        get canSubmit() {
+            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+        },
+        get canCancel() {
+            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+        },
+        get canAmend() {
+            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+        },
+        get workflowStateBadgeClass() {
+            const state = (this.workflowState || '').toLowerCase();
+            if (state === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (state === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (state === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
+            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+        },
+        async submitWorkflow() {
+            await this.save();
+            const response = await fetch(this.requestUrl(this.submitUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Submit failed.');
+                return;
+            }
+            this.workflowState = result.data?.workflow_state || 'Submitted';
+        },
+        async cancelWorkflow() {
+            const response = await fetch(this.requestUrl(this.cancelUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Cancel failed.');
+                return;
+            }
+            this.workflowState = result.data?.workflow_state || 'Cancelled';
+        },
+        async amendWorkflow() {
+            const response = await fetch(this.requestUrl(this.amendUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Amend failed.');
+                return;
+            }
+            this.workflowState = result.data?.workflow_state || 'Draft';
         },
         async save() {
             const payload = {};

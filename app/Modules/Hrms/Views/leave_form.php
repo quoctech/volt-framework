@@ -10,6 +10,7 @@
 /** @var array<string, array<string, string>> $linkTargets */
 /** @var bool $isSubmittable */
 /** @var string $submitUrl */
+/** @var string $approveUrl */
 /** @var string $cancelUrl */
 /** @var string $amendUrl */
 ?>
@@ -23,7 +24,7 @@
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeeducationFormApp({
+    <div x-data="leaveFormApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             listUrl: <?= esc(json_encode($listUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             saveUrl: <?= esc(json_encode($saveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -34,13 +35,14 @@
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             isSubmittable: <?= json_encode($isSubmittable) ?>,
             submitUrl: <?= esc(json_encode($submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrl: <?= esc(json_encode($approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode($cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrl: <?= esc(json_encode($amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500"><?= esc('/hrms/employeeeducation') ?></p>
+                <p class="text-zinc-500"><?= esc('/hrms/leave') ?></p>
             </div>
             <div class="flex items-center gap-2">
                 <template x-if="isSubmittable && recordName">
@@ -51,6 +53,7 @@
                 <template x-if="isSubmittable && recordName">
                     <div class="flex gap-1">
                         <button @click="submitWorkflow()" type="button" class="border border-amber-500 bg-amber-50 px-3 py-2 text-sm hover:bg-amber-100" x-show="canSubmit">Submit</button>
+                        <button @click="approveWorkflow()" type="button" class="border border-emerald-500 bg-emerald-50 px-3 py-2 text-sm hover:bg-emerald-100" x-show="canApprove">Approve</button>
                         <button @click="cancelWorkflow()" type="button" class="border border-red-300 px-3 py-2 text-sm hover:bg-red-50" x-show="canCancel">Cancel</button>
                         <button @click="amendWorkflow()" type="button" class="border border-sky-300 px-3 py-2 text-sm hover:bg-sky-50" x-show="canAmend">Amend</button>
                     </div>
@@ -196,6 +199,6 @@
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employeeeducation/employeeeducation_form.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Leave/leave_form.js'); ?></script>
 </body>
 </html>
