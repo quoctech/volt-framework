@@ -12,11 +12,13 @@ use Volt\Core\Database\VoltDatabase;
 
 final class AuditTrailWriter
 {
-    private BaseConnection $db;
-    private AuthService $authService;
+    private readonly BaseConnection $db;
+    private readonly AuthService $authService;
 
-    public function __construct(?BaseConnection $db = null, ?AuthService $authService = null)
-    {
+    public function __construct(
+        ?BaseConnection $db = null,
+        ?AuthService $authService = null,
+    ) {
         $this->db = $db ?? VoltDatabase::connection();
         $this->authService = $authService ?? service('voltAuth');
     }

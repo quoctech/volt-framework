@@ -22,9 +22,9 @@ final class VoltResourceController extends Controller
 
     private const DEFAULT_SESSION_UID = 'primary';
 
-    private VoltMetadataCompiler $compiler;
+    private readonly VoltMetadataCompiler $compiler;
 
-    private BaseConnection $db;
+    private readonly BaseConnection $db;
 
     /** @var array<string, array> */
     private array $metaCache = [];
@@ -154,7 +154,7 @@ final class VoltResourceController extends Controller
             $perPage = self::DEFAULT_PER_PAGE;
         }
 
-        $query = trim((string) ($this->request->getGet('q') ?? ''));
+        $query = mb_trim((string) ($this->request->getGet('q') ?? ''));
         $fields = $this->getFormFields($entityName);
         $builder = $model->builder();
 
@@ -215,7 +215,7 @@ final class VoltResourceController extends Controller
             return $this->respondError('Forbidden', 403);
         }
 
-        $query = trim((string) ($this->request->getGet('q') ?? ''));
+        $query = mb_trim((string) ($this->request->getGet('q') ?? ''));
         $builder = $model->builder()
             ->select('name')
             ->limit(20);
@@ -246,7 +246,7 @@ final class VoltResourceController extends Controller
 
         $fields = $this->getFormFields($entityName);
         $row = $this->normalizePayload($fields, $payload);
-        $name = trim((string) ($row['name'] ?? ''));
+        $name = mb_trim((string) ($row['name'] ?? ''));
 
         try {
             $exists = $name !== '' && is_array($model->find($name));
@@ -265,10 +265,10 @@ final class VoltResourceController extends Controller
             }
 
             if ($exists) {
-                $row = $this->applyReadOnlyFields($fields, $model, $row, $name);
+                $row = $this->applyReadOnlyFields(fields: $fields, model: $model, row: $row, existingName: $name);
             }
 
-            $this->assertRequiredFields($fields, $row, $model, $exists ? $name : null);
+            $this->assertRequiredFields(fields: $fields, row: $row, model: $model, existingName: $exists ? $name : null);
 
             if ($exists) {
                 $model->update($name, $row);
@@ -335,7 +335,7 @@ final class VoltResourceController extends Controller
 
         $page = max(1, (int) ($this->request->getGet('page') ?? 1));
         $perPage = min(100, max(1, (int) ($this->request->getGet('per_page') ?? 50)));
-        $query = trim((string) ($this->request->getGet('q') ?? ''));
+        $query = mb_trim((string) ($this->request->getGet('q') ?? ''));
 
         $builder = $model->builder();
 
@@ -597,7 +597,7 @@ final class VoltResourceController extends Controller
 
     private function getCompiledMeta(string $entityName): array
     {
-        $cacheKey = strtolower(trim($entityName));
+        $cacheKey = mb_strtolower(mb_trim($entityName));
         if (isset($this->metaCache[$cacheKey])) {
             return $this->metaCache[$cacheKey];
         }
@@ -627,7 +627,7 @@ final class VoltResourceController extends Controller
      */
     private function getFormFields(string $entityName): array
     {
-        $cacheKey = strtolower(trim($entityName));
+        $cacheKey = mb_strtolower(mb_trim($entityName));
         if (isset($this->fieldsCache[$cacheKey])) {
             return $this->fieldsCache[$cacheKey];
         }
@@ -643,7 +643,7 @@ final class VoltResourceController extends Controller
      */
     private function getFormSessions(string $entityName): array
     {
-        $cacheKey = strtolower(trim($entityName));
+        $cacheKey = mb_strtolower(mb_trim($entityName));
         if (isset($this->sessionsCache[$cacheKey])) {
             return $this->sessionsCache[$cacheKey];
         }
@@ -659,7 +659,7 @@ final class VoltResourceController extends Controller
      */
     private function getLinkTargets(string $entityName): array
     {
-        $cacheKey = strtolower(trim($entityName));
+        $cacheKey = mb_strtolower(mb_trim($entityName));
         if (isset($this->linkTargetsCache[$cacheKey])) {
             return $this->linkTargetsCache[$cacheKey];
         }
@@ -838,7 +838,7 @@ final class VoltResourceController extends Controller
     private function parseChildEntityName(string $options): string
     {
         $parts = explode(':', $options);
-        $name = trim($parts[0]);
+        $name = mb_trim($parts[0]);
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
         $name = strtolower($name);
 
@@ -930,7 +930,7 @@ final class VoltResourceController extends Controller
             }
 
             $fieldname = (string) ($field['fieldname'] ?? '');
-            if ($fieldname === '' || ! array_key_exists($fieldname, $existing)) {
+            if ($fieldname === '' || ! array_exists($existing, $fieldname)) {
                 continue;
             }
 
@@ -985,12 +985,12 @@ final class VoltResourceController extends Controller
             return $value !== [];
         }
 
-        return trim((string) ($value ?? '')) !== '';
+        return mb_trim((string) ($value ?? '')) !== '';
     }
 
     private function generateDocumentName(string $entityName): string
     {
-        $pattern = trim($this->getAutoname($entityName));
+        $pattern = mb_trim($this->getAutoname($entityName));
         if ($pattern === '' || $pattern === 'HASH') {
             return bin2hex(random_bytes(16));
         }
@@ -1061,8 +1061,8 @@ final class VoltResourceController extends Controller
         $fieldValues = [];
 
         foreach ($linkTargets as $fieldname => $target) {
-            $displayField = trim((string) ($target['display_field'] ?? 'name'));
-            $targetEntity = trim((string) ($target['entity'] ?? ''));
+            $displayField = mb_trim((string) ($target['display_field'] ?? 'name'));
+            $targetEntity = mb_trim((string) ($target['entity'] ?? ''));
             if ($fieldname === '' || $displayField === '' || $targetEntity === '') {
                 continue;
             }
@@ -1073,7 +1073,7 @@ final class VoltResourceController extends Controller
 
             $names = [];
             foreach ($rows as $row) {
-                $value = trim((string) ($row[$fieldname] ?? ''));
+                $value = mb_trim((string) ($row[$fieldname] ?? ''));
                 if ($value !== '') {
                     $names[] = $value;
                 }
@@ -1116,7 +1116,7 @@ final class VoltResourceController extends Controller
 
         foreach ($rows as &$row) {
             foreach ($linkTargets as $fieldname => $target) {
-                $value = trim((string) ($row[$fieldname] ?? ''));
+                $value = mb_trim((string) ($row[$fieldname] ?? ''));
                 $row[$fieldname . '__display'] = $displayByName[$fieldname][$value] ?? '';
             }
         }
@@ -1139,8 +1139,8 @@ final class VoltResourceController extends Controller
                 continue;
             }
 
-            $fieldname = trim((string) ($field['fieldname'] ?? ''));
-            $targetEntity = trim((string) ($field['options'] ?? ''));
+            $fieldname = mb_trim((string) ($field['fieldname'] ?? ''));
+            $targetEntity = mb_trim((string) ($field['options'] ?? ''));
             if ($fieldname === '' || $targetEntity === '') {
                 continue;
             }
@@ -1225,15 +1225,13 @@ final class VoltResourceController extends Controller
             'description',
         ];
 
-        foreach ($preferred as $fieldname) {
-            foreach ($fields as $field) {
-                if ((bool) ($field['hidden'] ?? false) === true) {
-                    continue;
-                }
-                if ((string) ($field['fieldname'] ?? '') === $fieldname) {
-                    return $fieldname;
-                }
-            }
+        $found = array_find($preferred, function (string $fieldname) use ($fields): bool {
+            return array_any($fields, function (array $field) use ($fieldname): bool {
+                return (bool) ($field['hidden'] ?? false) !== true && (string) ($field['fieldname'] ?? '') === $fieldname;
+            });
+        });
+        if ($found !== null) {
+            return $found;
         }
 
         foreach ($fields as $field) {

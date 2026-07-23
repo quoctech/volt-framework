@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Volt\Core\System\Controllers;
 
 use CodeIgniter\Controller;
+use CodeIgniter\HTTP\RedirectResponse;
 use Volt\Core\Config\Lang\LangService;
 use Volt\Core\System\Services\SystemSettingService;
 
 class SystemSettingController extends Controller
 {
-    private SystemSettingService $settingService;
+    private readonly SystemSettingService $settingService;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
@@ -57,10 +58,10 @@ class SystemSettingController extends Controller
         ]);
     }
 
-    public function save()
+    public function save(): RedirectResponse
     {
-        $language = trim((string) ($this->request->getPost('language') ?? 'en'));
-        $timezone = trim((string) ($this->request->getPost('timezone') ?? 'UTC'));
+        $language = mb_trim((string) ($this->request->getPost('language') ?? 'en'));
+        $timezone = mb_trim((string) ($this->request->getPost('timezone') ?? 'UTC'));
 
         if ($language !== '') {
             $this->settingService->set('language', $language);

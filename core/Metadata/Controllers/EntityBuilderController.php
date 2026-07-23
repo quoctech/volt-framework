@@ -13,7 +13,7 @@ use Volt\Core\Metadata\EntityBuilderService;
 
 class EntityBuilderController extends Controller
 {
-    private EntityBuilderService $builderService;
+    private readonly EntityBuilderService $builderService;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
     {

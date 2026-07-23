@@ -193,7 +193,7 @@
     "cache": {
         "key": "volt_metadata_entity_v1_employee_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-23T15:02:10+00:00",
+        "compiledAt": "2026-07-23T15:31:10+00:00",
         "role": null
     },
     "source": {

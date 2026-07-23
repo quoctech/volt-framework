@@ -9,7 +9,7 @@ use Volt\Core\Database\VoltDatabase;
 
 class AwesomeBarModel
 {
-    private BaseConnection $db;
+    private readonly BaseConnection $db;
 
     public function __construct()
     {
@@ -18,7 +18,7 @@ class AwesomeBarModel
 
     public function search(string $keyword, array $allowedEntities = []): array
     {
-        $keyword = trim($keyword);
+        $keyword = mb_trim($keyword);
 
         if ($keyword === '') {
             return $this->suggest();

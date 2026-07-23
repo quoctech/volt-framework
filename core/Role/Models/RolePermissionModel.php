@@ -13,7 +13,7 @@ class RolePermissionModel
         'error_logs',
     ];
 
-    private BaseConnection $db;
+    private readonly BaseConnection $db;
 
     public function __construct()
     {
@@ -136,7 +136,7 @@ class RolePermissionModel
             return $value;
         }
 
-        if (is_string($value) && $value !== '') {
+        if (is_string($value) && $value !== '' && json_validate($value)) {
             $decoded = json_decode($value, true);
 
             if (is_array($decoded)) {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Volt\Core\Database\Migrations;
 
 use CodeIgniter\Database\Migration;

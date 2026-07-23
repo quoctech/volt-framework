@@ -45,7 +45,7 @@ class LangService
         $value = $strings;
 
         foreach ($segments as $segment) {
-            if (! is_array($value) || ! array_key_exists($segment, $value)) {
+            if (! is_array($value) || ! array_exists($segment, $value)) {
                 return $key;
             }
             $value = $value[$segment];

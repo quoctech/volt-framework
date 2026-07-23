@@ -12,10 +12,10 @@ use Volt\Core\Role\Models\RolePermissionModel;
 
 class RoleController extends Controller
 {
-    private RoleModel $roleModel;
-    private RolePermissionModel $permissionModel;
+    private readonly RoleModel $roleModel;
+    private readonly RolePermissionModel $permissionModel;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);

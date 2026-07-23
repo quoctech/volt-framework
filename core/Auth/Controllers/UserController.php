@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace Volt\Core\Auth\Controllers;
 
 use CodeIgniter\Controller;
+use CodeIgniter\HTTP\RedirectResponse;
 use Volt\Core\Auth\Models\UserModel;
 use Volt\Core\Role\Models\RoleModel;
 
 class UserController extends Controller
 {
-    private UserModel $userModel;
-    private RoleModel $roleModel;
+    private readonly UserModel $userModel;
+    private readonly RoleModel $roleModel;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
@@ -21,7 +22,7 @@ class UserController extends Controller
         $this->roleModel = new RoleModel();
     }
 
-    public function index()
+    public function index(): string
     {
         $users = $this->userModel->orderBy('name', 'ASC')->findAll();
 
@@ -32,7 +33,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(): string
     {
         $roles = $this->roleModel->orderBy('name', 'ASC')->findAll();
 
@@ -45,7 +46,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function store()
+    public function store(): RedirectResponse|string
     {
         $rules = [
             'name'     => 'required|min_length[2]|max_length[100]|is_unique[sys_user.name]',
@@ -80,7 +81,7 @@ class UserController extends Controller
         return redirect()->to(site_url('desk/users'));
     }
 
-    public function edit(string $name)
+    public function edit(string $name): RedirectResponse|string
     {
         $user = $this->userModel->findByName($name);
 
@@ -99,7 +100,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(string $name)
+    public function update(string $name): RedirectResponse|string
     {
         $user = $this->userModel->findByName($name);
 
@@ -141,7 +142,7 @@ class UserController extends Controller
         return redirect()->to(site_url('desk/users'));
     }
 
-    public function delete(string $name)
+    public function delete(string $name): RedirectResponse
     {
         $user = $this->userModel->findByName($name);
 

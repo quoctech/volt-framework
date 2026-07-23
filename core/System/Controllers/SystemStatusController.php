@@ -9,9 +9,9 @@ use Volt\Core\System\Services\SystemStatusService;
 
 class SystemStatusController extends Controller
 {
-    private SystemStatusService $systemStatusService;
+    private readonly SystemStatusService $systemStatusService;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['url']);

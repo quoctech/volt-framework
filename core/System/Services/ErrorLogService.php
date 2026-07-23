@@ -20,16 +20,16 @@ final class ErrorLogService
     private const DEFAULT_PER_PAGE = 50;
     private const ALLOWED_PER_PAGE = [20, 50, 100, 200];
 
-    private BaseConnection $db;
-    private AuthService $authService;
-    private RequestInterface $request;
-    private LoggerInterface $logger;
+    private readonly BaseConnection $db;
+    private readonly AuthService $authService;
+    private readonly RequestInterface $request;
+    private readonly LoggerInterface $logger;
 
     public function __construct(
         ?BaseConnection $db = null,
         ?AuthService $authService = null,
         ?RequestInterface $request = null,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
     ) {
         $this->db = $db ?? VoltDatabase::connection();
         $this->authService = $authService ?? service('voltAuth');
@@ -46,7 +46,7 @@ final class ErrorLogService
             'level' => $this->normalizeLevel($level),
             'channel' => $this->normalizeChannel($channel),
             'code' => $this->normalizeNullableString($code, 100),
-            'message' => trim($message) !== '' ? trim($message) : 'Unknown system error',
+            'message' => mb_trim($message) !== '' ? mb_trim($message) : 'Unknown system error',
             'context' => $this->encodeContext($context),
             'file' => $this->normalizeNullableText($context['file'] ?? null),
             'line' => $this->normalizeNullableInt($context['line'] ?? null),
@@ -82,11 +82,11 @@ final class ErrorLogService
         $context['trace'] = $throwable->getTraceAsString();
 
         return $this->write(
-            'error',
-            $throwable->getMessage(),
-            $context,
-            $channel,
-            $code ?? (string) $throwable->getCode()
+            level: 'error',
+            message: $throwable->getMessage(),
+            context: $context,
+            channel: $channel,
+            code: $code ?? (string) $throwable->getCode()
         );
     }
 
@@ -106,7 +106,7 @@ final class ErrorLogService
         $perPage = in_array($perPage, self::ALLOWED_PER_PAGE, true) ? $perPage : self::DEFAULT_PER_PAGE;
         $level = $this->normalizeFilterString($filters['level'] ?? '');
         $channel = $this->normalizeFilterString($filters['channel'] ?? '');
-        $query = trim((string) ($filters['q'] ?? ''));
+        $query = mb_trim((string) ($filters['q'] ?? ''));
 
         $builder = $this->db->table(self::TABLE)
             ->select('id, level, channel, code, message, context, file, line, trace, request_uri, request_method, ip_address, user_agent, actor, created_at')
@@ -169,14 +169,14 @@ final class ErrorLogService
             ->getResultArray();
 
         return array_values(array_filter(array_map(
-            static fn (array $row): string => trim((string) ($row['channel'] ?? '')),
+            static fn (array $row): string => mb_trim((string) ($row['channel'] ?? '')),
             $rows
         )));
     }
 
     private function normalizeLevel(string $level): string
     {
-        $level = strtolower(trim($level));
+        $level = mb_strtolower(mb_trim($level));
 
         return in_array($level, ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'], true)
             ? $level
@@ -248,11 +248,11 @@ final class ErrorLogService
             return array_is_list($value) ? [] : $value;
         }
 
-        if (! is_string($value) || trim($value) === '') {
+        if (! is_string($value) || mb_trim($value) === '') {
             return [];
         }
 
-        $decoded = json_decode($value, true);
+        $decoded = json_validate($value) ? json_decode($value, true) : null;
 
         return is_array($decoded) && ! array_is_list($decoded) ? $decoded : [];
     }
@@ -269,12 +269,12 @@ final class ErrorLogService
 
     private function normalizeFilterString(mixed $value): string
     {
-        return strtolower(trim((string) $value));
+        return mb_strtolower(mb_trim((string) $value));
     }
 
     private function normalizeChannel(?string $channel): string
     {
-        $channel = strtolower(trim((string) $channel));
+        $channel = mb_strtolower(mb_trim((string) $channel));
         $channel = preg_replace('/[^a-z0-9_\-\.]+/', '_', $channel) ?? '';
 
         return $channel !== '' ? substr($channel, 0, 100) : 'system';
@@ -349,14 +349,14 @@ final class ErrorLogService
 
     private function normalizeNullableString(?string $value, int $maxLength): ?string
     {
-        $value = trim((string) $value);
+        $value = mb_trim((string) $value);
 
         return $value !== '' ? substr($value, 0, $maxLength) : null;
     }
 
     private function normalizeNullableText(mixed $value): ?string
     {
-        $value = trim((string) $value);
+        $value = mb_trim((string) $value);
 
         return $value !== '' ? $value : null;
     }

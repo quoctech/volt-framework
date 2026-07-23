@@ -11,9 +11,9 @@ use Volt\Core\Config\Lang\LangService;
 
 class AuthController extends Controller
 {
-    private AuthService $authService;
+    private readonly AuthService $authService;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
@@ -63,7 +63,7 @@ class AuthController extends Controller
         }
 
         $auth = $this->authService->login(
-            trim((string) $this->request->getPost('name')),
+            mb_trim((string) $this->request->getPost('name')),
             (string) $this->request->getPost('password'),
         );
 
@@ -99,7 +99,7 @@ class AuthController extends Controller
         }
 
         $auth = $this->authService->setupInitialAdmin(
-            trim((string) $this->request->getPost('name')),
+            mb_trim((string) $this->request->getPost('name')),
             (string) $this->request->getPost('password'),
         );
 
@@ -120,14 +120,14 @@ class AuthController extends Controller
         $name = is_array($payload) ? (string) ($payload['name'] ?? '') : (string) $this->request->getPost('name');
         $password = is_array($payload) ? (string) ($payload['password'] ?? '') : (string) $this->request->getPost('password');
 
-        if (mb_strlen(trim($name)) < 3 || mb_strlen($password) < 8) {
+        if (mb_strlen(mb_trim($name)) < 3 || mb_strlen($password) < 8) {
             return $this->response->setStatusCode(422)->setJSON([
                 'status'  => 'error',
                 'message' => 'Invalid credentials payload',
             ]);
         }
 
-        $auth = $this->authService->login(trim($name), $password);
+        $auth = $this->authService->login(mb_trim($name), $password);
 
         if (! $auth->authenticated) {
             return $this->response->setStatusCode($auth->setup_required ? 409 : 401)->setJSON([

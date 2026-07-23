@@ -17,10 +17,10 @@ final class PermissionResolver
     private const CACHE_PREFIX = 'volt_permission_matrix_';
     private const CACHE_VERSION_KEY = 'volt_perm_cache_ver';
 
-    private BaseConnection $db;
-    private CacheInterface $cache;
-    private AuthService $authService;
-    private int $cacheTtl;
+    private readonly BaseConnection $db;
+    private readonly CacheInterface $cache;
+    private readonly AuthService $authService;
+    private readonly int $cacheTtl;
 
     public function __construct(?BaseConnection $db = null, ?CacheInterface $cache = null, ?AuthService $authService = null)
     {
@@ -33,7 +33,7 @@ final class PermissionResolver
     public function can(string $entity, string $action, ?string $state = null, ?string $field = null, ?UserEntity $user = null): bool
     {
         $entity = $this->normalizeEntityName($entity);
-        $action = trim($action);
+        $action = mb_trim($action);
 
         if ($entity === '' || $action === '') {
             return false;
@@ -67,13 +67,7 @@ final class PermissionResolver
             $rules = array_merge($rules, $entityRules['*']);
         }
 
-        foreach ($rules as $rule) {
-            if ($this->ruleAllows($rule, $action, $field)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($rules, fn(array $rule): bool => $this->ruleAllows($rule, $action, $field));
     }
 
     public function hasEntityPermission(string $entity, ?UserEntity $user = null): bool
@@ -200,8 +194,6 @@ final class PermissionResolver
     }
 
     /**
-     * @param mixed $value
-     *
      * @return array<string, mixed>
      */
     private function decodeJsonField(mixed $value): array
@@ -210,7 +202,7 @@ final class PermissionResolver
             return $value;
         }
 
-        if (is_string($value) && $value !== '') {
+        if (is_string($value) && $value !== '' && json_validate($value)) {
             $decoded = json_decode($value, true);
             if (is_array($decoded)) {
                 return $decoded;
@@ -226,8 +218,6 @@ final class PermissionResolver
     }
 
     /**
-     * @param mixed $roles
-     *
      * @return array<int, string>
      */
     private function normalizeRoles(mixed $roles): array
@@ -258,6 +248,6 @@ final class PermissionResolver
 
     private function normalizeEntityName(string $name): string
     {
-        return strtolower(trim($name));
+        return mb_strtolower(mb_trim($name));
     }
 }

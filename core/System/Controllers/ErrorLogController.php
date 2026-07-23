@@ -12,9 +12,9 @@ use Volt\Core\System\Services\ErrorLogService;
 
 final class ErrorLogController extends Controller
 {
-    private ErrorLogService $errorLogService;
+    private readonly ErrorLogService $errorLogService;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['url']);

@@ -276,7 +276,7 @@ abstract class VoltModel extends Model
                 $row[self::COL_MODIFIED] = $row[self::COL_MODIFIED] ?? $timestamp;
                 $row[self::COL_DOCSTATUS] = $row[self::COL_DOCSTATUS] ?? 0;
 
-                if (! isset($row[self::COL_NAME]) || (is_string($row[self::COL_NAME]) && trim($row[self::COL_NAME]) === '')) {
+                if (! isset($row[self::COL_NAME]) || (is_string($row[self::COL_NAME]) && mb_trim($row[self::COL_NAME]) === '')) {
                     $row[self::COL_NAME] = bin2hex(random_bytes(16));
                 }
 
@@ -465,7 +465,7 @@ abstract class VoltModel extends Model
             ->get()
             ->getRowArray();
 
-        $pattern = is_array($row) ? trim((string) ($row['autoname'] ?? '')) : '';
+        $pattern = is_array($row) ? mb_trim((string) ($row['autoname'] ?? '')) : '';
         if ($pattern === '' || $pattern === 'HASH') {
             return bin2hex(random_bytes(16));
         }
@@ -689,11 +689,11 @@ abstract class VoltModel extends Model
         $timestamp = date('Y-m-d H:i:s');
         $actorName = $this->resolveActorName();
 
-        if ($isInsert && $this->hasColumn(self::COL_OWNER) && (! isset($row[self::COL_OWNER]) || trim((string) $row[self::COL_OWNER]) === '')) {
+        if ($isInsert && $this->hasColumn(self::COL_OWNER) && (! isset($row[self::COL_OWNER]) || mb_trim((string) $row[self::COL_OWNER]) === '')) {
             $row[self::COL_OWNER] = $actorName;
         }
 
-        if ($isInsert && $this->hasColumn(self::COL_CREATION) && (! isset($row[self::COL_CREATION]) || trim((string) $row[self::COL_CREATION]) === '')) {
+        if ($isInsert && $this->hasColumn(self::COL_CREATION) && (! isset($row[self::COL_CREATION]) || mb_trim((string) $row[self::COL_CREATION]) === '')) {
             $row[self::COL_CREATION] = $timestamp;
         }
 
@@ -701,7 +701,7 @@ abstract class VoltModel extends Model
             $row[self::COL_MODIFIED] = $timestamp;
         }
 
-        if ($isInsert && $this->hasColumn('created_at') && (! isset($row['created_at']) || trim((string) $row['created_at']) === '')) {
+        if ($isInsert && $this->hasColumn('created_at') && (! isset($row['created_at']) || mb_trim((string) $row['created_at']) === '')) {
             $row['created_at'] = $timestamp;
         }
 
@@ -755,8 +755,6 @@ abstract class VoltModel extends Model
     }
 
     /**
-     * @param mixed $row
-     *
      * @return array<string, mixed>
      */
     protected function normalizeRowObject(mixed $row): array
@@ -789,11 +787,13 @@ abstract class VoltModel extends Model
             }
 
             if (is_string($value)) {
-                $decoded = json_decode($value, true);
+                if (json_validate($value)) {
+                    $decoded = json_decode($value, true);
 
-                if (is_array($decoded)) {
-                    $row[$key] = $decoded;
-                    continue;
+                    if (is_array($decoded)) {
+                        $row[$key] = $decoded;
+                        continue;
+                    }
                 }
 
                 $unserialized = @unserialize($value, ['allowed_classes' => false]);
@@ -812,7 +812,7 @@ abstract class VoltModel extends Model
      */
     protected function resolveDocumentId(array $data): string|int|null
     {
-        if (array_key_exists('id', $data)) {
+        if (array_exists('id', $data)) {
             $id = $this->normalizeDocumentId($data['id']);
             if ($id !== null) {
                 return $id;
@@ -820,14 +820,14 @@ abstract class VoltModel extends Model
         }
 
         if (isset($data[self::KEY_DATA]) && is_array($data[self::KEY_DATA])) {
-            if (array_key_exists($this->primaryKey, $data[self::KEY_DATA])) {
+            if (array_exists($this->primaryKey, $data[self::KEY_DATA])) {
                 $id = $this->normalizeDocumentId($data[self::KEY_DATA][$this->primaryKey]);
                 if ($id !== null) {
                     return $id;
                 }
             }
 
-            if (array_key_exists(self::COL_NAME, $data[self::KEY_DATA])) {
+            if (array_exists(self::COL_NAME, $data[self::KEY_DATA])) {
                 $id = $this->normalizeDocumentId($data[self::KEY_DATA][self::COL_NAME]);
                 if ($id !== null) {
                     return $id;
@@ -896,7 +896,7 @@ abstract class VoltModel extends Model
     private function normalizeDocumentId(mixed $id): string|int|null
     {
         if (is_string($id)) {
-            $id = trim($id);
+            $id = mb_trim($id);
 
             return $id !== '' ? $id : null;
         }

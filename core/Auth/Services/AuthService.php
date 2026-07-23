@@ -14,7 +14,7 @@ use Volt\Core\Config\Lang\LangService;
 
 class AuthService
 {
-    private UserModel $userModel;
+    private readonly UserModel $userModel;
 
     private const SESSION_USER_KEY = 'volt_auth_user';
     private const SESSION_ROLES_KEY = 'volt_auth_roles';
@@ -240,28 +240,28 @@ class AuthService
                 ->where('api_token_expires_at >=', $now)
                 ->first();
         } else {
-            $user = null;
+            $user = array_find(
+                $this->userModel->findAll(),
+                function ($candidate) use ($hash, $now): bool {
+                    if (! $candidate instanceof UserEntity) {
+                        return false;
+                    }
 
-            foreach ($this->userModel->findAll() as $candidate) {
-                if (! $candidate instanceof UserEntity) {
-                    continue;
-                }
+                    $metadata = $this->normalizeMetadata($candidate->user_metadata);
 
-                $metadata = $this->normalizeMetadata($candidate->user_metadata);
+                    if (($metadata['api_token_hash'] ?? null) !== $hash) {
+                        return false;
+                    }
 
-                if (($metadata['api_token_hash'] ?? null) !== $hash) {
-                    continue;
-                }
+                    $expiresAt = $metadata['api_token_expires_at'] ?? null;
 
-                $expiresAt = $metadata['api_token_expires_at'] ?? null;
+                    if (! is_string($expiresAt) || $expiresAt < $now) {
+                        return false;
+                    }
 
-                if (! is_string($expiresAt) || $expiresAt < $now) {
-                    continue;
-                }
-
-                $user = $candidate;
-                break;
-            }
+                    return true;
+                },
+            );
         }
 
         if (! $user instanceof UserEntity || ! $user->isActive()) {
@@ -288,7 +288,7 @@ class AuthService
             return null;
         }
 
-        return trim($matches[1]);
+        return mb_trim($matches[1]);
     }
 
     public function generateApiKeySecret(UserEntity $user): array

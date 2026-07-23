@@ -83,11 +83,11 @@ class UserModel extends Model
 
         $data = $this->filterExistingColumns($data);
 
-        if (array_key_exists('roles', $data) && is_array($data['roles'])) {
+        if (array_exists('roles', $data) && is_array($data['roles'])) {
             $data['roles'] = json_encode(array_values($data['roles']), JSON_UNESCAPED_UNICODE);
         }
 
-        if (array_key_exists('user_metadata', $data) && is_array($data['user_metadata'])) {
+        if (array_exists('user_metadata', $data) && is_array($data['user_metadata'])) {
             $data['user_metadata'] = json_encode($data['user_metadata'], JSON_UNESCAPED_UNICODE);
         }
 
@@ -121,7 +121,7 @@ class UserModel extends Model
     public function decodeJsonField(mixed $value): array
     {
         if (is_string($value)) {
-            $decoded = json_decode($value, true);
+            $decoded = json_validate($value) ? json_decode($value, true) : null;
 
             if (is_array($decoded)) {
                 return $decoded;

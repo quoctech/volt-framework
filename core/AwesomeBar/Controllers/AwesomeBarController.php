@@ -10,9 +10,9 @@ use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 
 class AwesomeBarController extends Controller
 {
-    private AwesomeBarModel $awesomeBarModel;
+    private readonly AwesomeBarModel $awesomeBarModel;
 
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->awesomeBarModel = new AwesomeBarModel();

@@ -19,11 +19,11 @@ final class VoltMetadataCompiler
     private const INDEX_KEY_PREFIX = 'volt_metadata_index_';
     private const ENTITY_KEY_PREFIX = 'volt_metadata_entity_';
 
-    private BaseConnection $db;
-    private CacheInterface $cache;
-    private MetadataValidator $validator;
-    private WorkflowEngine $workflowEngine;
-    private int $cacheTtl;
+    private readonly BaseConnection $db;
+    private readonly CacheInterface $cache;
+    private readonly MetadataValidator $validator;
+    private readonly WorkflowEngine $workflowEngine;
+    private readonly int $cacheTtl;
 
     public function __construct(?BaseConnection $db = null, ?CacheInterface $cache = null)
     {
@@ -233,7 +233,7 @@ final class VoltMetadataCompiler
     private function parseChildEntityName(string $options): string
     {
         $parts = explode(':', $options);
-        $name = trim($parts[0]);
+        $name = mb_trim($parts[0]);
 
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
         $name = strtolower($name);
@@ -388,18 +388,18 @@ final class VoltMetadataCompiler
     private static function normalizeEntityName(string $name): string
     {
         $name = preg_replace('/(?<!^)[A-Z]/', '_$0', $name) ?? $name;
-        $name = strtolower(trim($name));
+        $name = mb_strtolower(mb_trim($name));
         $name = preg_replace('/[^a-z0-9_]+/', '_', $name) ?? '';
         $name = preg_replace('/_+/', '_', $name) ?? '';
-        return trim($name, '_');
+        return mb_trim($name, '_');
     }
 
     private function sanitizeCacheSegment(string $value): string
     {
-        $clean = strtolower(trim($value));
+        $clean = mb_strtolower(mb_trim($value));
         $clean = preg_replace('/[^a-z0-9_-]+/', '_', $clean);
         $clean = preg_replace('/_+/', '_', $clean);
-        $clean = trim($clean, '_');
+        $clean = mb_trim($clean, '_');
 
         return $clean === '' ? 'default' : $clean;
     }

@@ -33,8 +33,8 @@ class SchemaSync
         "modified TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP",
     ];
 
-    protected BaseConnection $db;
-    protected MetadataValidator $validator;
+    private readonly BaseConnection $db;
+    private readonly MetadataValidator $validator;
 
     public function __construct()
     {
@@ -239,7 +239,7 @@ class SchemaSync
     private function parseChildEntityName(string $options): string
     {
         $parts = explode(':', $options);
-        $name = trim($parts[0]);
+        $name = mb_trim($parts[0]);
 
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
         $name = strtolower($name);
@@ -260,9 +260,9 @@ class SchemaSync
     private function normalizeEntityName(string $name): string
     {
         $name = preg_replace('/(?<!^)[A-Z]/', '_$0', $name) ?? $name;
-        $name = strtolower(trim($name));
+        $name = mb_strtolower(mb_trim($name));
         $name = preg_replace('/[^a-z0-9_]+/', '_', $name) ?? '';
         $name = preg_replace('/_+/', '_', $name) ?? '';
-        return trim($name, '_');
+        return mb_trim($name, '_');
     }
 }

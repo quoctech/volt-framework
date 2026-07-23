@@ -58,7 +58,7 @@ final class EntityBuilderService
             ->orderBy('module', 'ASC')
             ->orderBy('name', 'ASC');
 
-        if (is_string($module) && trim($module) !== '') {
+        if (is_string($module) && mb_trim($module) !== '') {
             $builder->where('module', $this->normalizeIdentifier($module));
         }
 
@@ -151,7 +151,7 @@ final class EntityBuilderService
     public function createModule(array $payload): array
     {
         $name = $this->normalizeIdentifier((string) ($payload['name'] ?? ''));
-        $label = trim((string) ($payload['label'] ?? ''));
+        $label = mb_trim((string) ($payload['label'] ?? ''));
 
         if ($name === '') {
             throw new InvalidArgumentException('Module name is required.');
@@ -294,7 +294,7 @@ final class EntityBuilderService
         }
 
         $workflowName = $entityName . '_wf';
-        $label = trim((string) ($workflowPayload['label'] ?? ''));
+        $label = mb_trim((string) ($workflowPayload['label'] ?? ''));
         if ($label === '') {
             $label = $this->titleize($entityName) . ' Workflow';
         }
@@ -607,7 +607,7 @@ final class EntityBuilderService
         }
 
         $name = $this->normalizeEntityName((string) ($payload['name'] ?? ''));
-        $label = trim((string) ($payload['label'] ?? ''));
+        $label = mb_trim((string) ($payload['label'] ?? ''));
 
         return [
             'name'           => $name,
@@ -616,7 +616,7 @@ final class EntityBuilderService
             'is_submittable' => $this->toBool($payload['is_submittable'] ?? false),
             'issingle'       => $this->toBool($payload['issingle'] ?? false),
             'istable'        => $this->toBool($payload['istable'] ?? false),
-            'autoname'       => trim((string) ($payload['autoname'] ?? 'HASH')) ?: 'HASH',
+            'autoname'       => mb_trim((string) ($payload['autoname'] ?? 'HASH')) ?: 'HASH',
             'states'         => $this->normalizeJsonObject($payload['states'] ?? []),
             's_custom_jsonb' => $this->normalizeJsonObject($payload['s_custom_jsonb'] ?? []),
         ];
@@ -642,9 +642,9 @@ final class EntityBuilderService
             }
 
             $fieldname = $this->normalizeIdentifier((string) ($field['fieldname'] ?? ''));
-            $label = trim((string) ($field['label'] ?? ''));
+            $label = mb_trim((string) ($field['label'] ?? ''));
             $fieldtype = $this->normalizeFieldType((string) ($field['fieldtype'] ?? 'Input'));
-            $options = trim((string) ($field['options'] ?? ''));
+            $options = mb_trim((string) ($field['options'] ?? ''));
 
             if ($fieldname === '') {
                 throw new InvalidArgumentException('Fieldname is required for every field.');
@@ -802,6 +802,9 @@ final class EntityBuilderService
         }
 
         if (is_string($value)) {
+            if (!json_validate($value)) {
+                throw new InvalidArgumentException('Invalid JSON object supplied.');
+            }
             $decoded = json_decode($value, true);
             if (! is_array($decoded)) {
                 throw new InvalidArgumentException('Invalid JSON object supplied.');
@@ -826,10 +829,13 @@ final class EntityBuilderService
             return array_is_list($value) ? [] : $value;
         }
 
-        if (! is_string($value) || trim($value) === '') {
+        if (! is_string($value) || mb_trim($value) === '') {
             return [];
         }
 
+        if (!json_validate($value)) {
+            return [];
+        }
         $decoded = json_decode($value, true);
 
         if (! is_array($decoded)) {
@@ -951,7 +957,7 @@ final class EntityBuilderService
 
     private function parseReferencedEntityName(string $options): string
     {
-        $candidate = trim(strtolower($options));
+        $candidate = mb_trim(mb_strtolower($options));
         if ($candidate === '') {
             return '';
         }
@@ -983,10 +989,10 @@ final class EntityBuilderService
 
     private function normalizeIdentifier(string $value): string
     {
-        $normalized = strtolower(trim($value));
+        $normalized = mb_strtolower(mb_trim($value));
         $normalized = preg_replace('/[^a-z0-9_]+/', '_', $normalized) ?? '';
         $normalized = preg_replace('/_+/', '_', $normalized) ?? '';
-        $normalized = trim($normalized, '_');
+        $normalized = mb_trim($normalized, '_');
 
         if ($normalized === '' || preg_match('/^[0-9]/', $normalized) === 1) {
             return '';
@@ -1071,6 +1077,9 @@ final class EntityBuilderService
         }
 
         if (is_string($value)) {
+            if (!json_validate($value)) {
+                return [];
+            }
             $decoded = json_decode($value, true);
 
             return is_array($decoded) ? $decoded : [];

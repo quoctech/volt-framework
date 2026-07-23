@@ -27,10 +27,10 @@ final class TableNameResolver
     public static function normalizeIdentifier(string $value): string
     {
         $value = preg_replace('/(?<!^)[A-Z]/', '_$0', $value) ?? $value;
-        $value = strtolower(trim($value));
+        $value = mb_strtolower(mb_trim($value));
         $value = preg_replace('/[^a-z0-9_]+/', '_', $value) ?? '';
         $value = preg_replace('/_+/', '_', $value) ?? '';
 
-        return trim($value, '_');
+        return mb_trim($value, '_');
     }
 }

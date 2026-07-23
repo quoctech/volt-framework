@@ -1646,7 +1646,7 @@ PHP;
     private function parseChildEntityName(string $options): string
     {
         $parts = explode(':', $options);
-        $name = trim($parts[0]);
+        $name = mb_trim($parts[0]);
 
         $name = preg_replace('/[^a-zA-Z0-9_]/', '', $name) ?? '';
         $name = strtolower($name);
@@ -1673,7 +1673,7 @@ PHP;
                 continue;
             }
 
-            $uid = trim((string) ($session['uid'] ?? ''));
+            $uid = mb_trim((string) ($session['uid'] ?? ''));
             if ($uid === '') {
                 continue;
             }
@@ -1806,11 +1806,11 @@ PHP;
     private function snake(string $value): string
     {
         $value = preg_replace('/(?<!^)[A-Z]/', '_$0', $value) ?? $value;
-        $value = strtolower(trim($value));
+        $value = mb_strtolower(mb_trim($value));
         $value = preg_replace('/[^a-z0-9_]+/', '_', $value) ?? '';
         $value = preg_replace('/_+/', '_', $value) ?? '';
 
-        return trim($value, '_');
+        return mb_trim($value, '_');
     }
 
     private function studly(string $value): string
