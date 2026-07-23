@@ -11,9 +11,11 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]
 if ($isSubmittable) {
     $columns[] = ['fieldname' => 'workflow_state', 'label' => 'State', 'fieldtype' => 'Data'];
 }
+<?php
+$__lang = \Volt\Core\Config\Lang\LangService::load();
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,6 +34,7 @@ if ($isSubmittable) {
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             isSubmittable: <?= json_encode($isSubmittable) ?>,
             submitUrlBase: <?= esc(json_encode(site_url('hrms/api/employeeeducation/submit'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrlBase: <?= esc(json_encode(site_url('hrms/api/employeeeducation/approve'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrlBase: <?= esc(json_encode(site_url('hrms/api/employeeeducation/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrlBase: <?= esc(json_encode(site_url('hrms/api/employeeeducation/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-7xl p-6">
@@ -97,9 +100,10 @@ if ($isSubmittable) {
                                     <div class="flex flex-wrap gap-1">
                                         <button @click="openEdit(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Edit</button>
                                         <button @click="deleteRow(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Delete</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
-                                        <button x-show="isSubmittable && row.workflow_state" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="border border-emerald-500 px-2 py-1 text-emerald-800 hover:bg-emerald-50">Approve</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
+                                        <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
                                     </div>
                                 </td>
                             </tr>

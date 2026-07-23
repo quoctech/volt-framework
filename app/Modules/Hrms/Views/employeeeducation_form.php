@@ -10,11 +10,14 @@
 /** @var array<string, array<string, string>> $linkTargets */
 /** @var bool $isSubmittable */
 /** @var string $submitUrl */
+/** @var string $approveUrl */
 /** @var string $cancelUrl */
 /** @var string $amendUrl */
+<?php
+$__lang = \Volt\Core\Config\Lang\LangService::load();
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -34,6 +37,7 @@
             linkTargets: <?= esc(json_encode($linkTargets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             isSubmittable: <?= json_encode($isSubmittable) ?>,
             submitUrl: <?= esc(json_encode($submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            approveUrl: <?= esc(json_encode($approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode($cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrl: <?= esc(json_encode($amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="mx-auto max-w-4xl p-6">
@@ -51,6 +55,7 @@
                 <template x-if="isSubmittable && recordName">
                     <div class="flex gap-1">
                         <button @click="submitWorkflow()" type="button" class="border border-amber-500 bg-amber-50 px-3 py-2 text-sm hover:bg-amber-100" x-show="canSubmit">Submit</button>
+                        <button @click="approveWorkflow()" type="button" class="border border-emerald-500 bg-emerald-50 px-3 py-2 text-sm hover:bg-emerald-100" x-show="canApprove">Approve</button>
                         <button @click="cancelWorkflow()" type="button" class="border border-red-300 px-3 py-2 text-sm hover:bg-red-50" x-show="canCancel">Cancel</button>
                         <button @click="amendWorkflow()" type="button" class="border border-sky-300 px-3 py-2 text-sm hover:bg-sky-50" x-show="canAmend">Amend</button>
                     </div>

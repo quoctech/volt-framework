@@ -10,9 +10,11 @@ function employeeeducationFormApp(boot) {
         linkTargets: boot.linkTargets || {},
         isSubmittable: !!boot.isSubmittable,
         submitUrl: boot.submitUrl || '',
+        approveUrl: boot.approveUrl || '',
         cancelUrl: boot.cancelUrl || '',
         amendUrl: boot.amendUrl || '',
         workflowState: '',
+        amendedFrom: '',
         uploadUrl: '',
         form: {},
         linkLookups: {},
@@ -331,25 +333,32 @@ function employeeeducationFormApp(boot) {
             if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'workflow_state')) {
                 this.workflowState = String(result.data.workflow_state || '');
             }
+            if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'amended_from')) {
+                this.amendedFrom = String(result.data.amended_from || '');
+            }
         },
         get canSubmit() {
-            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+            return this.isSubmittable && this.workflowState === 'Draft' && this.recordName !== '';
+        },
+        get canApprove() {
+            return this.isSubmittable && this.workflowState === 'Submitted' && this.recordName !== '';
         },
         get canCancel() {
-            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+            return this.isSubmittable && this.workflowState === 'Submitted' && this.recordName !== '';
         },
         get canAmend() {
-            return this.isSubmittable && this.workflowState !== '' && this.recordName !== '';
+            return this.isSubmittable && this.workflowState === 'Cancelled' && !this.amendedFrom && this.recordName !== '';
         },
         get workflowStateBadgeClass() {
             const state = (this.workflowState || '').toLowerCase();
             if (state === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
             if (state === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (state === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
             if (state === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
             return 'border-zinc-300 bg-zinc-100 text-zinc-700';
         },
         async submitWorkflow() {
-            await this.save();
+            await this.save(true);
             const response = await fetch(this.requestUrl(this.submitUrl + '/' + encodeURIComponent(this.recordName)), {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -363,9 +372,27 @@ function employeeeducationFormApp(boot) {
                 alert(result.message || 'Submit failed.');
                 return;
             }
-            this.workflowState = result.data?.workflow_state || 'Submitted';
+            window.location.href = this.listUrl;
+        },
+        async approveWorkflow() {
+            await this.save(true);
+            const response = await fetch(this.requestUrl(this.approveUrl + '/' + encodeURIComponent(this.recordName)), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'ok') {
+                alert(result.message || 'Approve failed.');
+                return;
+            }
+            window.location.href = this.listUrl;
         },
         async cancelWorkflow() {
+            await this.save(true);
             const response = await fetch(this.requestUrl(this.cancelUrl + '/' + encodeURIComponent(this.recordName)), {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -379,9 +406,10 @@ function employeeeducationFormApp(boot) {
                 alert(result.message || 'Cancel failed.');
                 return;
             }
-            this.workflowState = result.data?.workflow_state || 'Cancelled';
+            window.location.href = this.listUrl;
         },
         async amendWorkflow() {
+            await this.save(true);
             const response = await fetch(this.requestUrl(this.amendUrl + '/' + encodeURIComponent(this.recordName)), {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -395,9 +423,9 @@ function employeeeducationFormApp(boot) {
                 alert(result.message || 'Amend failed.');
                 return;
             }
-            this.workflowState = result.data?.workflow_state || 'Draft';
+            window.location.href = this.listUrl;
         },
-        async save() {
+        async save(silent = false) {
             const payload = {};
             this.fields.forEach((field) => {
                 const value = this.form[field.fieldname];
@@ -421,7 +449,9 @@ function employeeeducationFormApp(boot) {
             if (!response.ok || result.status !== 'ok') {
                 throw new Error(result.message || 'Unable to save record.');
             }
-            window.location.href = this.listUrl;
+            if (!silent) {
+                window.location.href = this.listUrl;
+            }
         },
     };
 }

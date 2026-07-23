@@ -9,6 +9,7 @@ function employeeeducationListApp(boot) {
         linkTargets: boot.linkTargets || {},
         isSubmittable: !!boot.isSubmittable,
         submitUrlBase: boot.submitUrlBase || '',
+        approveUrlBase: boot.approveUrlBase || '',
         cancelUrlBase: boot.cancelUrlBase || '',
         amendUrlBase: boot.amendUrlBase || '',
         query: '',
@@ -121,6 +122,7 @@ function employeeeducationListApp(boot) {
             const s = (state || '').toLowerCase();
             if (s === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
             if (s === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
+            if (s === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
             if (s === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
             return 'border-zinc-300 bg-zinc-100 text-zinc-700';
         },
@@ -143,6 +145,9 @@ function employeeeducationListApp(boot) {
         },
         async submitRow(name) {
             await this.workflowAction(name, this.submitUrlBase);
+        },
+        async approveRow(name) {
+            await this.workflowAction(name, this.approveUrlBase);
         },
         async cancelRow(name) {
             await this.workflowAction(name, this.cancelUrlBase);

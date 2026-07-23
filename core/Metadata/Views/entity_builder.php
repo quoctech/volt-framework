@@ -29,9 +29,11 @@ $deleteModalFooter = static function (): string {
     <?php
     return (string) ob_get_clean();
 };
+
+$__lang = \Volt\Core\Config\Lang\LangService::load();
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="<?= esc($__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -275,7 +277,6 @@ $deleteModalFooter = static function (): string {
                                         <input x-model="workflow.label" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="t('workflow_label')">
                                     </label>
                                 </div>
-                                <button @click="toggleLocale()" type="button" class="mt-5 flex items-center gap-1 self-start border border-zinc-300 px-3 py-2 text-xs hover:bg-zinc-50" x-text="locale === 'en' ? '🌐 EN' : '🌐 VI'"></button>
                             </div>
 
                             <div class="border border-zinc-300 bg-white p-4">
@@ -743,9 +744,6 @@ $deleteModalFooter = static function (): string {
                     };
                     const lang = dict[this.locale] || dict.en;
                     return lang[key] || key;
-                },
-                toggleLocale() {
-                    this.locale = this.locale === 'en' ? 'vi' : 'en';
                 },
                 resetBuilder() {
                     this.sessions = [this.makeSession('Primary', 'Main fields')];
