@@ -60,9 +60,9 @@ class RoleController extends Controller
             ]);
         }
 
-        $name = trim((string) $this->request->getPost('name'));
-        $label = trim((string) $this->request->getPost('label'));
-        $description = trim((string) $this->request->getPost('description'));
+        $name = mb_trim((string) $this->request->getPost('name'));
+        $label = mb_trim((string) $this->request->getPost('label'));
+        $description = mb_trim((string) $this->request->getPost('description'));
 
         $actor = service('voltAuth')->currentUser();
 
@@ -114,8 +114,8 @@ class RoleController extends Controller
             ]);
         }
 
-        $label = trim((string) $this->request->getPost('label'));
-        $description = trim((string) $this->request->getPost('description'));
+        $label = mb_trim((string) $this->request->getPost('label'));
+        $description = mb_trim((string) $this->request->getPost('description'));
 
         $this->roleModel->update($name, [
             'label'       => $label,

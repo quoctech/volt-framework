@@ -241,11 +241,6 @@ final class VoltMetadataCompiler
         return $name !== '' ? $name : '';
     }
 
-    /**
-     * @param mixed $customMeta
-     *
-     * @return array<string, mixed>
-     */
     private function normalizeCustomMeta(mixed $customMeta): array
     {
         return $this->validator->normalizeCustomMeta($customMeta);

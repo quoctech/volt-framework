@@ -253,7 +253,7 @@ final class VoltCleanEntities extends BaseCommand
         $moduleJsonPath = $modulePath . '/module.json';
         if (is_file($moduleJsonPath)) {
             $payload = json_decode((string) file_get_contents($moduleJsonPath), true);
-            if (is_array($payload) && is_string($payload['name'] ?? null) && trim((string) $payload['name']) !== '') {
+            if (is_array($payload) && is_string($payload['name'] ?? null) && mb_trim((string) $payload['name']) !== '') {
                 return TableNameResolver::normalizeIdentifier((string) $payload['name']);
             }
         }
@@ -312,7 +312,7 @@ final class VoltCleanEntities extends BaseCommand
 
     private function dropTable(string $tableName): void
     {
-        $tableName = strtolower(trim($tableName));
+        $tableName = mb_strtolower(mb_trim($tableName));
         if (! preg_match('/^tab_[a-z0-9_]+$/', $tableName)) {
             throw new RuntimeException("Refusing to drop unsafe table identifier: {$tableName}");
         }
@@ -363,7 +363,7 @@ final class VoltCleanEntities extends BaseCommand
 
     private function shouldDelete(string $question): bool
     {
-        $answer = strtolower(trim(CLI::prompt($question, ['n', 'y'])));
+        $answer = mb_strtolower(mb_trim(CLI::prompt($question, ['n', 'y'])));
 
         return $answer === 'y';
     }

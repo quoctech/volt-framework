@@ -50,7 +50,7 @@ class EntityBuilderController extends Controller
 
     public function entityList(): string
     {
-        $moduleFilter = trim((string) ($this->request->getGet('module') ?? ''));
+        $moduleFilter = mb_trim((string) ($this->request->getGet('module') ?? ''));
         $userContext = $this->deskUserContext();
 
         $data = [
@@ -158,7 +158,7 @@ class EntityBuilderController extends Controller
     {
         try {
             $payload = $this->extractPayload();
-            $password = is_array($payload) ? trim((string) ($payload['password'] ?? '')) : '';
+            $password = is_array($payload) ? mb_trim((string) ($payload['password'] ?? '')) : '';
 
             if ($password === '') {
                 throw new InvalidArgumentException('Password is required.');

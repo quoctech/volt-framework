@@ -20,7 +20,7 @@ class AwesomeBarController extends Controller
 
     public function search(): ResponseInterface
     {
-        $q = trim((string) ($this->request->getGet('q') ?? ''));
+        $q = mb_trim((string) ($this->request->getGet('q') ?? ''));
         $this->awesomeBarModel->seedCorePages();
 
         $actor = service('voltAuth')->currentUser();

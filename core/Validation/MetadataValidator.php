@@ -47,7 +47,7 @@ final class MetadataValidator
 
     public function assertEntityName(string $entityName): string
     {
-        $entityName = trim($entityName);
+        $entityName = mb_trim($entityName);
 
         if ($entityName === '' || ! preg_match(self::ENTITY_NAME_PATTERN, $entityName)) {
             throw new InvalidArgumentException("Invalid entity name: {$entityName}");
@@ -99,7 +99,7 @@ final class MetadataValidator
             'id' => isset($field['id']) ? (int) $field['id'] : null,
             'parent' => $this->assertEntityName((string) ($field['parent'] ?? '')),
             'fieldname' => $fieldname,
-            'label' => trim((string) ($field['label'] ?? '')),
+            'label' => mb_trim((string) ($field['label'] ?? '')),
             'fieldtype' => $fieldtype,
             'length' => isset($field['length']) ? (int) $field['length'] : null,
             'options' => $options,
@@ -112,11 +112,6 @@ final class MetadataValidator
         ];
     }
 
-    /**
-     * @param mixed $customMeta
-     *
-     * @return array<string, mixed>
-     */
     public function normalizeCustomMeta(mixed $customMeta): array
     {
         return $this->normalizeJsonValue($customMeta);
@@ -124,7 +119,7 @@ final class MetadataValidator
 
     public function normalizeFieldType(string $fieldType): string
     {
-        $fieldType = trim($fieldType);
+        $fieldType = mb_trim($fieldType);
 
         if (! in_array($fieldType, self::FIELD_TYPES, true)) {
             throw new InvalidArgumentException("Invalid field type: {$fieldType}");
@@ -135,7 +130,7 @@ final class MetadataValidator
 
     private function assertFieldName(string $fieldName): string
     {
-        $fieldName = trim($fieldName);
+        $fieldName = mb_trim($fieldName);
 
         if ($fieldName === '' || ! preg_match(self::FIELD_NAME_PATTERN, $fieldName)) {
             throw new InvalidArgumentException("Invalid field name: {$fieldName}");
@@ -146,7 +141,7 @@ final class MetadataValidator
 
     private function normalizeModule(string $module): string
     {
-        $module = trim($module);
+        $module = mb_trim($module);
 
         if ($module === '') {
             return '';
@@ -161,28 +156,19 @@ final class MetadataValidator
 
     private function normalizeAutoname(string $autoname): string
     {
-        $autoname = trim($autoname);
+        $autoname = mb_trim($autoname);
 
         return $autoname === '' ? 'HASH' : strtoupper($autoname);
     }
 
-    /**
-     * @param mixed $value
-     *
-     * @return array<string, mixed>
-     */
     private function normalizeJsonValue(mixed $value): array
     {
         if (is_array($value)) {
             return $value;
         }
 
-        if (is_string($value) && $value !== '') {
-            $decoded = json_decode($value, true);
-
-            if (is_array($decoded)) {
+        if (is_string($value) && $value !== '' && is_array($decoded = json_decode($value, true))) {
                 return $decoded;
-            }
 
             $unserialized = @unserialize($value, ['allowed_classes' => false]);
 

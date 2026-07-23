@@ -245,7 +245,7 @@ final class WorkflowEngine
     {
         return match (true) {
             is_array($value) => $value,
-            is_string($value) && $value !== '' && is_array($decoded = json_decode($value, true)) => $decoded,
+            is_string($value) && $value !== '' && json_validate($value) && is_array($decoded = json_decode($value, true)) => $decoded,
             default => [],
         };
     }

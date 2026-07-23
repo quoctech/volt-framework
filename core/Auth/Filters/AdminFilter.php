@@ -59,7 +59,7 @@ class AdminFilter implements FilterInterface
 
     private function wantsJson(RequestInterface $request): bool
     {
-        $uri = trim($request->getUri()->getPath(), '/');
+        $uri = mb_trim($request->getUri()->getPath(), '/');
 
         if (str_starts_with($uri, 'api/') || str_contains($uri, '/api/')) {
             return true;

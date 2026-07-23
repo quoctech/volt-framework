@@ -117,7 +117,7 @@ final class EntityMetadataCache
             return null;
         }
 
-        $password = trim($password);
+        $password = mb_trim($password);
 
         if ($password === '' || $password === '<password>') {
             return null;

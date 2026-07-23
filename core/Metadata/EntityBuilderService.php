@@ -595,11 +595,6 @@ final class EntityBuilderService
         ];
     }
 
-    /**
-     * @param mixed $payload
-     *
-     * @return array<string, mixed>
-     */
     private function normalizeEntityPayload(mixed $payload): array
     {
         if (! is_array($payload)) {
@@ -622,11 +617,6 @@ final class EntityBuilderService
         ];
     }
 
-    /**
-     * @param mixed $payload
-     *
-     * @return array<int, array<string, mixed>>
-     */
     private function normalizeFieldPayload(mixed $payload): array
     {
         if (! is_array($payload)) {

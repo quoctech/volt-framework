@@ -43,7 +43,7 @@ final class VoltCoreMigrateStatus extends BaseCommand
                 $rows[] = [
                     $migration->version,
                     $migration->name,
-                    array_key_exists($migration->version, $executed) ? 'Yes' : 'No',
+                    array_exists($executed, $migration->version) ? 'Yes' : 'No',
                     (string) ($executed[$migration->version] ?? '-'),
                 ];
             }

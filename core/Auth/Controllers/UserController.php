@@ -65,7 +65,7 @@ class UserController extends Controller
             ]);
         }
 
-        $name = trim((string) $this->request->getPost('name'));
+        $name = mb_trim((string) $this->request->getPost('name'));
         $password = (string) $this->request->getPost('password');
         $isActive = (string) $this->request->getPost('is_active') === '1';
         $selectedRoles = $this->request->getPost('roles');
