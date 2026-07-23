@@ -930,7 +930,7 @@ final class VoltResourceController extends Controller
             }
 
             $fieldname = (string) ($field['fieldname'] ?? '');
-            if ($fieldname === '' || ! array_exists($existing, $fieldname)) {
+            if ($fieldname === '' || ! array_key_exists($fieldname, $existing)) {
                 continue;
             }
 

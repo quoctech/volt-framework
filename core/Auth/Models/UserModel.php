@@ -83,11 +83,11 @@ class UserModel extends Model
 
         $data = $this->filterExistingColumns($data);
 
-        if (array_exists('roles', $data) && is_array($data['roles'])) {
+        if (array_key_exists('roles', $data) && is_array($data['roles'])) {
             $data['roles'] = json_encode(array_values($data['roles']), JSON_UNESCAPED_UNICODE);
         }
 
-        if (array_exists('user_metadata', $data) && is_array($data['user_metadata'])) {
+        if (array_key_exists('user_metadata', $data) && is_array($data['user_metadata'])) {
             $data['user_metadata'] = json_encode($data['user_metadata'], JSON_UNESCAPED_UNICODE);
         }
 

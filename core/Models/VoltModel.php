@@ -812,7 +812,7 @@ abstract class VoltModel extends Model
      */
     protected function resolveDocumentId(array $data): string|int|null
     {
-        if (array_exists('id', $data)) {
+        if (array_key_exists('id', $data)) {
             $id = $this->normalizeDocumentId($data['id']);
             if ($id !== null) {
                 return $id;
@@ -820,14 +820,14 @@ abstract class VoltModel extends Model
         }
 
         if (isset($data[self::KEY_DATA]) && is_array($data[self::KEY_DATA])) {
-            if (array_exists($this->primaryKey, $data[self::KEY_DATA])) {
+            if (array_key_exists($this->primaryKey, $data[self::KEY_DATA])) {
                 $id = $this->normalizeDocumentId($data[self::KEY_DATA][$this->primaryKey]);
                 if ($id !== null) {
                     return $id;
                 }
             }
 
-            if (array_exists(self::COL_NAME, $data[self::KEY_DATA])) {
+            if (array_key_exists(self::COL_NAME, $data[self::KEY_DATA])) {
                 $id = $this->normalizeDocumentId($data[self::KEY_DATA][self::COL_NAME]);
                 if ($id !== null) {
                     return $id;
