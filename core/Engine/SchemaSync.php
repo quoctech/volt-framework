@@ -36,10 +36,12 @@ class SchemaSync
     private readonly BaseConnection $db;
     private readonly MetadataValidator $validator;
 
-    public function __construct()
-    {
-        $this->db = VoltDatabase::connection();
-        $this->validator = new MetadataValidator();
+    public function __construct(
+        ?BaseConnection $db = null,
+        ?MetadataValidator $validator = null,
+    ) {
+        $this->db = $db ?? VoltDatabase::connection();
+        $this->validator = $validator ?? new MetadataValidator();
     }
 
     /**

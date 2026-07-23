@@ -1,6 +1,6 @@
 {
-    "name": "codeigniter4/appstarter",
-    "description": "CodeIgniter4 starter app",
+    "name": "volt/framework",
+    "description": "Volt Framework — Metadata-driven ERP engine on CodeIgniter 4 + PostgreSQL",
     "license": "MIT",
     "type": "project",
     "homepage": "https://codeigniter.com",

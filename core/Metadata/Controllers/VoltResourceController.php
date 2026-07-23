@@ -7,6 +7,7 @@ namespace Volt\Core\Metadata\Controllers;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Database\BaseConnection;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use Volt\Core\Database\TableNameResolver;
@@ -501,90 +502,51 @@ final class VoltResourceController extends Controller
 
     public function restSubmit(string $entityName, string $id): ResponseInterface
     {
-        $model = $this->resolveModel($entityName);
-        $existing = $model->find($id);
-        if (! is_array($existing)) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status' => 'error',
-                'message' => 'Record not found.',
-            ]);
-        }
-
-        try {
-            $result = $model->submit($id);
-
-            return $this->response->setJSON([
-                'status' => 'ok',
-                'data' => $result,
-            ]);
-        } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
-        }
+        return $this->handleWorkflowAction($entityName, $id, 'submit');
     }
 
     public function restApprove(string $entityName, string $id): ResponseInterface
     {
-        $model = $this->resolveModel($entityName);
-        $existing = $model->find($id);
-        if (! is_array($existing)) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status' => 'error',
-                'message' => 'Record not found.',
-            ]);
-        }
-
-        try {
-            $result = $model->approve($id);
-
-            return $this->response->setJSON([
-                'status' => 'ok',
-                'data' => $result,
-            ]);
-        } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
-        }
+        return $this->handleWorkflowAction($entityName, $id, 'approve');
     }
 
     public function restCancel(string $entityName, string $id): ResponseInterface
     {
-        $model = $this->resolveModel($entityName);
-        $existing = $model->find($id);
-        if (! is_array($existing)) {
-            return $this->response->setStatusCode(404)->setJSON([
-                'status' => 'error',
-                'message' => 'Record not found.',
-            ]);
-        }
-
-        try {
-            $result = $model->cancel($id);
-
-            return $this->response->setJSON([
-                'status' => 'ok',
-                'data' => $result,
-            ]);
-        } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
-        }
+        return $this->handleWorkflowAction($entityName, $id, 'cancel');
     }
 
     public function restAmend(string $entityName, string $id): ResponseInterface
     {
+        return $this->handleWorkflowAction($entityName, $id, 'amend');
+    }
+
+    private function handleWorkflowAction(string $entityName, string $id, string $action): ResponseInterface
+    {
         $model = $this->resolveModel($entityName);
         $existing = $model->find($id);
+
         if (! is_array($existing)) {
             return $this->response->setStatusCode(404)->setJSON([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Record not found.',
             ]);
         }
 
+        $body = $this->request->getJSON(true);
+        $comment = is_array($body) ? ($body['comment'] ?? null) : null;
+
         try {
-            $record = $model->amend($id);
+            $result = match ($action) {
+                'submit'  => $model->submit($id, $comment),
+                'approve' => $model->approve($id, $comment),
+                'cancel'  => $model->cancel($id, $comment),
+                'amend'   => $model->amend($id),
+                default   => throw new InvalidArgumentException("Unknown workflow action: {$action}"),
+            };
 
             return $this->response->setJSON([
                 'status' => 'ok',
-                'data' => $record,
+                'data'   => $result,
             ]);
         } catch (Throwable $throwable) {
             return $this->respondError($throwable->getMessage(), 422);

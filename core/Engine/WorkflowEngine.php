@@ -15,6 +15,7 @@ final class WorkflowEngine
 
     private const STATE_DRAFT     = 'Draft';
     private const STATE_SUBMITTED = 'Submitted';
+    private const STATE_APPROVED  = 'Approved';
     private const STATE_CANCELLED = 'Cancelled';
 
     private const DOCSTATUS_DRAFT     = 0;
@@ -75,14 +76,16 @@ final class WorkflowEngine
             'states'       => [
                 ['name' => self::STATE_DRAFT,     'label' => 'Draft',     'docstatus' => self::DOCSTATUS_DRAFT,     'allow_edit' => 1, 'is_final' => 0],
                 ['name' => self::STATE_SUBMITTED, 'label' => 'Submitted', 'docstatus' => self::DOCSTATUS_SUBMITTED, 'allow_edit' => 0, 'is_final' => 0],
-                ['name' => self::STATE_CANCELLED, 'label' => 'Cancelled', 'docstatus' => self::DOCSTATUS_CANCELLED, 'allow_edit' => 0, 'is_final' => 1],
+                ['name' => self::STATE_APPROVED,  'label' => 'Approved',  'docstatus' => self::DOCSTATUS_SUBMITTED, 'allow_edit' => 0, 'is_final' => 1],
+                ['name' => self::STATE_CANCELLED, 'label' => 'Cancelled', 'docstatus' => self::DOCSTATUS_CANCELLED, 'allow_edit' => 0, 'is_final' => 0],
             ],
             'transitions'  => [
                 ['from_state' => self::STATE_DRAFT,     'action' => 'submit', 'to_state' => self::STATE_SUBMITTED],
+                ['from_state' => self::STATE_SUBMITTED, 'action' => 'approve', 'to_state' => self::STATE_APPROVED],
                 ['from_state' => self::STATE_SUBMITTED, 'action' => 'cancel', 'to_state' => self::STATE_CANCELLED],
                 ['from_state' => self::STATE_CANCELLED, 'action' => 'amend',  'to_state' => self::STATE_DRAFT],
             ],
-            'states_order' => [self::STATE_DRAFT, self::STATE_SUBMITTED, self::STATE_CANCELLED],
+            'states_order' => [self::STATE_DRAFT, self::STATE_SUBMITTED, self::STATE_APPROVED, self::STATE_CANCELLED],
         ];
     }
 
@@ -173,6 +176,15 @@ final class WorkflowEngine
 
     public function canTransition(string $workflowName, string $fromState, string $action): bool
     {
+        if ($workflowName === self::IMPLICIT_WORKFLOW) {
+            $implicit = $this->getImplicitWorkflow('');
+            return array_any(
+                $implicit['transitions'],
+                fn(array $t): bool => (string) ($t['from_state'] ?? '') === $fromState
+                    && (string) ($t['action'] ?? '') === $action,
+            );
+        }
+
         return $this->db->table('sys_workflow_transition')
             ->where('workflow', $workflowName)
             ->where('from_state', $fromState)
@@ -205,11 +217,54 @@ final class WorkflowEngine
 
     private function getValidTransitions(array $workflow, string $currentState, string $action): array
     {
+        $userRoles = $this->resolveUserRoles();
+
         return array_values(array_filter(
             $workflow['transitions'] ?? [],
             fn(array $t): bool => (string) ($t['from_state'] ?? '') === $currentState
-                && (string) ($t['action'] ?? '') === $action,
+                && (string) ($t['action'] ?? '') === $action
+                && $this->transitionAllowedForRoles($t, $userRoles),
         ));
+    }
+
+    private function transitionAllowedForRoles(array $transition, array $userRoles): bool
+    {
+        $allowedRaw = $transition['allowed_roles'] ?? null;
+
+        if ($allowedRaw === null || $allowedRaw === '' || $allowedRaw === '[]') {
+            return true;
+        }
+
+        $allowedRoles = is_string($allowedRaw) ? json_decode($allowedRaw, true) : (is_array($allowedRaw) ? $allowedRaw : []);
+
+        if (! is_array($allowedRoles) || $allowedRoles === []) {
+            return true;
+        }
+
+        if ($userRoles === []) {
+            return false;
+        }
+
+        return array_any($allowedRoles, fn(string $role): bool => in_array($role, $userRoles, true));
+    }
+
+    private function resolveUserRoles(): array
+    {
+        $user = service('voltAuth')->currentUser();
+
+        if ($user === null) {
+            return [];
+        }
+
+        $roles = $user->roles;
+
+        if (is_string($roles)) {
+            $decoded = json_decode($roles, true);
+
+            return is_array($decoded) ? $decoded : [$roles];
+        }
+
+        return is_array($roles) ? $roles : [];
     }
 
     private function resolveDocstatus(array $workflow, string $stateName): int

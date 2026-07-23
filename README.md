@@ -1,73 +1,128 @@
-# CodeIgniter 4 Application Starter
+# Volt Framework
 
-## What is CodeIgniter?
+> Metadata-driven ERP engine trên CodeIgniter 4 + PostgreSQL + Redis + Alpine.js
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Volt là framework `metadata-driven`: thay vì code CRUD thủ công cho từng bảng, bạn định nghĩa entity và field qua Entity Builder UI, engine tự động đồng bộ schema, sinh controller/model/view, và cung cấp REST API.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Tech Stack
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+| Layer | Công nghệ |
+|-------|-----------|
+| Backend | PHP 8.5+, CodeIgniter 4.7 |
+| Database | PostgreSQL 15+ |
+| Cache | Redis (metadata, permission) |
+| Frontend | Server-rendered HTML + Alpine.js + Tailwind CSS |
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+## Quick Start
 
-## Installation & updates
+```bash
+# 1. Clone & cài đặt
+composer install
+cp env .env          # Cấu hình database (PostgreSQL) + Redis
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+# 2. Chạy core migration (tạo sys_* tables)
+php spark volt:core-migrate
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+# 3. Đồng bộ schema cho tất cả entities
+php spark volt:sync --all
 
-## Setup
+# 4. Sinh artifact (controller, model, view, JS) cho entities
+php spark volt:scaffold --all
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+# 5. Khởi động dev server
+php spark serve
+```
 
-## Important Change with index.php
+## Architecture
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+Volt được tổ chức theo 4-layer architecture:
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+```
+Delivery ──→ Application ──→ Core Engine ──→ Persistence
+  (CI4 Views,     (Controllers,     (Metadata Compiler,    (PostgreSQL,
+   Alpine.js)      Services)          SchemaSync,            Redis)
+                                       WorkflowEngine,
+                                       PermissionResolver)
+```
 
-**Please** read the user guide for a better explanation of how CI4 works!
+Chi tiết: [`core/docs/architecture.md`](core/docs/architecture.md)
 
-## Repository Management
+## Core Documentation
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+| File | Mô tả |
+|------|-------|
+| [`core/docs/VOLT_FRAMEWORK.md`](core/docs/VOLT_FRAMEWORK.md) | Toàn tập framework — 17 sections |
+| [`core/docs/VOLT_FRAMEWORK_RULES.md`](core/docs/VOLT_FRAMEWORK_RULES.md) | Quy tắc code bắt buộc cho AI và developer |
+| [`core/docs/architecture.md`](core/docs/architecture.md) | Kiến trúc 4-layer, metadata flow, caching |
+| [`core/docs/roadmap.md`](core/docs/roadmap.md) | Lộ trình phát triển (Phases 0-9) |
+| [`core/docs/desc-project.md`](core/docs/desc-project.md) | Mô tả dự án, hiện trạng, cấu trúc thư mục |
+| [`core/docs/multilingual.md`](core/docs/multilingual.md) | Hệ thống đa ngôn ngữ (LangService) |
+| [`core/docs/entity-builder.md`](core/docs/entity-builder.md) | Entity Builder UI, field types, schema sync |
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+## CLI Commands
+
+| Command | Mô tả |
+|---------|-------|
+| `php spark volt:core-migrate` | Chạy migration core (sys_* tables) |
+| `php spark volt:core-migrate-status` | Kiểm tra trạng thái migration |
+| `php spark volt:sync {EntityName}` | Đồng bộ schema vật lý cho entity |
+| `php spark volt:sync --all` | Đồng bộ tất cả entities |
+| `php spark volt:scaffold {EntityName}` | Sinh artifact code cho entity |
+| `php spark volt:scaffold --all` | Sinh cho tất cả entities |
+| `php spark volt:clean-entities` | Xoá entity artifact dư thừa |
+| `php spark volt:sync-awesome-bar` | Đồng bộ awesome bar index |
 
 ## Server Requirements
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+- PHP 8.2+ (khuyến nghị 8.5)
+- PostgreSQL 15+
+- Redis (khuyến nghị)
+- Extensions: `intl`, `mbstring`, `json`, `curl`, `pdo_pgsql`
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+## Project Structure
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+```
+volt-project/
+├── app/                # Application layer (Config, Controllers, Views, Modules)
+│   ├── Config/         # App configuration, routes, services
+│   └── Modules/        # Business modules (Hrms, Stock, ...)
+│       └── Hrms/
+│           ├── Config/ # Module routes
+│           ├── Controllers/
+│           ├── Entities/ (auto-generated)
+│           ├── Models/ (auto-generated)
+│           └── Views/ (auto-generated)
+├── core/               # Volt Framework engine
+│   ├── Audit/          # Audit trail
+│   ├── Auth/           # Authentication, filters, user management
+│   ├── AwesomeBar/     # Quick search & navigation
+│   ├── Commands/       # CLI spark commands
+│   ├── Config/         # System config, language packs
+│   ├── Database/       # DB connection, migrations, TableNameResolver
+│   ├── docs/           # Documentation
+│   ├── Engine/         # SchemaSync, MetadataCompiler, WorkflowEngine
+│   ├── Metadata/       # Entity builder, artifact scaffolder, resource controller
+│   ├── Models/         # VoltModel, FileModel
+│   ├── Role/           # Role management
+│   ├── Security/       # PermissionResolver
+│   ├── System/         # System status, settings, error logs
+│   └── Validation/     # MetadataValidator
+├── public/             # Web server root
+├── tests/              # PHPUnit tests
+└── vendor/             # Composer dependencies
+```
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+## Development
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+```bash
+# Chạy PHPUnit tests
+composer test
 
-## Project Docs
+# Kiểm tra syntax
+find core/ -name '*.php' -exec php -l {} \;
+```
 
-- [Entity Builder](docs/entity-builder.md) describes the metadata builder UI, supported field types, and schema sync rules.
+## License
+
+Volt Framework — Internal project.
+Built on [CodeIgniter 4](https://codeigniter.com).

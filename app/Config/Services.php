@@ -9,6 +9,7 @@ use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Engine\WorkflowEngine;
+use Volt\Core\Events\EventBus;
 use Volt\Core\Security\PermissionResolver;
 use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
@@ -120,5 +121,14 @@ class Services extends BaseService
         }
 
         return new ErrorLogService();
+    }
+
+    public static function voltEventBus(?bool $getShared = true): EventBus
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltEventBus');
+        }
+
+        return new EventBus();
     }
 }

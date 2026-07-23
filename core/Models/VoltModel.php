@@ -48,6 +48,7 @@ abstract class VoltModel extends Model
     private const ACTION_DELETE = 'delete';
     private const ACTION_READ = 'read';
     private const ACTION_SUBMIT = 'submit';
+    private const ACTION_APPROVE = 'approve';
     private const ACTION_CANCEL = 'cancel';
     private const ACTION_AMEND = 'amend';
 
@@ -83,7 +84,7 @@ abstract class VoltModel extends Model
      * @param array<string, mixed> $data
      * @return array<string, mixed>|object|string|int|null
      */
-    public function insert($data = null, bool $returnID = true): array|object|string|int|null
+    public function insert($data = null, bool $returnID = true): array|object|string|int|bool|null
     {
         $childData = $this->extractChildData($data);
         $data = $this->stripChildData($data);
@@ -404,7 +405,7 @@ abstract class VoltModel extends Model
 
     public function approve(string $id, ?string $comment = null): array
     {
-        $this->assertPermission('submit');
+        $this->assertPermission(self::ACTION_APPROVE);
 
         $engine = $this->workflowEngine();
         $result = $engine->applyTransition($this->entityName, $id, 'approve', $comment);
@@ -424,7 +425,7 @@ abstract class VoltModel extends Model
 
     public function amend(string $id): array|object|string|int|null
     {
-        $this->assertPermission('create');
+        $this->assertPermission(self::ACTION_AMEND);
 
         $existing = $this->find($id);
         if (! is_array($existing)) {
@@ -436,24 +437,47 @@ abstract class VoltModel extends Model
             throw new RuntimeException("Only cancelled documents can be amended.");
         }
 
-        unset($existing['creation'], $existing['modified']);
-        $newName = $this->generateDocumentName();
-        $existing['name'] = $newName;
-        unset($existing['amended_from']);
-        $existing['docstatus'] = 0;
-        $existing['workflow_state'] = 'Draft';
+        $engine = $this->workflowEngine();
+        $workflow = $engine->getWorkflow($this->entityName) ?? $engine->getImplicitWorkflow($this->entityName);
+        $currentState = (string) ($existing['workflow_state'] ?? 'Cancelled');
+        $workflowName = (string) ($workflow['name'] ?? 'implicit');
 
-        $newName = $this->insert($existing);
-
-        if (is_array($newName)) {
-            return $newName;
+        if (! $engine->canTransition($workflowName, $currentState, 'amend')) {
+            throw new RuntimeException(
+                "Amend not allowed from state '{$currentState}' for document {$id}."
+            );
         }
 
-        $this->update($id, ['amended_from' => $newName]);
+        $db = VoltDatabase::connection();
+        $db->transStart();
 
-        $record = $this->find($newName);
+        try {
+            unset($existing['creation'], $existing['modified']);
+            $newName = $this->generateDocumentName();
+            $existing['name'] = $newName;
+            unset($existing['amended_from']);
+            $existing['docstatus'] = 0;
+            $existing['workflow_state'] = 'Draft';
 
-        return is_array($record) ? $record : [];
+            $insertResult = $this->insert($existing, false);
+
+            if ($insertResult === false) {
+                throw new RuntimeException("Failed to create amended document.");
+            }
+
+            $newRecordName = $newName;
+
+            $db->table($this->table)->where($this->primaryKey, $id)->update(['amended_from' => $newRecordName]);
+
+            $db->transComplete();
+
+            $record = $this->find($newRecordName);
+
+            return is_array($record) ? $record : [];
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
+        }
     }
 
     private function generateDocumentName(): string
@@ -519,6 +543,7 @@ abstract class VoltModel extends Model
         $workflowState = (string) ($record['workflow_state'] ?? 'Draft');
         $engine = $this->workflowEngine();
         $states = $engine->getStates($this->entityName);
+        $found = false;
 
         foreach ($states as $state) {
             if (! is_array($state)) {
@@ -527,11 +552,18 @@ abstract class VoltModel extends Model
             if ((string) ($state['name'] ?? '') !== $workflowState) {
                 continue;
             }
+            $found = true;
             if (! (bool) ($state['allow_edit'] ?? true)) {
                 throw new RuntimeException(
                     "Document {$id} is in state '{$workflowState}' and cannot be edited."
                 );
             }
+        }
+
+        if (! $found) {
+            throw new RuntimeException(
+                "Workflow state '{$workflowState}' not found in workflow definition for entity '{$this->entityName}'."
+            );
         }
     }
 
@@ -597,6 +629,13 @@ abstract class VoltModel extends Model
     protected function voltBeforeUpdate(array $data): array
     {
         $this->assertPermission(self::ACTION_WRITE);
+
+        $rawId = $data['id'] ?? '';
+        $id = is_array($rawId) ? (string) reset($rawId) : (string) $rawId;
+        if ($id !== '') {
+            $this->assertDocumentEditable($id);
+        }
+
         $this->captureSnapshot(self::ACTION_WRITE, $data);
 
         return $this->normalizeWritePayload($data, false);
