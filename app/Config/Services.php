@@ -14,6 +14,7 @@ use Volt\Core\Security\PermissionResolver;
 use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
 use Volt\Core\System\Services\SystemStatusService;
+use Volt\Core\Metadata\Services\PageService;
 use Volt\Core\Validation\MetadataValidator;
 
 /**
@@ -130,5 +131,14 @@ class Services extends BaseService
         }
 
         return new EventBus();
+    }
+
+    public static function voltPage(?bool $getShared = true): PageService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltPage');
+        }
+
+        return new PageService();
     }
 }

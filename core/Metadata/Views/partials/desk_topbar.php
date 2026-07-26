@@ -42,6 +42,9 @@ $common = $lang['common'] ?? [];
                         <a href="<?= site_url('desk/system-status') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-status' ? 'font-semibold text-slate-900' : '' ?>">
                             <?= esc($nav['system_status'] ?? 'System Status') ?>
                         </a>
+                        <a href="<?= site_url('desk/pages') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'pages' ? 'font-semibold text-slate-900' : '' ?>">
+                            Pages
+                        </a>
                     <?php endif; ?>
                     <?php if ($canViewErrorLogs): ?>
                         <a href="<?= site_url('desk/error-logs') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'error-logs' ? 'font-semibold text-slate-900' : '' ?>">

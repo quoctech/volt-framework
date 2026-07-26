@@ -127,6 +127,7 @@ class AwesomeBarModel
             ['item_name' => 'entity_list',    'label' => 'Entity List',    'description' => 'Xem danh sách entity metadata',                'route' => 'desk/entities',         'module' => null],
             ['item_name' => 'entity_builder',  'label' => 'Entity Builder',  'description' => 'Xây dựng và cấu hình entity',                    'route' => 'desk/entity-builder',   'module' => null],
             ['item_name' => 'create_module',   'label' => 'Create Module',   'description' => 'Tạo module mới',                               'route' => 'desk/create-module',    'module' => null],
+            ['item_name' => 'pages',           'label' => 'Pages',           'description' => 'Quản lý custom pages',                         'route' => 'desk/pages',            'module' => null],
             ['item_name' => 'user_list',       'label' => 'User List',       'description' => 'Quản lý người dùng',                            'route' => 'desk/users',            'module' => null],
             ['item_name' => 'role_list',       'label' => 'Role List',       'description' => 'Quản lý role và phân quyền',                    'route' => 'desk/roles',            'module' => null],
             ['item_name' => 'system_status',   'label' => 'System Status',   'description' => 'Kiểm tra trạng thái runtime, cache và database', 'route' => 'desk/system-status',    'module' => null],
