@@ -10,7 +10,7 @@ $routes->get('api/ping', 'Volt\Core\System\Controllers\HealthController::index')
 
 $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers'], static function (RouteCollection $routes): void {
     $routes->get('login', 'AuthController::login', ['filter' => 'guest']);
-    $routes->post('login', 'AuthController::authenticate', ['filter' => 'guest,throttle']);
+    $routes->post('login', 'AuthController::authenticate', ['filter' => ['guest', 'throttle']]);
     $routes->post('setup', 'AuthController::setup', ['filter' => 'guest']);
     $routes->post('logout', 'AuthController::logout', ['filter' => 'auth']);
 
