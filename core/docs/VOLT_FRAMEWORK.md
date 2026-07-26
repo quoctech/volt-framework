@@ -25,6 +25,7 @@
 16. [Role & Permission](#16-role--permission)
 17. [Routes](#17-routes)
 18. [Entity Builder — UI](#18-entity-builder--ui)
+19. [Pages (Custom Pages)](#19-pages-custom-pages)
 
 ---
 
@@ -97,6 +98,7 @@ Namespace: `Volt\Core` → `core/` (registered in `app/Config/Autoload.php`)
 | `sys_audit_trail` | Nhật ký thay đổi |
 | `sys_queue_job` | Hàng đợi tác vụ nền |
 | `sys_module` | Danh mục module runtime |
+| `sys_page` | Custom page metadata (HTML/CSS/JS, roles, route) |
 | `sys_role` | Danh mục role |
 | `sys_awesome_bar` | Index điều hướng & search |
 | `sys_setting` | Cấu hình runtime |
@@ -840,6 +842,10 @@ Chức năng: Quick search và navigation cho Desk UI.
 - `AwesomeBarModel` — query `sys_awesome_bar` index
 - `SyncAwesomeBar` command — rebuild index từ entities
 
+**Integration:**
+- Core pages (Desk, Entity List, Entity Builder, Pages, System Status, Error Logs, ...) được seed bởi `AwesomeBarModel::seedCorePages()`
+- Custom pages tự động đăng ký vào `sys_awesome_bar` khi save (`PageService::save()`) và xóa khi delete (`PageService::delete()`)
+
 Route: `GET /api/awesome-bar/search` (filter `auth`)
 
 ---
@@ -955,6 +961,26 @@ File: `app/Config/Routes.php`
 | `/api/file/delete/{uuid}` | FileController::delete | auth |
 | `/api/file/list/{entity}/{name}/{field?}` | FileController::listByEntity | auth |
 
+### Page routes (auto-generated)
+
+Custom pages được đăng ký động qua file `app/Config/PageRoutes.php`, sinh bởi `PageService::regeneratePageRoutes()`. File này được `require` ở cuối `app/Config/Routes.php`.
+
+```
+Route: /{route} → PageController::serve/{route}
+```
+
+Các route reserved không được dùng làm page route: `health`, `ping`, `login`, `logout`, `setup`, `desk`, `api`.
+
+### Page management routes (admin)
+
+| Route | Controller | Mô tả |
+|-------|------------|-------|
+| `/desk/pages` | PageController::index | Danh sách pages |
+| `/desk/pages/create` | PageController::create | Tạo page mới |
+| `/desk/pages/edit/{name}` | PageController::edit | Sửa page |
+| `POST /api/pages/save` | PageController::save | API lưu page |
+| `POST /api/pages/delete/{name}` | PageController::delete | API xóa page |
+
 ### Module routes (auto-generated)
 
 Mỗi module có file `Config/Routes.php` riêng, sinh bởi `ArtifactScaffolder`.
@@ -1025,6 +1051,84 @@ public function onUpdate(array $data, array $context): void     // Post-update
 - Desk / Entity List: filter `auth`
 - Entity Builder + Create Module: filter `admin`
 - CRUD API (module routes): filter `auth`
+
+---
+
+---
+
+## 19. Pages (Custom Pages)
+
+### 19.1 Tổng quan
+
+Pages cho phép admin tạo custom page với HTML/CSS/JS tùy chỉnh, phục vụ qua route riêng (`/pagename`). Mỗi page có thể giới hạn quyền truy cập theo role.
+
+**Flow:**
+```
+Admin UI (/desk/pages) → PageController::save()
+  ├─ Upsert sys_page (DB)
+  ├─ Scaffold file artifacts (app/Modules/{Module}/Pages/{name}.html/.css/.js)
+  └─ Regenerate PageRoutes.php
+```
+
+### 19.2 Database
+
+**Table:** `sys_page`
+
+| Column | Type | Mô tả |
+|--------|------|-------|
+| `name` | VARCHAR(100) PK | Page name (slug, lowercase underscore) |
+| `module` | VARCHAR(50) | Module chứa page |
+| `label` | VARCHAR(200) | Tên hiển thị |
+| `icon` | VARCHAR(100) | Icon class |
+| `route` | VARCHAR(200) | URL path (unique) |
+| `html_content` | TEXT | Nội dung HTML |
+| `css_content` | TEXT | CSS inline |
+| `js_content` | TEXT | JavaScript inline |
+| `roles` | JSONB | Role access control (`[]` = all authenticated users) |
+| `is_active` | SMALLINT | 0/1 |
+| `created_at` | TIMESTAMP | |
+| `updated_at` | TIMESTAMP | |
+
+### 19.3 Components
+
+| Component | File | Mô tả |
+|-----------|------|-------|
+| `PageModel` | `core/Metadata/Models/PageModel.php` | CRUD `sys_page` |
+| `PageService` | `core/Metadata/Services/PageService.php` | Business logic: save, scaffold files, regenerate routes, route validation, awesome bar |
+| `PageController` | `core/Metadata/Controllers/PageController.php` | 6 endpoints: index, create, edit, save, delete, serve |
+| `page_list` | `core/Metadata/Views/pages/page_list.php` | List view (table + Create button) |
+| `page_form` | `core/Metadata/Views/pages/page_form.php` | Create/edit form (name, label, module, route, HTML/CSS/JS editors, role checkboxes) |
+
+### 19.4 Route strategy
+
+- **Builder routes** (`/desk/pages`, `/desk/pages/create`, `/desk/pages/edit/{name}`) trong admin group
+- **API routes** (`POST /api/pages/save`, `POST /api/pages/delete/{name}`) trong admin group
+- **Serve routes** (auto-generated `PageRoutes.php`): `/{route}` → `PageController::serve/{route}`
+- Route động được require ở cuối `Routes.php`: `require __DIR__ . '/PageRoutes.php'`
+- Reserved routes (`health`, `ping`, `login`, `logout`, `setup`, `desk`, `api`) bị chặn khi tạo page
+
+### 19.5 Access control
+
+- `roles` JSONB column: empty array → tất cả authenticated users
+- Specific roles → user phải có ít nhất một role
+- Admin luôn bypass được role check
+
+### 19.6 File scaffolding
+
+Khi save, `PageService::scaffoldPageFiles()` tạo 3 files trong `app/Modules/{Module}/Pages/`:
+- `{name}.html` — HTML content
+- `{name}.css` — CSS content
+- `{name}.js` — JavaScript content
+
+Khi delete hoặc đổi module, file cũ được xóa tự động.
+
+### 19.7 Desk integration
+
+| Integration | Location |
+|-------------|----------|
+| Desk card | `/desk` — "Pages" card trong admin grid (`desk.php`) |
+| Topbar nav | Admin topbar — "Pages" link (`desk_topbar.php`) |
+| AwesomeBar | `sys_awesome_bar` — "Pages" entry (`seedCorePages()`) + individual pages on save |
 
 ---
 

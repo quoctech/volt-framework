@@ -256,6 +256,7 @@ Mục tiêu:
 
 Hạng mục:
 
+- ✅ Page List (custom pages CRUD) — triển khai CI4 Views + Alpine.js cho quản lý page
 - backend biên dịch layout thành ma trận 2D
 - Alpine.js renderer cho form/list
 - hỗ trợ grid child table
@@ -293,6 +294,7 @@ Tiêu chí hoàn thành:
 
 ## Backlog kỹ thuật
 
+- ~~custom page management (Page List)~~ ✅ `core/Metadata/` — PageModel, PageService, PageController, page_list + page_form views, route gen, scaffold, AwesomeBar integration
 - multi-tenant strategy
 - soft delete chuẩn hóa
 - ~~event bus nội bộ~~ ✅ `core/Events/` — EventBus + Event class + 7 dispatch points in VoltModel
@@ -316,6 +318,7 @@ Nếu bắt đầu code tiếp từ trạng thái repo hiện tại, thứ tự 
 8. tạo `PermissionResolver`
 9. thêm audit trail tự động
 10. làm UI quản trị bằng CI4 Views + Alpine.js + Tailwind CSS
+    - ✅ Page List (custom pages CRUD) — `core/Metadata/Views/pages/`
 
 ## Tài liệu liên quan
 
