@@ -6,6 +6,7 @@ namespace Volt\Core\Controllers;
 
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\Response;
+use Config\Services;
 use Volt\Core\Models\FileModel;
 
 final class FileController extends Controller
@@ -66,12 +67,15 @@ final class FileController extends Controller
         $isPrivate        = (int) ($this->request->getPost('is_private') ?? 1);
         $owner            = session()->get('user_name') ?? 'system';
 
+        $thumbnailPath = $this->generateThumbnail($destPath, $mimeType, $datePath, $uuid);
+
         $record = [
             'name'               => $uuid,
             'file_name'          => $originalName,
             'file_path'          => $filePath,
             'file_size'          => $file->getSizeByUnit('b'),
             'file_type'          => $mimeType,
+            'thumbnail_path'     => $thumbnailPath,
             'attached_to_entity' => $attachedToEntity ?: null,
             'attached_to_name'   => $attachedToName ?: null,
             'attached_to_field'  => $attachedToField ?: null,
@@ -129,6 +133,29 @@ final class FileController extends Controller
             'status' => 'ok',
             'data' => $files,
         ]);
+    }
+
+    private function generateThumbnail(string $sourcePath, string $mimeType, string $datePath, string $uuid): ?string
+    {
+        if (!str_starts_with($mimeType, 'image/')) {
+            return null;
+        }
+
+        try {
+            $thumbName = $uuid . '_thumb.webp';
+            $thumbPath = $datePath . '/' . $thumbName;
+            $destPath = WRITEPATH . 'uploads/' . $thumbPath;
+
+            Services::image()
+                ->withFile($sourcePath)
+                ->fit(300, 300, 'center')
+                ->convert(IMAGETYPE_WEBP)
+                ->save($destPath, 80);
+
+            return $thumbPath;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function generateUUID(): string

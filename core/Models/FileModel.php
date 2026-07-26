@@ -15,6 +15,7 @@ final class FileModel extends Model
     protected $protectFields = false;
     protected $allowedFields = [
         'name', 'file_name', 'file_path', 'file_size', 'file_type',
+        'thumbnail_path',
         'attached_to_entity', 'attached_to_name', 'attached_to_field',
         'is_private', 'owner', 'creation', 'modified',
     ];
@@ -64,6 +65,14 @@ final class FileModel extends Model
         $filePath = WRITEPATH . 'uploads/' . $file['file_path'];
         if (is_file($filePath)) {
             @unlink($filePath);
+        }
+
+        $thumbnailPath = $file['thumbnail_path'] ?? '';
+        if ($thumbnailPath !== '') {
+            $thumbFull = WRITEPATH . 'uploads/' . $thumbnailPath;
+            if (is_file($thumbFull)) {
+                @unlink($thumbFull);
+            }
         }
 
         return $this->delete($name);
