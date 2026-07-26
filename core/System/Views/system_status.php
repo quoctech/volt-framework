@@ -2,100 +2,112 @@
 
 /** @var array<string, mixed> $report */
 $report = $report ?? [];
-$summary = $report['summary'] ?? ['ok' => 0, 'warning' => 0, 'error' => 0, 'total' => 0];
-$checks = $report['checks'] ?? [];
-$resources = $report['resources'] ?? [];
-$overallStatus = (string) ($report['overallStatus'] ?? 'warning');
 $generatedAt = (string) ($report['generatedAt'] ?? '');
+$phpVersion = (string) ($report['phpVersion'] ?? PHP_VERSION);
+$extensions = $report['extensions'] ?? [];
+$resources = $report['resources'] ?? [];
 
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $ss = $lang['system_status_page'] ?? [];
 
-$statusClasses = [
-    'ok' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
-    'error' => 'border-rose-200 bg-rose-50 text-rose-800',
-];
+$cpuLabels = [$ss['resource_cpu_load_1m'] ?? '', $ss['resource_cpu_load_5m'] ?? '', $ss['resource_cpu_load_15m'] ?? ''];
+$ramLabels = [$ss['resource_ram_total'] ?? '', $ss['resource_ram_available'] ?? '', $ss['resource_ram_used'] ?? ''];
+$phpResourceLabels = [$ss['resource_php_memory_usage'] ?? '', $ss['resource_php_peak_memory'] ?? ''];
 
-$rowClasses = [
-    'ok' => 'border-emerald-100 bg-emerald-50/60',
-    'warning' => 'border-amber-100 bg-amber-50/60',
-    'error' => 'border-rose-100 bg-rose-50/60',
-];
+$cpuItems = [];
+$ramItems = [];
+$phpResourceItems = [];
 
-$statusLabels = [
-    'ok' => $ss['ok'] ?? 'OK',
-    'warning' => $ss['warning'] ?? 'Warning',
-    'error' => $ss['error'] ?? 'Error',
-];
+foreach ($resources as $item) {
+    $label = (string) ($item['label'] ?? '');
+    if (in_array($label, $cpuLabels, true)) {
+        $cpuItems[] = $item;
+    } elseif (in_array($label, $ramLabels, true)) {
+        $ramItems[] = $item;
+    } elseif (in_array($label, $phpResourceLabels, true)) {
+        $phpResourceItems[] = $item;
+    }
+}
 ?>
-<div class="space-y-4">
+<div class="space-y-3">
     <div class="rounded border border-slate-200 bg-white px-5 py-4">
         <div class="flex items-center justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="truncate text-xl font-semibold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
-            </div>
-            <div class="flex shrink-0 items-center gap-3 whitespace-nowrap">
-                <span class="inline-flex rounded border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide <?= esc($statusClasses[$overallStatus] ?? $statusClasses['warning']) ?>">
-                    <?= esc($statusLabels[$overallStatus] ?? 'Warning') ?>
-                </span>
-                <span class="text-xs text-slate-500"><?= esc($generatedAt) ?></span>
-            </div>
+            <h1 class="text-xl font-semibold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
+            <span class="text-xs text-slate-500"><?= esc($generatedAt) ?></span>
         </div>
+        <div class="mt-1 text-sm text-slate-500">PHP <?= esc($phpVersion) ?></div>
     </div>
 
-    <?php if ($resources !== []): ?>
-        <div class="grid gap-3 md:grid-cols-4">
-            <?php foreach (array_slice($resources, 0, 4) as $item): ?>
-                <div class="overflow-hidden rounded border border-slate-200 bg-white px-4 py-3">
-                    <div class="truncate text-[11px] uppercase tracking-[0.18em] text-slate-500"><?= esc((string) ($item['label'] ?? '')) ?></div>
-                    <div class="truncate text-sm font-semibold text-slate-900"><?= esc((string) ($item['value'] ?? '')) ?></div>
-                </div>
+    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
+        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
+            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
+            CPU Load
+        </summary>
+        <div class="border-t border-slate-100 px-5 py-3">
+            <?php foreach ($cpuItems as $item): ?>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
+                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
+            </div>
             <?php endforeach; ?>
         </div>
-    <?php endif; ?>
+    </details>
 
-    <div class="grid gap-3 md:grid-cols-4">
-        <div class="overflow-hidden rounded border border-slate-200 bg-white px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.18em] text-slate-500"><?= esc($ss['checks'] ?? 'Checks') ?></div>
-            <div class="mt-1 text-2xl font-semibold text-slate-900"><?= esc((string) ($summary['total'] ?? 0)) ?></div>
-        </div>
-        <div class="overflow-hidden rounded border border-emerald-200 bg-white px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.18em] text-emerald-700"><?= esc($ss['ok'] ?? 'OK') ?></div>
-            <div class="mt-1 text-2xl font-semibold text-emerald-900"><?= esc((string) ($summary['ok'] ?? 0)) ?></div>
-        </div>
-        <div class="overflow-hidden rounded border border-amber-200 bg-white px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.18em] text-amber-700"><?= esc($ss['warning'] ?? 'Warning') ?></div>
-            <div class="mt-1 text-2xl font-semibold text-amber-900"><?= esc((string) ($summary['warning'] ?? 0)) ?></div>
-        </div>
-        <div class="overflow-hidden rounded border border-rose-200 bg-white px-4 py-3">
-            <div class="text-xs uppercase tracking-[0.18em] text-rose-700"><?= esc($ss['error'] ?? 'Error') ?></div>
-            <div class="mt-1 text-2xl font-semibold text-rose-900"><?= esc((string) ($summary['error'] ?? 0)) ?></div>
-        </div>
-    </div>
-
-    <div class="overflow-x-auto rounded border border-slate-200 bg-white">
-        <div class="grid min-w-[980px] grid-cols-[280px_120px_1fr] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            <div><?= esc($ss['checks'] ?? 'Checks') ?></div>
-            <div><?= esc($ss['status'] ?? 'Status') ?></div>
-            <div><?= esc($ss['recommendation'] ?? 'Recommendation') ?></div>
-        </div>
-
-        <?php foreach ($checks as $check): ?>
-            <?php $status = (string) ($check['status'] ?? 'warning'); ?>
-            <div class="grid min-w-[980px] grid-cols-[280px_120px_1fr] gap-3 border-b px-4 py-3 last:border-b-0 <?= esc($rowClasses[$status] ?? $rowClasses['warning']) ?>">
-                <div class="min-w-0 overflow-hidden whitespace-nowrap">
-                    <div class="truncate text-sm font-medium text-slate-900"><?= esc((string) ($check['title'] ?? 'Untitled check')) ?></div>
-                </div>
-                <div class="flex items-center whitespace-nowrap">
-                    <span class="inline-flex rounded border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide <?= esc($statusClasses[$status] ?? $statusClasses['warning']) ?>">
-                        <?= esc($statusLabels[$status] ?? 'Warning') ?>
-                    </span>
-                </div>
-                <div class="min-w-0 overflow-hidden whitespace-nowrap text-sm text-slate-600">
-                    <span class="truncate"><?= esc((string) ($check['summary'] ?? '')) ?> <span class="text-slate-400">•</span> <?= esc((string) ($check['recommendation'] ?? '')) ?></span>
-                </div>
+    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
+        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
+            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
+            Memory (RAM)
+        </summary>
+        <div class="border-t border-slate-100 px-5 py-3">
+            <?php foreach ($ramItems as $item): ?>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
+                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
             </div>
-        <?php endforeach; ?>
-    </div>
+            <?php endforeach; ?>
+        </div>
+    </details>
+
+    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
+        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
+            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
+            PHP
+        </summary>
+        <div class="border-t border-slate-100 px-5 py-3">
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600">Version</span>
+                <span class="font-medium text-slate-900"><?= esc($phpVersion) ?></span>
+            </div>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600">Memory Limit</span>
+                <span class="font-medium text-slate-900"><?= esc(ini_get('memory_limit') ?: 'n/a') ?></span>
+            </div>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600">Max Execution</span>
+                <span class="font-medium text-slate-900"><?= esc(ini_get('max_execution_time') ?: 'n/a') ?>s</span>
+            </div>
+            <?php foreach ($phpResourceItems as $item): ?>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
+                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </details>
+
+    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
+        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
+            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
+            Required Extensions
+        </summary>
+        <div class="border-t border-slate-100 px-5 py-3">
+            <?php foreach ($extensions as $ext): ?>
+            <?php $ok = ($ext['value'] ?? '') === ($ss['loaded'] ?? 'Loaded'); ?>
+            <div class="flex justify-between py-1 text-sm">
+                <span class="text-slate-600"><?= esc($ext['label'] ?? '') ?></span>
+                <span class="font-medium <?= $ok ? 'text-emerald-600' : 'text-rose-600' ?>"><?= esc($ext['value'] ?? '') ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </details>
 </div>
