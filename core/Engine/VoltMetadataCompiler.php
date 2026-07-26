@@ -257,6 +257,10 @@ final class VoltMetadataCompiler
     private function deepPatch(array $base, array $patch): array
     {
         foreach ($patch as $key => $value) {
+            if ($value === [] || $value === null) {
+                continue;
+            }
+
             if (
                 is_array($value)
                 && isset($base[$key])

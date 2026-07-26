@@ -295,7 +295,7 @@ Tiêu chí hoàn thành:
 
 - multi-tenant strategy
 - soft delete chuẩn hóa
-- event bus nội bộ
+- ~~event bus nội bộ~~ ✅ `core/Events/` — EventBus + Event class + 7 dispatch points in VoltModel
 - import/export engine
 - attachment subsystem
 - full-text search strategy

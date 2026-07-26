@@ -23,7 +23,7 @@
     },
     "fields": {
         "employee": {
-            "id": 107,
+            "id": 33,
             "parent": "leave",
             "fieldname": "employee",
             "label": "Employee",
@@ -43,12 +43,12 @@
             "default_value": ""
         },
         "from_date": {
-            "id": 108,
+            "id": 34,
             "parent": "leave",
             "fieldname": "from_date",
             "label": "From Date",
             "fieldtype": "Date",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 1,
             "read_only": 0,
@@ -61,12 +61,12 @@
             "in_list_view": true
         },
         "to_date": {
-            "id": 109,
+            "id": 35,
             "parent": "leave",
             "fieldname": "to_date",
             "label": "To Date",
             "fieldtype": "Date",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 1,
             "read_only": 0,
@@ -79,12 +79,12 @@
             "in_list_view": true
         },
         "reason": {
-            "id": 110,
+            "id": 36,
             "parent": "leave",
             "fieldname": "reason",
             "label": "Reason",
             "fieldtype": "Text",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 0,
             "read_only": 0,
@@ -162,7 +162,12 @@
                 "custom_attributes": "{}"
             }
         ],
-        "states_order": []
+        "states_order": [
+            "Draft",
+            "Submitted",
+            "Approved",
+            "Cancelled"
+        ]
     },
     "layout": {
         "sessions": [
@@ -177,7 +182,7 @@
     "cache": {
         "key": "volt_metadata_entity_v1_leave_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-23T15:41:45+00:00",
+        "compiledAt": "2026-07-26T07:05:50+00:00",
         "role": null
     },
     "source": {
@@ -192,7 +197,7 @@
         },
         "fields": [
             {
-                "id": "107",
+                "id": "33",
                 "parent": "leave",
                 "fieldname": "employee",
                 "label": "Employee",
@@ -205,12 +210,12 @@
                 "idx": "1"
             },
             {
-                "id": "108",
+                "id": "34",
                 "parent": "leave",
                 "fieldname": "from_date",
                 "label": "From Date",
                 "fieldtype": "Date",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "1",
                 "read_only": "0",
@@ -218,12 +223,12 @@
                 "idx": "2"
             },
             {
-                "id": "109",
+                "id": "35",
                 "parent": "leave",
                 "fieldname": "to_date",
                 "label": "To Date",
                 "fieldtype": "Date",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "1",
                 "read_only": "0",
@@ -231,12 +236,12 @@
                 "idx": "3"
             },
             {
-                "id": "110",
+                "id": "36",
                 "parent": "leave",
                 "fieldname": "reason",
                 "label": "Reason",
                 "fieldtype": "Text",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",

@@ -24,7 +24,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
 <body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
-    <div x-data="employeeeducationFormApp({
+    <div x-data="test_evtFormApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             listUrl: <?= esc(json_encode($listUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             saveUrl: <?= esc(json_encode($saveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -42,7 +42,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
         <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
             <div>
                 <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500"><?= esc('/hrms/employeeeducation') ?></p>
+                <p class="text-zinc-500"><?= esc('/core/test_evt') ?></p>
             </div>
             <div class="flex items-center gap-2">
                 <template x-if="isSubmittable && recordName">
@@ -199,6 +199,6 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
         </section>
     </div>
 
-    <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employeeeducation/employeeeducation_form.js'); ?></script>
+    <script><?php readfile(APPPATH . 'Modules/Core/Entities/TestEvt/test_evt_form.js'); ?></script>
 </body>
 </html>

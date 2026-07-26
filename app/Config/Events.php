@@ -5,6 +5,7 @@ namespace Config;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Exceptions\FrameworkException;
 use CodeIgniter\HotReloader\HotReloader;
+use Volt\Core\Events\Event;
 
 /*
  * --------------------------------------------------------------------
@@ -54,4 +55,14 @@ Events::on('pre_system', static function (): void {
             });
         }
     }
+
+    // Volt Event Bus sample listeners
+    $bus = service('voltEventBus');
+    $bus->listen('volt.model.created', static function (Event $e): void {
+        log_message('info', sprintf(
+            '[EventBus] %s created: %s',
+            $e->get('entity'),
+            $e->get('id'),
+        ));
+    });
 });

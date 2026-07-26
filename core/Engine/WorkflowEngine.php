@@ -154,13 +154,14 @@ final class WorkflowEngine
 
         if ($comment !== null) {
             $this->db->table('sys_audit_trail')->insert([
-                'entity'   => $entityName,
-                'document' => $documentName,
-                'action'   => 'workflow:' . $action,
-                'before'   => json_encode(['workflow_state' => $currentState]),
-                'after'    => json_encode(['workflow_state' => $targetState, 'comment' => $comment]),
-                'owner'    => $actorName,
-                'creation' => date('Y-m-d H:i:s'),
+                'entity'     => $entityName,
+                'doc_id'     => $documentName,
+                'action'     => 'workflow:' . $action,
+                'changed_by' => $actorName,
+                'delta'      => json_encode([
+                    'before' => ['workflow_state' => $currentState],
+                    'after'  => ['workflow_state' => $targetState, 'comment' => $comment],
+                ]),
             ]);
         }
 

@@ -9,6 +9,7 @@
 1. [Tổng quan](#1-tổng-quan)
 2. [Cấu trúc thư mục core](#2-cấu-trúc-thư-mục-core)
 3. [Database — Hệ thống bảng sys_*](#3-database--hệ-thống-bảng-sys_)
+   - [3.3 QueryParser](#33-queryparser)
 4. [Metadata System](#4-metadata-system)
 5. [Engine Layer](#5-engine-layer)
 6. [Workflow Engine](#6-workflow-engine)
@@ -16,13 +17,14 @@
 8. [Controllers](#8-controllers)
 9. [Auth & Security](#9-auth--security)
 10. [Audit & Logging](#10-audit--logging)
-11. [Commands](#11-commands)
-12. [File/Attachment System](#12-fileattachment-system)
-13. [Awesome Bar](#13-awesome-bar)
-14. [Multilingual](#14-multilingual)
-15. [Role & Permission](#15-role--permission)
-16. [Routes](#16-routes)
-17. [Entity Builder — UI](#17-entity-builder--ui)
+11. [Events & Event Bus](#11-events--event-bus)
+12. [Commands](#12-commands)
+13. [File/Attachment System](#13-fileattachment-system)
+14. [Awesome Bar](#14-awesome-bar)
+15. [Multilingual](#15-multilingual)
+16. [Role & Permission](#16-role--permission)
+17. [Routes](#17-routes)
+18. [Entity Builder — UI](#18-entity-builder--ui)
 
 ---
 
@@ -132,6 +134,54 @@ Child table (`istable=1`) có thêm:
 - Entity: `tab_` + `snake_case(entity_name)` — ví dụ `tab_employee`
 - System: `sys_` + `snake_case(name)` — ví dụ `sys_entity`
 - Resolver: `Volt\Core\Database\TableNameResolver`
+
+### 3.3 QueryParser
+
+**File:** `core/Database/QueryParser.php`
+
+Parser query parameters từ REST API (`restIndex`) — filter, sort, phân trang, field selection. Tích hợp với `PermissionResolver` để tự động loại bỏ field mà user không có quyền read.
+
+**Usage:**
+```php
+$query = new QueryParser(
+    builder: $model->builder(),
+    entityName: 'employee',
+    permissionResolver: service('voltPermissionResolver'),
+    compiledMeta: $compiler->compileEntity('employee'),
+);
+
+$result = $query->apply($request->getGet());
+// $result = ['builder' => BaseBuilder, 'total' => int, 'page' => int, 'perPage' => int]
+$rows = $result['builder']->get()->getResultArray();
+```
+
+**Query parameters:**
+
+| Param | Format | Ví dụ |
+|-------|--------|-------|
+| `filters` | JSON array of tuples `[field, op, value]` | `[["status","=","Active"],["age",">=",18]]` |
+| `fields` | Comma-separated hoặc JSON array | `name,status,age` hoặc `["name","status"]` |
+| `order_by` | `field dir` | `creation desc` |
+| `page` | Integer ≥ 1 | `2` |
+| `per_page` | One of: 10, 20, 50, 100, 200, 500, 1000, 2500 | `20` |
+| `q` | Free-text search (LIKE trên string fields) | `john` |
+
+**Supported operators:**
+
+| Operator | Mô tả |
+|----------|-------|
+| `=` | Equals |
+| `!=` | Not equals |
+| `>` / `>=` / `<` / `<=` | Comparison |
+| `like` / `not like` | Pattern match (CI4 builder) |
+| `in` / `not in` | Array membership (value là JSON array) |
+| `between` | Range (value là `[from, to]`) |
+
+**Security:**
+- Field names được validate chỉ cho phép `[a-zA-Z_][a-zA-Z0-9_]*` và phải tồn tại trong compiled metadata hoặc system fields
+- Operator phải thuộc whitelist
+- Values được truyền qua CI4 parameterized queries (không concatenate vào SQL)
+- Fields filter tự động loại bỏ field không có quyền `read`
 
 ---
 
@@ -335,17 +385,33 @@ Key methods:
 
 ### 6.4 VoltModel workflow methods
 
-VoltModel bổ sung 4 methods cho workflow:
+VoltModel bổ sung 5 methods cho workflow:
 
 ```php
 $model->submit($id, $comment = null);   // Submit → docstatus=1, workflow_state='Submitted'
+$model->approve($id, $comment = null);  // Approve → docstatus=1, workflow_state='Approved'
 $model->cancel($id, $comment = null);   // Cancel → docstatus=2, workflow_state='Cancelled'
-$model->amend($id);                      // Amend → tạo bản copy mới, docstatus=0, workflow_state='Draft'
+$model->amend($id, $comment = null);    // Amend → tạo bản copy mới, docstatus=0, workflow_state='Draft'
 $model->assertDocumentEditable($id);    // Throw nếu doc không editable ở state hiện tại
 $model->assertWorkflowTransition($id, $action);  // Throw nếu action không hợp lệ từ state hiện tại
 ```
 
-### 6.5 API endpoints (auto-generated)
+Khi truyền `$comment`, workflow engine tự động ghi vào `sys_audit_trail` với action `workflow:submit`, `workflow:approve`, `workflow:cancel`, hoặc `workflow:amend`. Nếu không có comment, audit trail không được ghi.
+
+### 6.5 Audit trail format
+
+Mỗi workflow transition có comment được ghi vào `sys_audit_trail` với cấu trúc:
+
+| Column | Giá trị |
+|--------|---------|
+| `entity` | Tên entity (VD: `leave`) |
+| `doc_id` | Document name |
+| `action` | `workflow:submit`, `workflow:approve`, `workflow:cancel`, `workflow:amend` |
+| `changed_by` | Actor name (từ `voltAuth->currentUser()` hoặc `'system'`) |
+| `delta` | JSON: `{before: {workflow_state}, after: {workflow_state, comment}}` |
+| `changed_at` | Timestamp (mặc định `CURRENT_TIMESTAMP`) |
+
+### 6.6 API endpoints (auto-generated)
 
 Mỗi entity có `is_submittable = true` được sinh thêm 4 API routes:
 
@@ -358,7 +424,7 @@ Mỗi entity có `is_submittable = true` được sinh thêm 4 API routes:
 
 Các endpoint đều nhận JSON body tùy chọn với field `comment` (string).
 
-### 6.6 Cấu hình Entity Builder
+### 6.7 Cấu hình Entity Builder
 
 Trong Entity Builder (Settings tab), checkbox **Submittable**:
 - Khi bật, entity được đánh dấu `is_submittable = true`
@@ -366,7 +432,7 @@ Trong Entity Builder (Settings tab), checkbox **Submittable**:
 - ArtifactScaffolder sinh routes + model methods hỗ trợ workflow
 - Implicit workflow được kích hoạt mặc định
 
-### 6.7 Custom workflow
+### 6.8 Custom workflow
 
 Workflow custom được định nghĩa qua migration seed:
 
@@ -465,11 +531,26 @@ Controller REST trung tâm, sinh tự động trong module route. Xử lý CRUD 
 
 | Method | Route | Mô tả |
 |--------|-------|-------|
-| `restIndex` | GET `/{module}/api/{entity}` | List + pagination + search |
+| `restIndex` | GET `/{module}/api/{entity}` | List + filter + sort + pagination + field selection (xem query params bên dưới) |
 | `restShow` | GET `/{module}/api/{entity}/load/{name}` | Load một record |
 | `restStore` | POST `/{module}/api/{entity}/save` | Tạo mới |
 | `restUpdate` | POST `/{module}/api/{entity}/save` | Cập nhật (nếu có name) |
 | `restDestroy` | POST `/{module}/api/{entity}/delete/{name}` | Xóa |
+
+**restIndex query parameters** (xử lý bởi `QueryParser`):
+
+| Param | Format | Ví dụ |
+|-------|--------|-------|
+| `filters` | JSON array `[field, op, value]` | `[["status","=","Active"]]` |
+| `fields` | Comma-separated hoặc JSON array | `name,status` |
+| `order_by` | `field dir` | `creation desc` |
+| `page` | Integer ≥ 1 | `2` |
+| `per_page` | 10 / 20 / 50 / 100 / 200 / 500 / 1000 / 2500 | `20` |
+| `q` | Free-text search | `john` |
+
+Operators: `=`, `!=`, `>`, `>=`, `<`, `<=`, `like`, `not like`, `in`, `not in`, `between`.
+
+Field selection tự động loại bỏ field không có quyền `read`. Tất cả giá trị được truyền qua parameterized query (chống SQL injection).
 
 Response format:
 - List: `{data: [...], meta: {page, per_page, total, total_pages}}`
@@ -606,7 +687,54 @@ Service alias: `voltErrorLog`
 
 ---
 
-## 11. Commands
+## 11. Events & Event Bus
+
+### 11.1 EventBus
+
+**File:** `core/Events/EventBus.php`
+**File (Event):** `core/Events/Event.php`
+
+Event Bus nội bộ cho phép các module lắng nghe và phản hồi sự kiện phát sinh từ core mà không cần can thiệp vào core code.
+
+```php
+// Listener đăng ký trong app/Config/Events.php
+\CodeIgniter\Events\Events::on('pre_system', function () {
+    service('voltEventBus')->listen('volt.model.*', function (Event $e) {
+        log_message('info', sprintf(
+            '[%s] Entity=%s ID=%s',
+            $e->getName(), $e->get('entity'), $e->get('id')
+        ));
+    });
+});
+
+// Dispatch
+service('voltEventBus')->dispatch(new Event('volt.model.created', [
+    'entity' => 'employee',
+    'id'     => 'E-2024-00001',
+]));
+```
+
+### 11.2 Events dispatched by VoltModel
+
+| Event name | Trigger | Payload |
+|---|---|---|
+| `volt.model.created` | `voltAfterInsert` | `entity`, `id`, `data` |
+| `volt.model.updated` | `voltAfterUpdate` | `entity`, `id`, `data` |
+| `volt.model.deleted` | `voltAfterDelete` | `entity`, `id` |
+| `volt.model.submitted` | `submit()` | `entity`, `id`, `result`, `comment` |
+| `volt.model.approved` | `approve()` | `entity`, `id`, `result`, `comment` |
+| `volt.model.cancelled` | `cancel()` | `entity`, `id`, `result`, `comment` |
+| `volt.model.amended` | `amend()` | `entity`, `old_id`, `new_id`, `record` |
+
+### 11.3 Pattern
+
+- Listener đăng ký qua `EventBus::listen(name, callable)` — hỗ trợ wildcard `*` (VD: `volt.model.*`)
+- Event payload được set/get qua `Event::get(key)` / `Event::set(key, value)`
+- EventBus dùng instance singleton (service `voltEventBus`)
+
+---
+
+## 12. Commands
 
 ### volt:sync
 
@@ -649,9 +777,19 @@ Quét và xóa entity artifact dư thừa (tương tác y/n).
 
 Đồng bộ Awesome Bar index từ entities.
 
+### volt:register-entities
+
+Đọc file JSON trong `app/Modules/*/Entities/*/` và đăng ký entity vào `sys_entity`, `sys_entity_field`, `sys_entity_custom`, cùng workflow (`sys_workflow`, `sys_workflow_state`, `sys_workflow_transition`):
+
+```bash
+php spark volt:register-entities
+```
+
+Chỉ dùng cho lần đầu deploy hoặc import entity từ JSON đã compiled. Bỏ qua entity đã tồn tại.
+
 ---
 
-## 12. File/Attachment System
+## 13. File/Attachment System
 
 ### sys_file table
 
@@ -691,7 +829,7 @@ GET  /api/file/list/{entity}/{name}/{field?}
 
 ---
 
-## 13. Awesome Bar
+## 14. Awesome Bar
 
 **Namespace:** `Volt\Core\AwesomeBar`
 
@@ -706,7 +844,7 @@ Route: `GET /api/awesome-bar/search` (filter `auth`)
 
 ---
 
-## 14. Multilingual
+## 15. Multilingual
 
 **File:** `core/Config/Lang/LangService.php`
 
@@ -732,7 +870,7 @@ echo \Volt\Core\Config\Lang\LangService::get('common.save');
 
 ---
 
-## 15. Role & Permission
+## 16. Role & Permission
 
 ### Role management
 
@@ -770,7 +908,7 @@ $resolver->can('employee', 'read', null, 'salary'); // Field-level
 
 ---
 
-## 16. Routes
+## 17. Routes
 
 File: `app/Config/Routes.php`
 
@@ -839,7 +977,7 @@ $routes->group('hrms', ['filter' => 'auth'], function (RouteCollection $routes):
 
 ---
 
-## 17. Entity Builder — UI
+## 18. Entity Builder — UI
 
 ### Pages
 

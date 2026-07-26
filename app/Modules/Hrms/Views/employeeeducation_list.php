@@ -11,10 +11,8 @@ $columns = json_decode('[{"fieldname":"name","label":"Name","fieldtype":"Data"}]
 if ($isSubmittable) {
     $columns[] = ['fieldname' => 'workflow_state', 'label' => 'State', 'fieldtype' => 'Data'];
 }
-<?php
 $__lang = \Volt\Core\Config\Lang\LangService::load();
-?>
-<!doctype html>
+?><!doctype html>
 <html lang="<?= esc($__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">

@@ -23,7 +23,7 @@
     },
     "fields": {
         "employee_name": {
-            "id": 1,
+            "id": 25,
             "parent": "employee",
             "fieldname": "employee_name",
             "label": "Tên Nhân Viên",
@@ -43,12 +43,12 @@
             "default_value": ""
         },
         "employee_age": {
-            "id": 3,
+            "id": 26,
             "parent": "employee",
             "fieldname": "employee_age",
             "label": "Tuổi Nhân Viên",
             "fieldtype": "Int",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 0,
             "read_only": 0,
@@ -61,12 +61,12 @@
             "in_list_view": true
         },
         "attach_4": {
-            "id": 104,
+            "id": 27,
             "parent": "employee",
             "fieldname": "attach_4",
             "label": "Attach 4",
             "fieldtype": "Attach",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 0,
             "read_only": 0,
@@ -79,12 +79,12 @@
             "in_list_view": false
         },
         "attach_image_5": {
-            "id": 105,
+            "id": 28,
             "parent": "employee",
             "fieldname": "attach_image_5",
             "label": "Attach Image 5",
             "fieldtype": "Attach Image",
-            "length": null,
+            "length": 255,
             "options": "",
             "reqd": 0,
             "read_only": 0,
@@ -97,12 +97,12 @@
             "in_list_view": false
         },
         "education": {
-            "id": 88,
+            "id": 29,
             "parent": "employee",
             "fieldname": "education",
             "label": "Education",
             "fieldtype": "Table",
-            "length": null,
+            "length": 255,
             "options": "EmployeeEducation:separate",
             "reqd": 0,
             "read_only": 0,
@@ -188,12 +188,17 @@
                 "custom_attributes": "{}"
             }
         ],
-        "states_order": []
+        "states_order": [
+            "Draft",
+            "Pending Approval",
+            "Approved",
+            "Rejected"
+        ]
     },
     "cache": {
         "key": "volt_metadata_entity_v1_employee_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-23T15:31:10+00:00",
+        "compiledAt": "2026-07-26T07:05:50+00:00",
         "role": null
     },
     "source": {
@@ -208,7 +213,7 @@
         },
         "fields": [
             {
-                "id": "1",
+                "id": "25",
                 "parent": "employee",
                 "fieldname": "employee_name",
                 "label": "Tên Nhân Viên",
@@ -221,12 +226,12 @@
                 "idx": "1"
             },
             {
-                "id": "3",
+                "id": "26",
                 "parent": "employee",
                 "fieldname": "employee_age",
                 "label": "Tuổi Nhân Viên",
                 "fieldtype": "Int",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",
@@ -234,12 +239,12 @@
                 "idx": "2"
             },
             {
-                "id": "104",
+                "id": "27",
                 "parent": "employee",
                 "fieldname": "attach_4",
                 "label": "Attach 4",
                 "fieldtype": "Attach",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",
@@ -247,12 +252,12 @@
                 "idx": "3"
             },
             {
-                "id": "105",
+                "id": "28",
                 "parent": "employee",
                 "fieldname": "attach_image_5",
                 "label": "Attach Image 5",
                 "fieldtype": "Attach Image",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",
@@ -260,12 +265,12 @@
                 "idx": "4"
             },
             {
-                "id": "88",
+                "id": "29",
                 "parent": "employee",
                 "fieldname": "education",
                 "label": "Education",
                 "fieldtype": "Table",
-                "length": null,
+                "length": "255",
                 "options": "EmployeeEducation:separate",
                 "reqd": "0",
                 "read_only": "0",

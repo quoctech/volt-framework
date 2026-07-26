@@ -343,10 +343,8 @@ PHP;
 if (\$isSubmittable) {
     \$columns[] = ['fieldname' => 'workflow_state', 'label' => 'State', 'fieldtype' => 'Data'];
 }
-<?php
 \$__lang = \Volt\Core\Config\Lang\LangService::load();
-?>
-<!doctype html>
+?><!doctype html>
 <html lang="<?= esc(\$__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">
@@ -499,10 +497,8 @@ PHP;
 /** @var string \$approveUrl */
 /** @var string \$cancelUrl */
 /** @var string \$amendUrl */
-<?php
 \$__lang = \Volt\Core\Config\Lang\LangService::load();
-?>
-<!doctype html>
+?><!doctype html>
 <html lang="<?= esc(\$__lang['code'] ?? 'en') ?>">
 <head>
     <meta charset="utf-8">

@@ -48,7 +48,7 @@
     "cache": {
         "key": "volt_metadata_entity_v1_employeeeducation_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-23T15:31:10+00:00",
+        "compiledAt": "2026-07-24T12:40:18+00:00",
         "role": null
     },
     "source": {
@@ -63,12 +63,12 @@
         },
         "fields": [
             {
-                "id": "83",
+                "id": "30",
                 "parent": "employeeeducation",
                 "fieldname": "school_name",
                 "label": "School Name",
                 "fieldtype": "Data",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "1",
                 "read_only": "0",
@@ -76,12 +76,12 @@
                 "idx": "1"
             },
             {
-                "id": "84",
+                "id": "31",
                 "parent": "employeeeducation",
                 "fieldname": "degree",
                 "label": "Degree",
                 "fieldtype": "Data",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",
@@ -89,12 +89,12 @@
                 "idx": "2"
             },
             {
-                "id": "85",
+                "id": "32",
                 "parent": "employeeeducation",
                 "fieldname": "year",
                 "label": "Year",
                 "fieldtype": "Int",
-                "length": null,
+                "length": "255",
                 "options": "",
                 "reqd": "0",
                 "read_only": "0",

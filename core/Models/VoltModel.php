@@ -13,6 +13,8 @@ use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Security\PermissionResolver;
+use Volt\Core\Events\Event;
+use Volt\Core\Events\EventBus;
 use Volt\Core\Validation\MetadataValidator;
 
 abstract class VoltModel extends Model
@@ -400,6 +402,13 @@ abstract class VoltModel extends Model
         $engine = $this->workflowEngine();
         $result = $engine->applyTransition($this->entityName, $id, 'submit', $comment);
 
+        $this->eventBus()->dispatch(new Event('volt.model.submitted', [
+            'entity'  => $this->entityName,
+            'id'      => $id,
+            'result'  => $result,
+            'comment' => $comment,
+        ]));
+
         return $result;
     }
 
@@ -409,6 +418,13 @@ abstract class VoltModel extends Model
 
         $engine = $this->workflowEngine();
         $result = $engine->applyTransition($this->entityName, $id, 'approve', $comment);
+
+        $this->eventBus()->dispatch(new Event('volt.model.approved', [
+            'entity'  => $this->entityName,
+            'id'      => $id,
+            'result'  => $result,
+            'comment' => $comment,
+        ]));
 
         return $result;
     }
@@ -420,10 +436,17 @@ abstract class VoltModel extends Model
         $engine = $this->workflowEngine();
         $result = $engine->applyTransition($this->entityName, $id, 'cancel', $comment);
 
+        $this->eventBus()->dispatch(new Event('volt.model.cancelled', [
+            'entity'  => $this->entityName,
+            'id'      => $id,
+            'result'  => $result,
+            'comment' => $comment,
+        ]));
+
         return $result;
     }
 
-    public function amend(string $id): array|object|string|int|null
+    public function amend(string $id, ?string $comment = null): array|object|string|int|null
     {
         $this->assertPermission(self::ACTION_AMEND);
 
@@ -469,9 +492,30 @@ abstract class VoltModel extends Model
 
             $db->table($this->table)->where($this->primaryKey, $id)->update(['amended_from' => $newRecordName]);
 
+            if ($comment !== null) {
+                $actorName = (string) (service('voltAuth')->currentUser()?->name ?? 'system');
+                $db->table('sys_audit_trail')->insert([
+                    'entity'     => $this->entityName,
+                    'doc_id'     => $id,
+                    'action'     => 'workflow:amend',
+                    'changed_by' => $actorName,
+                    'delta'      => json_encode([
+                        'before' => ['workflow_state' => $currentState],
+                        'after'  => ['workflow_state' => 'Draft', 'comment' => $comment],
+                    ]),
+                ]);
+            }
+
             $db->transComplete();
 
             $record = $this->find($newRecordName);
+
+            $this->eventBus()->dispatch(new Event('volt.model.amended', [
+                'entity' => $this->entityName,
+                'old_id' => $id,
+                'new_id' => $newRecordName,
+                'record' => $record,
+            ]));
 
             return is_array($record) ? $record : [];
         } catch (\Throwable $e) {
@@ -479,6 +523,8 @@ abstract class VoltModel extends Model
             throw $e;
         }
     }
+
+
 
     private function generateDocumentName(): string
     {
@@ -623,6 +669,16 @@ abstract class VoltModel extends Model
     {
         $this->writeAudit(self::ACTION_CREATE, $data, null);
 
+        $entityName = $this->entityName !== '' ? $this->entityName : $this->table;
+        $id = $this->resolveDocumentId($data);
+        $savedData = isset($data[self::KEY_DATA]) && is_array($data[self::KEY_DATA]) ? $this->normalizeRowPayload($data[self::KEY_DATA]) : [];
+
+        $this->eventBus()->dispatch(new Event('volt.model.created', [
+            'entity' => $entityName,
+            'id'     => $id,
+            'data'   => $savedData,
+        ]));
+
         return $data;
     }
 
@@ -645,6 +701,16 @@ abstract class VoltModel extends Model
     {
         $this->writeAudit(self::ACTION_WRITE, $data, self::ACTION_WRITE);
 
+        $entityName = $this->entityName !== '' ? $this->entityName : $this->table;
+        $id = $this->resolveDocumentId($data);
+        $savedData = isset($data[self::KEY_DATA]) && is_array($data[self::KEY_DATA]) ? $this->normalizeRowPayload($data[self::KEY_DATA]) : [];
+
+        $this->eventBus()->dispatch(new Event('volt.model.updated', [
+            'entity' => $entityName,
+            'id'     => $id,
+            'data'   => $savedData,
+        ]));
+
         return $data;
     }
 
@@ -659,6 +725,14 @@ abstract class VoltModel extends Model
     protected function voltAfterDelete(array $data): array
     {
         $this->writeAudit(self::ACTION_DELETE, $data, self::ACTION_DELETE);
+
+        $entityName = $this->entityName !== '' ? $this->entityName : $this->table;
+        $id = $this->resolveDocumentId($data);
+
+        $this->eventBus()->dispatch(new Event('volt.model.deleted', [
+            'entity' => $entityName,
+            'id'     => $id,
+        ]));
 
         return $data;
     }
@@ -925,6 +999,11 @@ abstract class VoltModel extends Model
         }
 
         return $this->metadataValidator;
+    }
+
+    protected function eventBus(): EventBus
+    {
+        return service('voltEventBus');
     }
 
     private function snapshotKey(string $context, string|int $id): string

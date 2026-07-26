@@ -10,9 +10,11 @@ use CodeIgniter\Database\BaseConnection;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Database\QueryParser;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Engine\VoltMetadataCompiler;
+use Volt\Core\Exceptions\ValidationException;
 use Volt\Core\Models\VoltModel;
 
 final class VoltResourceController extends Controller
@@ -303,7 +305,7 @@ final class VoltResourceController extends Controller
                 return $this->respondError('Could not generate unique name after retries.', 422);
             }
 
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -319,7 +321,7 @@ final class VoltResourceController extends Controller
                 'message' => 'Record deleted.',
             ]);
         } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -334,40 +336,23 @@ final class VoltResourceController extends Controller
             return $this->respondError('Forbidden', 403);
         }
 
-        $page = max(1, (int) ($this->request->getGet('page') ?? 1));
-        $perPage = min(100, max(1, (int) ($this->request->getGet('per_page') ?? 50)));
-        $query = mb_trim((string) ($this->request->getGet('q') ?? ''));
+        $query = new QueryParser(
+            builder: $model->builder(),
+            entityName: $entityName,
+            permissionResolver: service('voltPermissionResolver'),
+            compiledMeta: $this->getCompiledMeta($entityName),
+        );
 
-        $builder = $model->builder();
-
-        if ($query !== '') {
-            $pk = $model->primaryKey;
-            $builder->groupStart();
-            $builder->like($pk, $query);
-            foreach ($model->allowedFields as $field) {
-                if ($field === $pk) {
-                    continue;
-                }
-                $builder->orLike($field, $query);
-            }
-            $builder->groupEnd();
-        }
-
-        $countBuilder = clone $builder;
-        $total = (int) $countBuilder->countAllResults(false);
-        $rows = $builder
-            ->orderBy('modified', 'DESC')
-            ->limit($perPage, ($page - 1) * $perPage)
-            ->get()
-            ->getResultArray();
+        $result = $query->apply($this->request->getGet());
+        $rows = $result['builder']->get()->getResultArray();
 
         return $this->response->setJSON([
             'data' => $rows,
             'meta' => [
-                'page'       => $page,
-                'per_page'   => $perPage,
-                'total'      => $total,
-                'total_pages' => max(1, (int) ceil($total / $perPage)),
+                'page'        => $result['page'],
+                'per_page'    => $result['perPage'],
+                'total'       => $result['total'],
+                'total_pages' => max(1, (int) ceil($result['total'] / max(1, $result['perPage']))),
             ],
         ]);
     }
@@ -426,7 +411,7 @@ final class VoltResourceController extends Controller
                 'data' => $record,
             ]);
         } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -476,7 +461,7 @@ final class VoltResourceController extends Controller
                 'data' => $record,
             ]);
         } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -496,7 +481,7 @@ final class VoltResourceController extends Controller
 
             return $this->response->setStatusCode(204);
         } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -549,7 +534,7 @@ final class VoltResourceController extends Controller
                 'data'   => $result,
             ]);
         } catch (Throwable $throwable) {
-            return $this->respondError($throwable->getMessage(), 422);
+            return $this->respondException($throwable);
         }
     }
 
@@ -1213,12 +1198,27 @@ final class VoltResourceController extends Controller
     //  RESPONSE HELPERS
     // ========================================================================
 
-    private function respondError(string $message, int $code = 400): ResponseInterface
+    private function respondError(string $message, int $code = 400, ?array $errors = null): ResponseInterface
     {
-        return $this->response->setStatusCode($code)->setJSON([
-            'status' => 'error',
+        $payload = [
+            'status'  => 'error',
             'message' => $message,
-        ]);
+        ];
+
+        if ($errors !== null && $errors !== []) {
+            $payload['errors'] = $errors;
+        }
+
+        return $this->response->setStatusCode($code)->setJSON($payload);
+    }
+
+    private function respondException(\Throwable $e): ResponseInterface
+    {
+        if ($e instanceof ValidationException) {
+            return $this->respondError($e->getMessage(), $e->getCode() ?: 422, $e->getFieldErrors());
+        }
+
+        return $this->respondError($e->getMessage(), 422);
     }
 
     private function forbiddenHtml(): ResponseInterface

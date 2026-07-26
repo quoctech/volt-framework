@@ -51,7 +51,7 @@ Chi tiết: [`core/docs/architecture.md`](core/docs/architecture.md)
 
 | File | Mô tả |
 |------|-------|
-| [`core/docs/VOLT_FRAMEWORK.md`](core/docs/VOLT_FRAMEWORK.md) | Toàn tập framework — 17 sections |
+| [`core/docs/VOLT_FRAMEWORK.md`](core/docs/VOLT_FRAMEWORK.md) | Toàn tập framework — 18 sections |
 | [`core/docs/VOLT_FRAMEWORK_RULES.md`](core/docs/VOLT_FRAMEWORK_RULES.md) | Quy tắc code bắt buộc cho AI và developer |
 | [`core/docs/architecture.md`](core/docs/architecture.md) | Kiến trúc 4-layer, metadata flow, caching |
 | [`core/docs/roadmap.md`](core/docs/roadmap.md) | Lộ trình phát triển (Phases 0-9) |
@@ -70,6 +70,7 @@ Chi tiết: [`core/docs/architecture.md`](core/docs/architecture.md)
 | `php spark volt:scaffold {EntityName}` | Sinh artifact code cho entity |
 | `php spark volt:scaffold --all` | Sinh cho tất cả entities |
 | `php spark volt:clean-entities` | Xoá entity artifact dư thừa |
+| `php spark volt:register-entities` | Đăng ký entity từ JSON vào sys_entity |
 | `php spark volt:sync-awesome-bar` | Đồng bộ awesome bar index |
 
 ## Server Requirements
