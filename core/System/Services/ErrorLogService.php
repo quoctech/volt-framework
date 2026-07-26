@@ -6,9 +6,9 @@ namespace Volt\Core\System\Services;
 
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\CLIRequest;
-use DateTimeImmutable;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\I18n\Time;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use Volt\Core\Auth\Entities\UserEntity;
@@ -93,7 +93,7 @@ final class ErrorLogService
 
     public function purge(int $retainDays = 90): int
     {
-        $cutoff = (new DateTimeImmutable("-{$retainDays} days"))->format('Y-m-d H:i:s');
+        $cutoff = Time::now()->subDays($retainDays)->toDateTimeString();
 
         $this->db->table(self::TABLE)
             ->where('created_at <', $cutoff)

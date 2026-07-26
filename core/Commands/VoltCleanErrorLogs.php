@@ -6,6 +6,7 @@ namespace Volt\Core\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
+use CodeIgniter\I18n\Time;
 use Config\Services;
 
 final class VoltCleanErrorLogs extends BaseCommand
@@ -27,7 +28,7 @@ final class VoltCleanErrorLogs extends BaseCommand
         $logService = Services::voltErrorLog();
         $db = \Volt\Core\Database\VoltDatabase::connection();
 
-        $cutoff = (new \DateTimeImmutable("-{$retainDays} days"))->format('Y-m-d H:i:s');
+        $cutoff = Time::now()->subDays($retainDays)->toDateTimeString();
 
         $count = $db->table('sys_error_log')
             ->where('created_at <', $cutoff)

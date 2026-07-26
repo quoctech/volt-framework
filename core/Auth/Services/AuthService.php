@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Auth\Services;
 
 use CodeIgniter\HTTP\IncomingRequest;
-use DateInterval;
-use DateTimeImmutable;
+use CodeIgniter\I18n\Time;
 use Volt\Core\Auth\Entities\AuthEntity;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Models\UserModel;
@@ -208,7 +207,7 @@ class AuthService
         $token = bin2hex(random_bytes(32));
         $metadata = $this->normalizeMetadata($user->user_metadata);
         $metadata['api_token_hash'] = hash('sha256', $token);
-        $metadata['api_token_expires_at'] = (new DateTimeImmutable(sprintf('+%d seconds', self::API_TOKEN_TTL_SECONDS)))->format('Y-m-d H:i:s');
+        $metadata['api_token_expires_at'] = Time::now()->addSeconds(self::API_TOKEN_TTL_SECONDS)->toDateTimeString();
 
         $payload = ['user_metadata' => $metadata];
 
@@ -232,7 +231,7 @@ class AuthService
         }
 
         $hash = hash('sha256', $bearerToken);
-        $now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $now = Time::now()->toDateTimeString();
 
         if ($this->userModel->hasColumn('api_token_hash') && $this->userModel->hasColumn('api_token_expires_at')) {
             $user = $this->userModel
@@ -362,7 +361,7 @@ class AuthService
         $metadata = $this->normalizeMetadata($user->user_metadata);
         $metadata['failed_login_attempts'] = 0;
         $metadata['locked_until'] = null;
-        $metadata['last_login_at'] = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $metadata['last_login_at'] = Time::now()->toDateTimeString();
         $payload = ['user_metadata' => $metadata];
 
         if ($this->userModel->hasColumn('failed_login_attempts')) {
@@ -386,7 +385,7 @@ class AuthService
         $lockedUntil = null;
 
         if ($attempts >= self::LOGIN_ATTEMPT_LIMIT) {
-            $lockedUntil = (new DateTimeImmutable())->add(new DateInterval('PT' . (self::LOGIN_LOCK_MINUTES * 60) . 'S'))->format('Y-m-d H:i:s');
+            $lockedUntil = Time::now()->addSeconds(self::LOGIN_LOCK_MINUTES * 60)->toDateTimeString();
             $attempts = self::LOGIN_ATTEMPT_LIMIT;
         }
 
@@ -414,7 +413,7 @@ class AuthService
             return false;
         }
 
-        return $lockedUntil > (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        return $lockedUntil > Time::now()->toDateTimeString();
     }
 
     private function normalizeRoles(mixed $roles): array

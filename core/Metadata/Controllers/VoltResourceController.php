@@ -16,6 +16,7 @@ use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Exceptions\ValidationException;
 use Volt\Core\Models\VoltModel;
+use Volt\Core\Validation\FieldValidator;
 
 final class VoltResourceController extends Controller
 {
@@ -390,6 +391,16 @@ final class VoltResourceController extends Controller
             $payload = $this->filterAllowedFields($payload, $allowedFields);
         }
 
+        $fields = $this->getFormFields($entityName);
+        $errors = (new FieldValidator())->validate($fields, $payload);
+        if ($errors !== []) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $errors,
+            ]);
+        }
+
         try {
             $id = $model->insert($payload);
             if ($id === false) {
@@ -440,6 +451,16 @@ final class VoltResourceController extends Controller
             $payload = $this->filterAllowedFields($payload, $allowedFields);
         }
         unset($payload[$model->primaryKey]);
+
+        $fields = $this->getFormFields($entityName);
+        $errors = (new FieldValidator())->validate($fields, $payload);
+        if ($errors !== []) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $errors,
+            ]);
+        }
 
         try {
             if (! $model->update($id, $payload)) {
