@@ -38,6 +38,7 @@ class Filters extends BaseFilters
         'guest'         => \Volt\Core\Auth\Filters\GuestFilter::class,
         'apiauth'       => \Volt\Core\Auth\Filters\ApiAuthFilter::class,
         'admin'         => \Volt\Core\Auth\Filters\AdminFilter::class,
+        'throttle'      => \Volt\Core\Auth\Filters\ThrottleFilter::class,
     ];
 
     /**

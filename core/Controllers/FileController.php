@@ -100,13 +100,10 @@ final class FileController extends Controller
             return $this->fail('File not found on disk.', 404);
         }
 
-        $this->response
-            ->setHeader('Content-Type', $file['file_type'] ?: 'application/octet-stream')
-            ->setHeader('Content-Disposition', 'inline; filename="' . $file['file_name'] . '"')
-            ->setHeader('Content-Length', (string) $file['file_size'])
-            ->setBody(file_get_contents($filePath));
-
-        return $this->response;
+        return $this->response->download($filePath, null)
+            ->setFileName($file['file_name'])
+            ->setContentType($file['file_type'] ?: 'application/octet-stream')
+            ->inline();
     }
 
     public function delete(string $name): Response
