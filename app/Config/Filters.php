@@ -75,6 +75,7 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'cors',
             'csrf' => ['except' => ['api/*', '*/api/*', '*/rest/*']],
             // 'invalidchars',
         ],
