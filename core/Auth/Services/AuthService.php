@@ -113,13 +113,13 @@ class AuthService
         ]);
 
         if ($this->hasAdmin()) {
-            $auth->message = 'System already has an admin.';
+            $auth->message = LangService::get('auth.admin_exists');
 
             return $auth;
         }
 
         if ($this->userModel->findByName($username)) {
-            $auth->message = 'Username already exists.';
+            $auth->message = LangService::get('auth.username_exists');
 
             return $auth;
         }
@@ -163,26 +163,26 @@ class AuthService
         $user = $this->currentUser();
 
         if (! $user instanceof UserEntity) {
-            return ['ok' => false, 'message' => 'Bạn chưa đăng nhập.'];
+            return ['ok' => false, 'message' => LangService::get('auth.not_logged_in')];
         }
 
         if (! password_verify($currentPassword, (string) $user->password)) {
-            return ['ok' => false, 'message' => 'Mật khẩu hiện tại không đúng.'];
+            return ['ok' => false, 'message' => LangService::get('auth.current_password_wrong')];
         }
 
         if (mb_strlen($newPassword) < 8) {
-            return ['ok' => false, 'message' => 'Mật khẩu mới phải có ít nhất 8 ký tự.'];
+            return ['ok' => false, 'message' => LangService::get('auth.new_password_min_length')];
         }
 
         if (password_verify($newPassword, (string) $user->password)) {
-            return ['ok' => false, 'message' => 'Mật khẩu mới phải khác mật khẩu hiện tại.'];
+            return ['ok' => false, 'message' => LangService::get('auth.new_password_same_as_old')];
         }
 
         $this->userModel->update($user->name, [
             'password' => password_hash($newPassword, PASSWORD_DEFAULT),
         ]);
 
-        return ['ok' => true, 'message' => 'Đã cập nhật mật khẩu.'];
+        return ['ok' => true, 'message' => LangService::get('auth.password_updated')];
     }
 
     /**
@@ -193,14 +193,14 @@ class AuthService
         $user = $this->currentUser();
 
         if (! $user instanceof UserEntity) {
-            return ['ok' => false, 'message' => 'Bạn chưa đăng nhập.'];
+            return ['ok' => false, 'message' => LangService::get('auth.not_logged_in')];
         }
 
         if (! password_verify($password, (string) $user->password)) {
-            return ['ok' => false, 'message' => 'Mật khẩu không đúng.'];
+            return ['ok' => false, 'message' => LangService::get('auth.password_wrong')];
         }
 
-        return ['ok' => true, 'message' => 'Xác nhận thành công.'];
+        return ['ok' => true, 'message' => LangService::get('auth.confirm_success')];
     }
 
     public function issueApiToken(UserEntity $user): string
