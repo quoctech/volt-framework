@@ -114,6 +114,12 @@ class ReportQueryBuilder
             throw new InvalidArgumentException('At least one entity is required.');
         }
 
+        $entityAliasMap = $this->buildEntityAliasMap($entities);
+
+        $columns = $this->resolveColumnAliases($columns, $entityAliasMap);
+        $filters = $this->resolveFilterAliases($filters, $entityAliasMap);
+        $orderBy = $this->resolveOrderByAliases($orderBy, $entityAliasMap);
+
         [$fromClause, $bindings] = $this->buildFromClause($entities);
 
         $hasAggregation = false;
@@ -187,6 +193,17 @@ class ReportQueryBuilder
         if ($entities === []) {
             throw new InvalidArgumentException('At least one entity is required.');
         }
+
+        $entityAliasMap = $this->buildEntityAliasMap($entities);
+        $rowFields = array_map(fn(string $f) => $this->resolveEntityPrefix($f, $entityAliasMap), $rowFields);
+        $colField = $colField !== '' ? $this->resolveEntityPrefix($colField, $entityAliasMap) : $colField;
+        foreach ($values as &$v) {
+            if (! empty($v['field'])) {
+                $v['field'] = $this->resolveEntityPrefix($v['field'], $entityAliasMap);
+            }
+        }
+        unset($v);
+        $filters = $this->resolveFilterAliases($filters, $entityAliasMap);
 
         [$fromClause, $bindings] = $this->buildFromClause($entities);
 
@@ -402,5 +419,59 @@ class ReportQueryBuilder
     private function quoteLabel(string $label): string
     {
         return '"' . str_replace('"', '""', $label) . '"';
+    }
+
+    private function buildEntityAliasMap(array $entities): array
+    {
+        $map = [];
+        foreach ($entities as $e) {
+            $name = $e['entity'] ?? '';
+            $alias = $e['alias'] ?? $name;
+            if ($name !== '') {
+                $map[$name] = $alias;
+            }
+        }
+        return $map;
+    }
+
+    private function resolveEntityPrefix(string $field, array $aliasMap): string
+    {
+        foreach ($aliasMap as $entityName => $alias) {
+            $prefix = $entityName . '.';
+            if (str_starts_with($field, $prefix)) {
+                return $alias . '.' . mb_substr($field, mb_strlen($prefix));
+            }
+        }
+        return $field;
+    }
+
+    private function resolveColumnAliases(array $columns, array $aliasMap): array
+    {
+        foreach ($columns as &$col) {
+            if (! empty($col['field'])) {
+                $col['field'] = $this->resolveEntityPrefix($col['field'], $aliasMap);
+            }
+        }
+        return $columns;
+    }
+
+    private function resolveFilterAliases(array $filters, array $aliasMap): array
+    {
+        foreach ($filters as &$filter) {
+            if (! empty($filter['field'])) {
+                $filter['field'] = $this->resolveEntityPrefix($filter['field'], $aliasMap);
+            }
+        }
+        return $filters;
+    }
+
+    private function resolveOrderByAliases(array $orderBy, array $aliasMap): array
+    {
+        foreach ($orderBy as &$order) {
+            if (! empty($order['field'])) {
+                $order['field'] = $this->resolveEntityPrefix($order['field'], $aliasMap);
+            }
+        }
+        return $orderBy;
     }
 }

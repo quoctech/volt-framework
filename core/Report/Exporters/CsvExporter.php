@@ -16,8 +16,8 @@ class CsvExporter
         foreach ($rows as $row) {
             $line = [];
             foreach ($columns as $col) {
-                $field = $col['field'] ?? '';
-                $line[] = $row[$field] ?? '';
+                $key = $col['label'] ?? $col['field'] ?? '';
+                $line[] = $row[$key] ?? '';
             }
             fputcsv($handle, $line, $delimiter);
         }

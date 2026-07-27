@@ -23,8 +23,8 @@ class XlsxExporter
 
         foreach ($rows as $rowIdx => $row) {
             foreach ($columns as $colIdx => $col) {
-                $field = $col['field'] ?? '';
-                $sheet->setCellValueByColumnAndRow($colIdx + 1, $rowIdx + 2, $row[$field] ?? '');
+                $key = $col['label'] ?? $col['field'] ?? '';
+                $sheet->setCellValueByColumnAndRow($colIdx + 1, $rowIdx + 2, $row[$key] ?? '');
             }
         }
 

@@ -125,7 +125,7 @@ window.reportFormData = <?= json_encode($report, JSON_UNESCAPED_UNICODE) ?>;
                 <datalist id="fieldSuggestions">
                     <template x-for="e in availableEntities" :key="e.name">
                         <template x-for="f in e.fields" :key="e.name + '.' + f.fieldname">
-                            <option :value="e.name + '.' + f.fieldname" :label="e.label + ': ' + f.label"></option>
+                            <option :value="(e.name.charAt(0)) + '.' + f.fieldname" :label="e.label + ': ' + f.label"></option>
                         </template>
                     </template>
                 </datalist>
@@ -488,7 +488,7 @@ function showTestResult(data) {
         data.rows.forEach(function(row) {
             html += '<tr class="border-b border-slate-100">';
             (data.columns || []).forEach(function(col) {
-                html += '<td class="px-3 py-2 text-slate-700">' + (row[col.field] ?? '') + '</td>';
+                html += '<td class="px-3 py-2 text-slate-700">' + (row[col.label] ?? '') + '</td>';
             });
             html += '</tr>';
         });

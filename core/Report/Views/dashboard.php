@@ -68,8 +68,8 @@ function initChart(canvas, reportName) {
             return;
         }
 
-        var labels = result.data.rows.map(function(r) { return r[cols[0].field] || ''; });
-        var values = result.data.rows.map(function(r) { return parseFloat(r[cols[1].field]) || 0; });
+        var labels = result.data.rows.map(function(r) { return r[cols[0].label] || ''; });
+        var values = result.data.rows.map(function(r) { return parseFloat(r[cols[1].label]) || 0; });
 
         var ctx = canvas.getContext('2d');
         chartInstances[reportName] = new Chart(ctx, {

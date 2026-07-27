@@ -101,7 +101,7 @@ function showReportResult(name, data) {
     data.rows.forEach(function(row) {
         html += '<tr class="border-b border-slate-100">';
         data.columns.forEach(function(col) {
-            html += '<td class="px-3 py-2 text-slate-700">' + (row[col.field] ?? '') + '</td>';
+            html += '<td class="px-3 py-2 text-slate-700">' + (row[col.label] ?? '') + '</td>';
         });
         html += '</tr>';
     });
