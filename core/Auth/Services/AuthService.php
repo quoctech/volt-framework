@@ -10,6 +10,7 @@ use Volt\Core\Auth\Entities\AuthEntity;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Models\UserModel;
 use Volt\Core\Config\Lang\LangService;
+use Volt\Core\Database\VoltDatabase;
 
 class AuthService
 {
@@ -46,7 +47,11 @@ class AuthService
             return null;
         }
 
-        $user = $this->userModel->findByName($username);
+        $userModel = $this->resolveUserModel(
+            $session->get(VoltDatabase::TENANT_SESSION_KEY),
+        );
+
+        $user = $userModel->findByName($username);
 
         if (! $user || ! $user->isActive()) {
             $session->remove([self::SESSION_USER_KEY, self::SESSION_ROLES_KEY, self::SESSION_LOGIN_KEY]);
@@ -57,7 +62,7 @@ class AuthService
         return $user;
     }
 
-    public function login(string $username, string $password): AuthEntity
+    public function login(string $username, string $password, ?string $tenantName = null): AuthEntity
     {
         $auth = new AuthEntity([
             'authenticated'  => false,
@@ -70,7 +75,8 @@ class AuthService
             return $auth;
         }
 
-        $user = $this->userModel->findByName($username);
+        $userModel = $this->resolveUserModel($tenantName);
+        $user = $userModel->findByName($username);
 
         if (! $user || ! $user->isActive()) {
             $auth->message = LangService::get('auth.invalid_credentials');
@@ -85,14 +91,14 @@ class AuthService
         }
 
         if (! password_verify($password, $user->password)) {
-            $this->registerFailedAttempt($user);
+            $this->registerFailedAttempt($user, $userModel);
             $auth->message = LangService::get('auth.invalid_credentials');
 
             return $auth;
         }
 
-        $this->registerSuccessfulLogin($user);
-        $this->startSession($user);
+        $this->registerSuccessfulLogin($user, $userModel);
+        $this->startSession($user, $tenantName);
 
         $auth->fill([
             'authenticated'  => true,
@@ -102,6 +108,17 @@ class AuthService
         ]);
 
         return $auth;
+    }
+
+    private function resolveUserModel(?string $tenantName): UserModel
+    {
+        if ($tenantName === null) {
+            return $this->userModel;
+        }
+
+        $db = VoltDatabase::tenantConnection($tenantName);
+
+        return new UserModel($db);
     }
 
     public function setupInitialAdmin(string $username, string $password): AuthEntity
@@ -345,42 +362,51 @@ class AuthService
         return $user;
     }
 
-    private function startSession(UserEntity $user): void
+    private function startSession(UserEntity $user, ?string $tenantName = null): void
     {
         $session = session();
         $session->regenerate(true);
-        $session->set([
+
+        $data = [
             self::SESSION_USER_KEY  => $user->name,
             self::SESSION_ROLES_KEY => $this->normalizeRoles($user->roles),
             self::SESSION_LOGIN_KEY => true,
-        ]);
+        ];
+
+        if ($tenantName !== null) {
+            $data[VoltDatabase::TENANT_SESSION_KEY] = $tenantName;
+        }
+
+        $session->set($data);
     }
 
-    private function registerSuccessfulLogin(UserEntity $user): void
+    private function registerSuccessfulLogin(UserEntity $user, ?UserModel $userModel = null): void
     {
-        $metadata = $this->normalizeMetadata($user->user_metadata);
+        $userModel ??= $this->userModel;
+        $metadata = $this->normalizeMetadata($user->user_metadata, $userModel);
         $metadata['failed_login_attempts'] = 0;
         $metadata['locked_until'] = null;
         $metadata['last_login_at'] = Time::now()->toDateTimeString();
         $payload = ['user_metadata' => $metadata];
 
-        if ($this->userModel->hasColumn('failed_login_attempts')) {
+        if ($userModel->hasColumn('failed_login_attempts')) {
             $payload['failed_login_attempts'] = 0;
         }
 
-        if ($this->userModel->hasColumn('locked_until')) {
+        if ($userModel->hasColumn('locked_until')) {
             $payload['locked_until'] = null;
         }
 
-        if ($this->userModel->hasColumn('last_login_at')) {
+        if ($userModel->hasColumn('last_login_at')) {
             $payload['last_login_at'] = $metadata['last_login_at'];
         }
 
-        $this->userModel->update($user->name, $payload);
+        $userModel->update($user->name, $payload);
     }
 
-    private function registerFailedAttempt(UserEntity $user): void
+    private function registerFailedAttempt(UserEntity $user, ?UserModel $userModel = null): void
     {
+        $userModel ??= $this->userModel;
         $attempts = ((int) $user->failed_login_attempts) + 1;
         $lockedUntil = null;
 
@@ -389,20 +415,20 @@ class AuthService
             $attempts = self::LOGIN_ATTEMPT_LIMIT;
         }
 
-        $metadata = $this->normalizeMetadata($user->user_metadata);
+        $metadata = $this->normalizeMetadata($user->user_metadata, $userModel);
         $metadata['failed_login_attempts'] = $attempts;
         $metadata['locked_until'] = $lockedUntil;
         $payload = ['user_metadata' => $metadata];
 
-        if ($this->userModel->hasColumn('failed_login_attempts')) {
+        if ($userModel->hasColumn('failed_login_attempts')) {
             $payload['failed_login_attempts'] = $attempts;
         }
 
-        if ($this->userModel->hasColumn('locked_until')) {
+        if ($userModel->hasColumn('locked_until')) {
             $payload['locked_until'] = $lockedUntil;
         }
 
-        $this->userModel->update($user->name, $payload);
+        $userModel->update($user->name, $payload);
     }
 
     private function isLocked(UserEntity $user): bool
@@ -424,8 +450,9 @@ class AuthService
         ));
     }
 
-    private function normalizeMetadata(mixed $metadata): array
+    private function normalizeMetadata(mixed $metadata, ?UserModel $userModel = null): array
     {
-        return $this->userModel->decodeJsonField($metadata);
+        $userModel ??= $this->userModel;
+        return $userModel->decodeJsonField($metadata);
     }
 }

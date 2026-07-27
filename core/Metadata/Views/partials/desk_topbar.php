@@ -51,6 +51,9 @@ $common = $lang['common'] ?? [];
                         <a href="<?= site_url('desk/dashboard') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'dashboard' ? 'font-semibold text-slate-900' : '' ?>">
                             Dashboard
                         </a>
+                        <a href="<?= site_url('desk/tenants') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'tenants' ? 'font-semibold text-slate-900' : '' ?>">
+                            <?= esc($nav['tenants'] ?? 'Tenants') ?>
+                        </a>
                     <?php endif; ?>
                     <?php if ($canViewErrorLogs): ?>
                         <a href="<?= site_url('desk/error-logs') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'error-logs' ? 'font-semibold text-slate-900' : '' ?>">

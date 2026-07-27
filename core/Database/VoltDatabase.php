@@ -5,38 +5,90 @@ declare(strict_types=1);
 namespace Volt\Core\Database;
 
 use CodeIgniter\Database\BaseConnection;
-use Config\Database as DatabaseConfig;
+use CodeIgniter\Database\Config as DatabaseConfig;
 
 final class VoltDatabase
 {
-    /**
-     * Shared database connections keyed by group name.
-     *
-     * @var array<string, BaseConnection>
-     */
+    public const TENANT_SESSION_KEY = 'tenant';
+    private const TENANT_PREFIX = 'tenant_';
+
     private static array $instances = [];
 
     private function __construct()
     {
     }
 
-    /**
-     * Get a shared database connection for the requested group.
-     */
     public static function connection(?string $group = null): BaseConnection
     {
-        $resolvedGroup = $group ?? self::defaultGroup();
-
-        if (! isset(self::$instances[$resolvedGroup])) {
-            self::$instances[$resolvedGroup] = DatabaseConfig::connect($resolvedGroup, true);
+        if ($group === null) {
+            $tenant = self::resolveTenant(null);
+            if ($tenant !== null) {
+                return self::tenantConnection($tenant);
+            }
+            $group = self::defaultGroup();
         }
 
-        return self::$instances[$resolvedGroup];
+        if (! isset(self::$instances[$group])) {
+            self::$instances[$group] = DatabaseConfig::connect($group, true);
+        }
+
+        return self::$instances[$group];
     }
 
-    /**
-     * Clear cached connections, useful for tests or runtime reconfiguration.
-     */
+    public static function tenantConnection(string $tenantName): BaseConnection
+    {
+        $cacheKey = self::TENANT_PREFIX . $tenantName;
+
+        if (isset(self::$instances[$cacheKey])) {
+            return self::$instances[$cacheKey];
+        }
+
+        $row = self::connection()
+            ->table('sys_tenant')
+            ->select('db_host, db_port, db_name, db_username, db_password')
+            ->where('name', $tenantName)
+            ->where('is_active', 1)
+            ->get()
+            ->getRowArray();
+
+        if ($row === null) {
+            throw new \RuntimeException("Tenant '{$tenantName}' not found or inactive.");
+        }
+
+        $config = [
+            'DSN'         => '',
+            'hostname'    => (string) ($row['db_host'] ?? 'localhost'),
+            'port'        => (int) ($row['db_port'] ?? 5432),
+            'username'    => (string) ($row['db_username'] ?? 'volt_admin'),
+            'password'    => (string) ($row['db_password'] ?? ''),
+            'database'    => (string) ($row['db_name'] ?? ''),
+            'DBDriver'    => 'Postgre',
+            'DBPrefix'    => '',
+            'pConnect'    => false,
+            'DBDebug'     => true,
+            'charset'     => 'utf8',
+            'DBCollat'    => 'utf8_general_ci',
+            'swapPre'     => '',
+            'encrypt'     => false,
+            'compress'    => false,
+            'strictOn'    => false,
+            'failover'    => [],
+        ];
+
+        self::$instances[$cacheKey] = DatabaseConfig::connect($config, true);
+
+        return self::$instances[$cacheKey];
+    }
+
+    public static function resolveTenant(?string $tenantName): ?string
+    {
+        $tenant = $tenantName ?? session(self::TENANT_SESSION_KEY);
+        if ($tenant === null || $tenant === '') {
+            return null;
+        }
+        return $tenant;
+    }
+
     public static function reset(): void
     {
         self::$instances = [];

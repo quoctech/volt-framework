@@ -4,6 +4,7 @@
 /** @var string $mode */
 /** @var string|null $error */
 /** @var string|null $success */
+/** @var array $tenants */
 
 $setupRequired = (bool) ($setupRequired ?? false);
 $mode = ($mode ?? '') === 'setup' || $setupRequired ? 'setup' : 'login';
@@ -119,6 +120,22 @@ $htmlLang = $lang['code'] ?? 'en';
                             placeholder="••••••••"
                         >
                     </label>
+                    <?php if (! empty($tenants)): ?>
+                        <label class="block">
+                            <span class="mb-1 block text-sm font-medium text-slate-700"><?= esc($a['tenant_label'] ?? 'Tenant') ?></span>
+                            <select
+                                id="login_tenant"
+                                name="tenant"
+                                required
+                                class="w-full border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
+                            >
+                                <option value=""><?= esc($a['tenant_placeholder'] ?? '— Select tenant —') ?></option>
+                                <?php foreach ($tenants as $t): ?>
+                                    <option value="<?= esc($t['name']) ?>"><?= esc($t['label'] ?? $t['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                    <?php endif; ?>
                     <button
                         type="submit"
                         class="w-full border border-slate-900 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"

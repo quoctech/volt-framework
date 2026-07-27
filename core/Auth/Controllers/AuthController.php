@@ -8,16 +8,19 @@ use CodeIgniter\Controller;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Config\Lang\LangService;
+use Volt\Core\Tenant\Services\TenantService;
 
 class AuthController extends Controller
 {
     private readonly AuthService $authService;
+    private readonly TenantService $tenantService;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
         $this->authService = service('voltAuth');
+        $this->tenantService = new TenantService();
     }
 
     public function index()
@@ -39,11 +42,14 @@ class AuthController extends Controller
             return redirect()->to(site_url('/'));
         }
 
+        $isSetup = $this->authService->requiresSetup();
+
         return view('auth/login', [
-            'setupRequired' => $this->authService->requiresSetup(),
-            'mode'          => $this->authService->requiresSetup() ? 'setup' : 'login',
+            'setupRequired' => $isSetup,
+            'mode'          => $isSetup ? 'setup' : 'login',
             'error'         => session()->getFlashdata('auth_error'),
             'success'       => session()->getFlashdata('auth_success'),
+            'tenants'       => $isSetup ? [] : $this->tenantService->getActive(),
         ]);
     }
 
@@ -52,19 +58,33 @@ class AuthController extends Controller
         $rules = [
             'name'     => 'required|min_length[3]|max_length[100]',
             'password' => 'required|min_length[8]|max_length[255]',
+            'tenant'   => 'required|max_length[100]',
         ];
 
         if (! $this->validate($rules)) {
             return view('auth/login', [
-                'setupRequired' => $this->authService->requiresSetup(),
+                'setupRequired' => false,
                 'mode'          => 'login',
                 'error'         => implode(' ', $this->validator->getErrors()),
+                'tenants'       => $this->tenantService->getActive(),
+            ]);
+        }
+
+        $tenant = mb_trim((string) $this->request->getPost('tenant'));
+
+        if (! $this->tenantService->exists($tenant)) {
+            return view('auth/login', [
+                'setupRequired' => false,
+                'mode'          => 'login',
+                'error'         => LangService::get('auth.invalid_tenant', 'Invalid tenant'),
+                'tenants'       => $this->tenantService->getActive(),
             ]);
         }
 
         $auth = $this->authService->login(
             mb_trim((string) $this->request->getPost('name')),
             (string) $this->request->getPost('password'),
+            $tenant,
         );
 
         if (! $auth->authenticated) {
@@ -72,6 +92,7 @@ class AuthController extends Controller
                 'setupRequired' => $auth->setup_required,
                 'mode'          => $auth->setup_required ? 'setup' : 'login',
                 'error'         => $auth->message ?? LangService::get('auth.login_failed'),
+                'tenants'       => $this->tenantService->getActive(),
             ]);
         }
 

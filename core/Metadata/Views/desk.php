@@ -57,6 +57,13 @@ $common = $lang['common'] ?? [];
                     <p class="mt-4 text-sm text-slate-500"><?= $d['roles_hint'] ?? '' ?></p>
                 </a>
 
+                <a href="<?= site_url('desk/tenants') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['tenants'] ?? 'Tenants') ?></h2>
+                    <p class="mt-2 text-sm text-slate-600"><?= $d['tenants_desc'] ?? '' ?></p>
+                    <p class="mt-4 text-sm text-slate-500"><?= $d['tenants_hint'] ?? '' ?></p>
+                </a>
+
                 <a href="<?= site_url('desk/system-status') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
                     <h2 class="mt-2 text-xl font-semibold"><?= esc($d['system_status'] ?? 'System Status') ?></h2>

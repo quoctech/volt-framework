@@ -63,6 +63,15 @@ $routes->group('desk/roles', ['namespace' => 'Volt\Core\Role\Controllers', 'filt
     $routes->post('permissions/(:segment)', 'RolePermissionController::update/$1');
 });
 
+$routes->group('desk/tenants', ['namespace' => 'Volt\Core\Tenant\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->get('/', 'TenantController::index');
+    $routes->get('create', 'TenantController::create');
+    $routes->post('store', 'TenantController::store');
+    $routes->get('edit/(:segment)', 'TenantController::edit/$1');
+    $routes->post('update/(:segment)', 'TenantController::update/$1');
+    $routes->post('delete/(:segment)', 'TenantController::delete/$1');
+});
+
 $routes->group('desk', ['namespace' => 'Volt\Core\System\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
     $routes->get('system-status', 'SystemStatusController::index');
     $routes->get('system-settings', 'SystemSettingController::index');
