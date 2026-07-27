@@ -58,7 +58,7 @@ class AuthController extends Controller
         $rules = [
             'name'     => 'required|min_length[3]|max_length[100]',
             'password' => 'required|min_length[8]|max_length[255]',
-            'tenant'   => 'required|max_length[100]',
+            'tenant'   => 'if_exist|max_length[100]',
         ];
 
         if (! $this->validate($rules)) {
@@ -70,9 +70,9 @@ class AuthController extends Controller
             ]);
         }
 
-        $tenant = mb_trim((string) $this->request->getPost('tenant'));
+        $tenant = mb_trim((string) ($this->request->getPost('tenant') ?? ''));
 
-        if (! $this->tenantService->exists($tenant)) {
+        if ($tenant !== '' && ! $this->tenantService->exists($tenant)) {
             return view('auth/login', [
                 'setupRequired' => false,
                 'mode'          => 'login',
@@ -80,6 +80,8 @@ class AuthController extends Controller
                 'tenants'       => $this->tenantService->getActive(),
             ]);
         }
+
+        $tenant = $tenant !== '' ? $tenant : null;
 
         $auth = $this->authService->login(
             mb_trim((string) $this->request->getPost('name')),
