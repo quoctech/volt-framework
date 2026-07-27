@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Volt\Core\Report\Services;
 
+use CodeIgniter\Events\Events;
+use CodeIgniter\Validation\ValidationInterface;
 use InvalidArgumentException;
 use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 use Volt\Core\Database\VoltDatabase;
@@ -14,15 +16,18 @@ class ReportService
     private readonly ReportModel $reportModel;
     private readonly ReportQueryBuilder $queryBuilder;
     private readonly PivotEngine $pivotEngine;
+    private readonly ValidationInterface $validation;
 
     public function __construct(
         ?ReportModel $reportModel = null,
         ?ReportQueryBuilder $queryBuilder = null,
         ?PivotEngine $pivotEngine = null,
+        ?ValidationInterface $validation = null,
     ) {
         $this->reportModel = $reportModel ?? new ReportModel();
         $this->queryBuilder = $queryBuilder ?? new ReportQueryBuilder();
         $this->pivotEngine = $pivotEngine ?? new PivotEngine();
+        $this->validation = $validation ?? service('validation');
     }
 
     public function getAll(): array
@@ -126,17 +131,24 @@ class ReportService
         $reportType = mb_trim((string) ($data['report_type'] ?? 'query'));
         $description = mb_trim((string) ($data['description'] ?? ''));
 
-        if ($name === '') {
-            throw new InvalidArgumentException('Report name is required.');
+        $this->validation->setRules([
+            'name'        => 'required|min_length[3]|max_length[140]',
+            'module'      => 'required|max_length[50]',
+            'report_type' => 'required|in_list[query,pivot,sql]',
+        ]);
+
+        $input = [
+            'name'        => $name,
+            'module'      => $module,
+            'report_type' => $reportType,
+        ];
+
+        if (! $this->validation->run($input)) {
+            throw new InvalidArgumentException(implode(' ', $this->validation->getErrors()));
         }
+
         if ($label === '') {
             $label = $this->titleize($name);
-        }
-        if ($module === '') {
-            throw new InvalidArgumentException('Module is required.');
-        }
-        if (! in_array($reportType, ['query', 'pivot', 'sql'], true)) {
-            throw new InvalidArgumentException('Invalid report type.');
         }
 
         $queryJson = $data['query'] ?? [];
@@ -172,6 +184,7 @@ class ReportService
         $this->reportModel->upsert($payload);
 
         $actor = service('voltAuth')->currentUser();
+        Events::trigger('report_saved', $name, $label, $module, $actor?->name ?? 'system');
         (new AwesomeBarModel())->registerEntity(
             'report_' . $name,
             $label . ' (Report)',
@@ -191,6 +204,7 @@ class ReportService
         }
 
         $this->reportModel->delete($name);
+        Events::trigger('report_deleted', $name);
         (new AwesomeBarModel())->removeEntity('report_' . $name);
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
+use CodeIgniter\Database\RawSql;
 
 class CreateSysReportTable extends Migration
 {
@@ -16,27 +17,28 @@ class CreateSysReportTable extends Migration
             return;
         }
 
-        $sql = 'CREATE TABLE ' . self::TABLE . ' ('
-            . 'name VARCHAR(140) PRIMARY KEY,'
-            . 'module VARCHAR(50) NOT NULL,'
-            . 'label VARCHAR(255) NOT NULL,'
-            . 'description TEXT DEFAULT \'\','
-            . 'report_type VARCHAR(20) NOT NULL DEFAULT \'query\','
-            . 'is_active SMALLINT DEFAULT 1,'
-            . 'query JSONB DEFAULT \'{}\'::jsonb,'
-            . 'columns JSONB DEFAULT \'[]\'::jsonb,'
-            . 'roles JSONB DEFAULT \'[]\'::jsonb,'
-            . 'charts JSONB DEFAULT \'[]\'::jsonb,'
-            . 'owner VARCHAR(100) DEFAULT \'\','
-            . 'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,'
-            . 'updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
-            . ')';
+        $this->forge->addField([
+            'name'        => ['type' => 'VARCHAR', 'constraint' => 140],
+            'module'      => ['type' => 'VARCHAR', 'constraint' => 50],
+            'label'       => ['type' => 'VARCHAR', 'constraint' => 255],
+            'description' => ['type' => 'TEXT', 'default' => ''],
+            'report_type' => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'query'],
+            'is_active'   => ['type' => 'SMALLINT', 'default' => 1],
+            'query'       => ['type' => 'JSONB', 'default' => '{}', 'null' => true],
+            'columns'     => ['type' => 'JSONB', 'default' => '[]', 'null' => true],
+            'roles'       => ['type' => 'JSONB', 'default' => '[]', 'null' => true],
+            'charts'      => ['type' => 'JSONB', 'default' => '[]', 'null' => true],
+            'owner'       => ['type' => 'VARCHAR', 'constraint' => 100, 'default' => ''],
+            'created_at'  => ['type' => 'TIMESTAMP', 'default' => new RawSql('CURRENT_TIMESTAMP'), 'null' => true],
+            'updated_at'  => ['type' => 'TIMESTAMP', 'default' => new RawSql('CURRENT_TIMESTAMP'), 'null' => true],
+        ]);
 
-        $this->db->query($sql);
+        $this->forge->addKey('name', true);
+        $this->forge->createTable(self::TABLE);
     }
 
     public function down()
     {
-        $this->db->query('DROP TABLE IF EXISTS ' . self::TABLE);
+        $this->forge->dropTable(self::TABLE, true);
     }
 }

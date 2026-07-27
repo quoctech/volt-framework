@@ -4,62 +4,45 @@ declare(strict_types=1);
 
 namespace Volt\Core\Report\Models;
 
-use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Model;
 use Volt\Core\Database\VoltDatabase;
 
-class ReportModel
+class ReportModel extends Model
 {
-    private readonly BaseConnection $db;
+    protected $table          = 'sys_report';
+    protected $primaryKey     = 'name';
+    protected $useAutoIncrement = false;
+    protected $returnType     = 'array';
+    protected $useSoftDeletes = false;
+    protected $useTimestamps  = true;
+    protected $dateFormat     = 'datetime';
+    protected $createdField   = 'created_at';
+    protected $updatedField   = 'updated_at';
+
+    protected $allowedFields = [
+        'name', 'module', 'label', 'description', 'report_type',
+        'is_active', 'query', 'columns', 'roles', 'charts', 'owner',
+    ];
 
     public function __construct()
     {
-        $this->db = VoltDatabase::connection();
+        parent::__construct(VoltDatabase::connection());
     }
 
     public function getAll(): array
     {
-        return $this->db->table('sys_report')
-            ->orderBy('label', 'ASC')
-            ->get()
-            ->getResultArray();
+        $this->orderBy('label', 'ASC');
+        return $this->findAll();
     }
 
     public function getByName(string $name): ?array
     {
-        $row = $this->db->table('sys_report')
-            ->where('name', $name)
-            ->get()
-            ->getRowArray();
-
+        $row = $this->find($name);
         return is_array($row) ? $row : null;
-    }
-
-    public function exists(string $name): bool
-    {
-        return $this->db->table('sys_report')
-            ->where('name', $name)
-            ->countAllResults() > 0;
     }
 
     public function upsert(array $data): void
     {
-        $now = date('Y-m-d H:i:s');
-        $data['updated_at'] = $now;
-
-        if ($this->exists($data['name'])) {
-            $this->db->table('sys_report')
-                ->where('name', $data['name'])
-                ->update($data);
-        } else {
-            $data['created_at'] = $now;
-            $this->db->table('sys_report')->insert($data);
-        }
-    }
-
-    public function delete(string $name): void
-    {
-        $this->db->table('sys_report')
-            ->where('name', $name)
-            ->delete();
+        $this->save($data);
     }
 }

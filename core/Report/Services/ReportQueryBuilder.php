@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Report\Services;
 
 use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\BaseBuilder;
 use InvalidArgumentException;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
@@ -120,10 +121,9 @@ class ReportQueryBuilder
         $filters = $this->resolveFilterAliases($filters, $entityAliasMap);
         $orderBy = $this->resolveOrderByAliases($orderBy, $entityAliasMap);
 
-        [$fromClause, $bindings] = $this->buildFromClause($entities);
+        $builder = $this->buildQueryBuilder($entities);
 
         $hasAggregation = false;
-        $selectParts = [];
         $groupByParts = [];
 
         foreach ($columns as $col) {
@@ -136,49 +136,37 @@ class ReportQueryBuilder
             if (! empty($col['aggregation'])) {
                 $agg = strtoupper(mb_trim($col['aggregation']));
                 $this->validateAggregation($agg);
-                $selectParts[] = "{$agg}({$expression}) AS " . $this->quoteLabel($label);
+                $builder->select("{$agg}({$expression}) AS " . $this->quoteLabel($label));
                 $hasAggregation = true;
             } else {
-                $selectParts[] = "{$expression} AS " . $this->quoteLabel($label);
+                $builder->select("{$expression} AS " . $this->quoteLabel($label));
                 $groupByParts[] = $expression;
             }
         }
 
-        if ($selectParts === []) {
-            throw new InvalidArgumentException('At least one column is required.');
-        }
-
-        $sql = 'SELECT ' . implode(', ', $selectParts) . ' FROM ' . $fromClause;
-
-        [$whereSql, $whereBindings] = $this->buildWhereClause($filters);
-        if ($whereSql !== '') {
-            $sql .= ' WHERE ' . $whereSql;
-            $bindings = array_merge($bindings, $whereBindings);
-        }
-
         if ($hasAggregation && $groupByParts !== []) {
-            $sql .= ' GROUP BY ' . implode(', ', $groupByParts);
+            $builder->groupBy(implode(', ', $groupByParts));
         }
+
+        $this->applyFilters($builder, $filters);
 
         $having = $query['having'] ?? [];
         if ($having !== []) {
-            $havingParts = [];
             foreach ($having as $h) {
-                $havingParts[] = "{$h['field']} {$h['operator']} ?";
-                $bindings[] = $h['value'];
+                $builder->having("{$h['field']} {$h['operator']}", $h['value'], true);
             }
-            $sql .= ' HAVING ' . implode(' AND ', $havingParts);
         }
 
         foreach ($orderBy as $order) {
             $dir = strtoupper($order['dir'] ?? 'ASC');
             $dir = in_array($dir, ['ASC', 'DESC'], true) ? $dir : 'ASC';
-            $sql .= ' ORDER BY ' . ($order['field'] ?? '1') . " {$dir}";
+            $builder->orderBy($order['field'] ?? '1', $dir);
         }
 
-        $sql .= " LIMIT {$limit}";
+        $builder->limit($limit);
+        $rows = $builder->get()->getResultArray();
 
-        return $this->executeSqlQuery($sql, $bindings, $columns);
+        return $this->buildResult($columns, $rows);
     }
 
     private function buildFlatQuery(array $query): array
@@ -205,21 +193,17 @@ class ReportQueryBuilder
         unset($v);
         $filters = $this->resolveFilterAliases($filters, $entityAliasMap);
 
-        [$fromClause, $bindings] = $this->buildFromClause($entities);
+        $builder = $this->buildQueryBuilder($entities);
 
-        $selectParts = [];
         $columnsMeta = [];
-        $fieldsForSelect = [];
 
         foreach ($rowFields as $rf) {
-            $selectParts[] = "{$rf} AS " . $this->quoteLabel($rf);
+            $builder->select("{$rf} AS " . $this->quoteLabel($rf));
             $columnsMeta[] = ['field' => $rf, 'label' => $rf, 'aggregation' => null, 'is_row' => true];
-            $fieldsForSelect[] = $rf;
         }
 
         if ($colField !== '') {
-            $selectParts[] = "{$colField} AS " . $this->quoteLabel($colField);
-            $fieldsForSelect[] = $colField;
+            $builder->select("{$colField} AS " . $this->quoteLabel($colField));
         }
 
         foreach ($values as $v) {
@@ -235,35 +219,37 @@ class ReportQueryBuilder
                 $expr = $field;
             }
             $label = $v['label'] ?? $field;
-            $selectParts[] = "{$expr} AS " . $this->quoteLabel($label);
+            $builder->select("{$expr} AS " . $this->quoteLabel($label));
             $columnsMeta[] = [
                 'field'       => $field,
                 'label'       => $label,
                 'aggregation' => $agg ?: null,
                 'is_value'    => true,
             ];
-            $fieldsForSelect[] = $expr;
-        }
-
-        if ($selectParts === []) {
-            throw new InvalidArgumentException('At least one field is required.');
-        }
-
-        $sql = 'SELECT ' . implode(', ', $selectParts) . ' FROM ' . $fromClause;
-
-        [$whereSql, $whereBindings] = $this->buildWhereClause($filters);
-        if ($whereSql !== '') {
-            $sql .= ' WHERE ' . $whereSql;
-            $bindings = array_merge($bindings, $whereBindings);
         }
 
         if ($rowFields !== []) {
-            $sql .= ' GROUP BY ' . implode(', ', $rowFields) . ", {$colField}";
+            $groupBy = implode(', ', $rowFields);
+            if ($colField !== '') {
+                $groupBy .= ', ' . $colField;
+            }
+            $builder->groupBy($groupBy);
         }
 
-        $sql .= " LIMIT {$limit}";
+        $this->applyFilters($builder, $filters);
 
-        return $this->executeSqlQuery($sql, $bindings, $columnsMeta);
+        $builder->limit($limit);
+        $rows = $builder->get()->getResultArray();
+
+        if ($columnsMeta === []) {
+            throw new InvalidArgumentException('At least one field is required.');
+        }
+
+        return [
+            'columns' => $columnsMeta,
+            'rows'    => $rows,
+            'total'   => count($rows),
+        ];
     }
 
     private function executeSql(array $query): array
@@ -317,40 +303,34 @@ class ReportQueryBuilder
         ];
     }
 
-    private function buildFromClause(array $entities): array
+    private function buildQueryBuilder(array $entities): BaseBuilder
     {
-        $fromParts = [];
-        $bindings = [];
+        $first = $entities[0];
+        $firstEntity = $first['entity'] ?? '';
+        $firstAlias = $first['alias'] ?? $firstEntity;
+        $firstTable = TableNameResolver::entity($firstEntity);
+        $builder = $this->db->table("{$firstTable} AS {$firstAlias}");
 
-        foreach ($entities as $i => $entity) {
+        for ($i = 1; $i < count($entities); $i++) {
+            $entity = $entities[$i];
             $entityName = $entity['entity'] ?? '';
             $alias = $entity['alias'] ?? $entityName;
             $tableName = TableNameResolver::entity($entityName);
+            $joinType = strtoupper(mb_trim($entity['join_type'] ?? 'LEFT'));
 
-            if ($i === 0) {
-                $fromParts[] = "\"{$tableName}\" AS {$alias}";
-            } else {
-                $joinType = strtoupper(mb_trim($entity['join_type'] ?? 'LEFT'));
-                if (! in_array($joinType, ['LEFT', 'RIGHT', 'INNER', 'FULL', 'CROSS'], true)) {
-                    $joinType = 'LEFT';
-                }
-                $joinOn = $entity['join_on'] ?? '';
-                $fromParts[] = "{$joinType} JOIN \"{$tableName}\" AS {$alias} ON {$joinOn}";
+            if (! in_array($joinType, ['LEFT', 'RIGHT', 'INNER', 'FULL', 'CROSS'], true)) {
+                $joinType = 'LEFT';
             }
+
+            $joinOn = $entity['join_on'] ?? '';
+            $builder->join("{$tableName} AS {$alias}", $joinOn, $joinType);
         }
 
-        return [implode(' ', $fromParts), $bindings];
+        return $builder;
     }
 
-    private function buildWhereClause(array $filters): array
+    private function applyFilters(BaseBuilder $builder, array $filters): void
     {
-        if ($filters === []) {
-            return ['', []];
-        }
-
-        $parts = [];
-        $bindings = [];
-
         foreach ($filters as $filter) {
             $field = $filter['field'] ?? '';
             $operator = mb_strtolower(mb_trim($filter['operator'] ?? '='));
@@ -360,38 +340,53 @@ class ReportQueryBuilder
                 continue;
             }
 
-            if (in_array($operator, ['in', 'not in'], true)) {
-                $vals = is_array($value) ? $value : [$value];
-                $placeholders = implode(', ', array_fill(0, count($vals), '?'));
-                $parts[] = "{$field} {$operator} ({$placeholders})";
-                $bindings = array_merge($bindings, $vals);
-            } elseif ($operator === 'between' && is_array($value) && count($value) === 2) {
-                $parts[] = "{$field} BETWEEN ? AND ?";
-                $bindings[] = (string) $value[0];
-                $bindings[] = (string) $value[1];
-            } elseif (in_array($operator, ['like', 'not like'], true)) {
-                $parts[] = "{$field} {$operator} ?";
-                $bindings[] = '%' . $value . '%';
-            } elseif ($operator === 'is' || $operator === 'is not') {
-                $parts[] = "{$field} {$operator} ?";
-                $bindings[] = $value;
-            } else {
-                if (! in_array($operator, ['=', '!=', '<>', '>', '>=', '<', '<='], true)) {
-                    $operator = '=';
-                }
-                $parts[] = "{$field} {$operator} ?";
-                $bindings[] = $value;
+            switch ($operator) {
+                case 'in':
+                    $vals = is_array($value) ? $value : [$value];
+                    $builder->whereIn($field, $vals);
+                    break;
+
+                case 'not in':
+                    $vals = is_array($value) ? $value : [$value];
+                    $builder->whereNotIn($field, $vals);
+                    break;
+
+                case 'between':
+                    $vals = is_array($value) && count($value) === 2 ? $value : [$value, $value];
+                    $builder->groupStart();
+                    $builder->where("{$field} >= ?", $vals[0]);
+                    $builder->where("{$field} <= ?", $vals[1]);
+                    $builder->groupEnd();
+                    break;
+
+                case 'like':
+                    $builder->like($field, $value);
+                    break;
+
+                case 'not like':
+                    $builder->notLike($field, $value);
+                    break;
+
+                case 'is':
+                    $builder->where($field, $value === '' ? null : $value);
+                    break;
+
+                case 'is not':
+                    $builder->where("{$field} IS NOT", $value === '' ? null : $value);
+                    break;
+
+                default:
+                    if (! in_array($operator, ['=', '!=', '<>', '>', '>=', '<', '<='], true)) {
+                        $operator = '=';
+                    }
+                    $builder->where("{$field} {$operator}", $value);
+                    break;
             }
         }
-
-        return [implode(' AND ', $parts), $bindings];
     }
 
-    private function executeSqlQuery(string $sql, array $bindings, array $columns): array
+    private function buildResult(array $columns, array $rows): array
     {
-        $result = $this->db->query($sql, $bindings);
-        $rows = $result->getResultArray();
-
         $colMeta = [];
         foreach ($columns as $col) {
             $colMeta[] = [

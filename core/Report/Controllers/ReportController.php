@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Volt\Core\Report\Controllers;
 
+use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\Controller;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -11,6 +12,8 @@ use Volt\Core\Report\Services\ReportService;
 
 class ReportController extends Controller
 {
+    use ResponseTrait;
+
     private readonly ReportService $reportService;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
@@ -56,25 +59,21 @@ class ReportController extends Controller
 
     public function save(): ResponseInterface
     {
-        $this->validateRequest();
-
         $data = $this->request->getJSON(true);
 
         if (! is_array($data)) {
-            return $this->fail('Invalid request body.');
+            return $this->fail('Invalid request body.', 400);
         }
 
         try {
             $report = $this->reportService->save($data);
 
-            return $this->response
-                ->setContentType('application/json')
-                ->setBody(json_encode([
-                    'success' => true,
-                    'report'  => $report,
-                ]));
+            return $this->respond([
+                'success' => true,
+                'report'  => $report,
+            ]);
         } catch (\InvalidArgumentException $e) {
-            return $this->fail($e->getMessage());
+            return $this->fail($e->getMessage(), 400);
         }
     }
 
@@ -82,9 +81,7 @@ class ReportController extends Controller
     {
         $this->reportService->delete($name);
 
-        return $this->response
-            ->setContentType('application/json')
-            ->setBody(json_encode(['success' => true]));
+        return $this->respond(['success' => true]);
     }
 
     public function run(string $name): ResponseInterface
@@ -95,21 +92,19 @@ class ReportController extends Controller
             if ($name === '_test') {
                 $query = $params['query'] ?? [];
                 if ($query === []) {
-                    return $this->fail('Query payload is required for test run.');
+                    return $this->fail('Query payload is required for test run.', 400);
                 }
                 $result = $this->reportService->runQuery($query, $params);
             } else {
                 $result = $this->reportService->run($name, $params);
             }
 
-            return $this->response
-                ->setContentType('application/json')
-                ->setBody(json_encode([
-                    'success' => true,
-                    'data'    => $result,
-                ]));
+            return $this->respond([
+                'success' => true,
+                'data'    => $result,
+            ]);
         } catch (\InvalidArgumentException $e) {
-            return $this->fail($e->getMessage());
+            return $this->fail($e->getMessage(), 400);
         }
     }
 
@@ -125,30 +120,24 @@ class ReportController extends Controller
                 ->setHeader('Content-Disposition', 'attachment; filename="' . $name . '.' . $export['extension'] . '"')
                 ->setBody($export['data']);
         } catch (\InvalidArgumentException $e) {
-            return $this->fail($e->getMessage());
+            return $this->fail($e->getMessage(), 400);
         }
     }
 
     public function entities(): ResponseInterface
     {
-        return $this->response
-            ->setContentType('application/json')
-            ->setBody(json_encode([
-                'success'  => true,
-                'entities' => $this->reportService->getEntities(),
-            ]));
+        return $this->respond([
+            'success'  => true,
+            'entities' => $this->reportService->getEntities(),
+        ]);
     }
 
     public function entityFields(string $entityName): ResponseInterface
     {
-        $fields = $this->reportService->getEntityFields($entityName);
-
-        return $this->response
-            ->setContentType('application/json')
-            ->setBody(json_encode([
-                'success' => true,
-                'fields'  => $fields,
-            ]));
+        return $this->respond([
+            'success' => true,
+            'fields'  => $this->reportService->getEntityFields($entityName),
+        ]);
     }
 
     public function suggestJoins(): ResponseInterface
@@ -156,14 +145,10 @@ class ReportController extends Controller
         $data = $this->request->getJSON(true) ?? [];
         $entities = $data['entities'] ?? [];
 
-        $suggestions = $this->reportService->suggestJoins($entities);
-
-        return $this->response
-            ->setContentType('application/json')
-            ->setBody(json_encode([
-                'success'     => true,
-                'suggestions' => $suggestions,
-            ]));
+        return $this->respond([
+            'success'     => true,
+            'suggestions' => $this->reportService->suggestJoins($entities),
+        ]);
     }
 
     public function dashboard(): string
@@ -221,20 +206,5 @@ class ReportController extends Controller
             'deskActive'      => 'reports',
             'content'         => $content,
         ]);
-    }
-
-    private function validateRequest(): void
-    {
-        if ($this->request->getMethod() !== 'post') {
-            $this->fail('Method not allowed.', 405);
-        }
-    }
-
-    private function fail(string $message, int $code = 400): ResponseInterface
-    {
-        return $this->response
-            ->setStatusCode($code)
-            ->setContentType('application/json')
-            ->setBody(json_encode(['success' => false, 'error' => $message]));
     }
 }
