@@ -28,13 +28,11 @@ final class QueueWorker
 
     public function processNext(): bool
     {
-        $job = $this->fetchNextJob();
+        $job = $this->model->claimNextJob();
 
         if ($job === null) {
             return false;
         }
-
-        $this->markRunning($job['id']);
 
         try {
             $handler = $this->resolveHandler($job['job_type']);
@@ -42,7 +40,7 @@ final class QueueWorker
             $handler($payload, $job);
             $this->markCompleted($job['id']);
         } catch (Throwable $e) {
-            $this->markFailed($job['id'], $e->getMessage());
+            $this->markFailed($job['id'], (int) ($job['attempts'] ?? 0), $e->getMessage());
         }
 
         return true;
@@ -59,24 +57,6 @@ final class QueueWorker
         return $count;
     }
 
-    private function fetchNextJob(): ?array
-    {
-        $job = $this->model
-            ->where('status', 'queued')
-            ->orderBy('created_at', 'ASC')
-            ->first();
-
-        return $job;
-    }
-
-    private function markRunning(int $id): void
-    {
-        $this->model->update($id, [
-            'status'    => 'running',
-            'attempts'  => $this->model->find($id)['attempts'] + 1,
-        ]);
-    }
-
     private function markCompleted(int $id): void
     {
         $this->model->update($id, [
@@ -84,11 +64,8 @@ final class QueueWorker
         ]);
     }
 
-    private function markFailed(int $id, string $error): void
+    private function markFailed(int $id, int $attempts, string $error): void
     {
-        $job = $this->model->find($id);
-        $attempts = $job['attempts'] ?? 0;
-
         $status = $attempts >= self::MAX_ATTEMPTS ? 'failed' : 'queued';
 
         $this->model->update($id, [
