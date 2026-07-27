@@ -15,6 +15,7 @@ use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
 use Volt\Core\System\Services\SystemStatusService;
 use Volt\Core\Metadata\Services\PageService;
+use Volt\Core\Report\Services\ReportService;
 use Volt\Core\Validation\MetadataValidator;
 
 /**
@@ -140,5 +141,14 @@ class Services extends BaseService
         }
 
         return new PageService();
+    }
+
+    public static function voltReport(?bool $getShared = true): ReportService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltReport');
+        }
+
+        return new ReportService();
     }
 }

@@ -91,6 +91,20 @@ $common = $lang['common'] ?? [];
                     <p class="mt-2 text-sm text-slate-600">Create and manage custom pages with HTML, CSS, JS.</p>
                     <p class="mt-4 text-sm text-slate-500">Custom routes at /pagename</p>
                 </a>
+
+                <a href="<?= site_url('desk/reports') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold">Reports</h2>
+                    <p class="mt-2 text-sm text-slate-600">Build custom reports, pivot tables, and charts.</p>
+                    <p class="mt-4 text-sm text-slate-500">Query, Pivot &amp; SQL</p>
+                </a>
+
+                <a href="<?= site_url('desk/dashboard') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="mt-2 text-xl font-semibold">Dashboard</h2>
+                    <p class="mt-2 text-sm text-slate-600">Visualize report data with charts.</p>
+                    <p class="mt-4 text-sm text-slate-500">Bar &amp; Line charts</p>
+                </a>
             <?php else: ?>
                 <div class="border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 sm:col-span-1">
                     <p class="font-semibold"><?= esc($d['restricted'] ?? 'Restricted Access') ?></p>

@@ -1,0 +1,240 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Volt\Core\Report\Controllers;
+
+use CodeIgniter\Controller;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\ResponseInterface;
+use Volt\Core\Report\Services\ReportService;
+
+class ReportController extends Controller
+{
+    private readonly ReportService $reportService;
+
+    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
+    {
+        parent::initController($request, $response, $logger);
+        helper(['url']);
+        $this->reportService = service('voltReport');
+    }
+
+    public function index(): string
+    {
+        $actor = service('voltAuth')->currentUser();
+        $reports = $this->reportService->getAll();
+
+        $content = view('Volt\\Core\\Report\\Views\\reports\\report_list', [
+            'reports' => $reports,
+        ]);
+
+        return view('Volt\\Core\\Metadata\\Views\\layouts\\desk', [
+            'pageTitle'       => 'Reports · Volt Desk',
+            'currentUserName' => $actor?->name ?? '',
+            'isAdmin'         => $actor?->isAdmin() ?? false,
+            'deskActive'      => 'reports',
+            'content'         => $content,
+        ]);
+    }
+
+    public function create(): string
+    {
+        return $this->renderForm();
+    }
+
+    public function edit(string $name): string
+    {
+        $report = $this->reportService->getByName($name);
+
+        if ($report === null) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->renderForm($report);
+    }
+
+    public function save(): ResponseInterface
+    {
+        $this->validateRequest();
+
+        $data = $this->request->getJSON(true);
+
+        if (! is_array($data)) {
+            return $this->fail('Invalid request body.');
+        }
+
+        try {
+            $report = $this->reportService->save($data);
+
+            return $this->response
+                ->setContentType('application/json')
+                ->setBody(json_encode([
+                    'success' => true,
+                    'report'  => $report,
+                ]));
+        } catch (\InvalidArgumentException $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function delete(string $name): ResponseInterface
+    {
+        $this->reportService->delete($name);
+
+        return $this->response
+            ->setContentType('application/json')
+            ->setBody(json_encode(['success' => true]));
+    }
+
+    public function run(string $name): ResponseInterface
+    {
+        $params = $this->request->getJSON(true) ?? [];
+
+        try {
+            if ($name === '_test') {
+                $query = $params['query'] ?? [];
+                if ($query === []) {
+                    return $this->fail('Query payload is required for test run.');
+                }
+                $result = $this->reportService->runQuery($query, $params);
+            } else {
+                $result = $this->reportService->run($name, $params);
+            }
+
+            return $this->response
+                ->setContentType('application/json')
+                ->setBody(json_encode([
+                    'success' => true,
+                    'data'    => $result,
+                ]));
+        } catch (\InvalidArgumentException $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function export(string $name, string $format): ResponseInterface
+    {
+        $params = $this->request->getJSON(true) ?? [];
+
+        try {
+            $export = $this->reportService->export($name, $format, $params);
+
+            return $this->response
+                ->setContentType($export['content_type'])
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $name . '.' . $export['extension'] . '"')
+                ->setBody($export['data']);
+        } catch (\InvalidArgumentException $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function entities(): ResponseInterface
+    {
+        return $this->response
+            ->setContentType('application/json')
+            ->setBody(json_encode([
+                'success'  => true,
+                'entities' => $this->reportService->getEntities(),
+            ]));
+    }
+
+    public function entityFields(string $entityName): ResponseInterface
+    {
+        $fields = $this->reportService->getEntityFields($entityName);
+
+        return $this->response
+            ->setContentType('application/json')
+            ->setBody(json_encode([
+                'success' => true,
+                'fields'  => $fields,
+            ]));
+    }
+
+    public function suggestJoins(): ResponseInterface
+    {
+        $data = $this->request->getJSON(true) ?? [];
+        $entities = $data['entities'] ?? [];
+
+        $suggestions = $this->reportService->suggestJoins($entities);
+
+        return $this->response
+            ->setContentType('application/json')
+            ->setBody(json_encode([
+                'success'     => true,
+                'suggestions' => $suggestions,
+            ]));
+    }
+
+    public function dashboard(): string
+    {
+        $actor = service('voltAuth')->currentUser();
+        $reports = $this->reportService->getAll();
+
+        $content = view('Volt\\Core\\Report\\Views\\dashboard', [
+            'reports' => $reports,
+        ]);
+
+        return view('Volt\\Core\\Metadata\\Views\\layouts\\desk', [
+            'pageTitle'       => 'Dashboard · Volt Desk',
+            'currentUserName' => $actor?->name ?? '',
+            'isAdmin'         => $actor?->isAdmin() ?? false,
+            'deskActive'      => 'dashboard',
+            'content'         => $content,
+            'extraStyles'     => '',
+            'extraScripts'    => '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>',
+        ]);
+    }
+
+    private function renderForm(?array $report = null): string
+    {
+        $actor = service('voltAuth')->currentUser();
+        $modules = $this->reportService->getModules();
+        $roles = $this->reportService->getRoles();
+        $entities = $this->reportService->getEntities();
+
+        if ($report !== null) {
+            if (is_string($report['query'] ?? null)) {
+                $report['query'] = json_decode($report['query'], true);
+            }
+            if (is_string($report['columns'] ?? null)) {
+                $report['columns'] = json_decode($report['columns'], true);
+            }
+            if (is_string($report['charts'] ?? null)) {
+                $report['charts'] = json_decode($report['charts'], true);
+            }
+        }
+
+        $content = view('Volt\\Core\\Report\\Views\\reports\\report_form', [
+            'report'   => $report,
+            'modules'  => $modules,
+            'roles'    => $roles,
+            'entities' => $entities,
+        ]);
+
+        $title = $report !== null ? 'Edit Report · Volt Desk' : 'Create Report · Volt Desk';
+
+        return view('Volt\\Core\\Metadata\\Views\\layouts\\desk', [
+            'pageTitle'       => $title,
+            'currentUserName' => $actor?->name ?? '',
+            'isAdmin'         => $actor?->isAdmin() ?? false,
+            'deskActive'      => 'reports',
+            'content'         => $content,
+        ]);
+    }
+
+    private function validateRequest(): void
+    {
+        if ($this->request->getMethod() !== 'post') {
+            $this->fail('Method not allowed.', 405);
+        }
+    }
+
+    private function fail(string $message, int $code = 400): ResponseInterface
+    {
+        return $this->response
+            ->setStatusCode($code)
+            ->setContentType('application/json')
+            ->setBody(json_encode(['success' => false, 'error' => $message]));
+    }
+}

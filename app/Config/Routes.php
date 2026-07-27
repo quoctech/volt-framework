@@ -89,6 +89,33 @@ $routes->group('api/pages', ['namespace' => 'Volt\Core\Metadata\Controllers', 'f
     $routes->post('delete/(:segment)', 'PageController::delete/$1');
 });
 
+// Reports builder UI (admin)
+$routes->group('', ['namespace' => 'Volt\Core\Report\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->get('desk/reports', 'ReportController::index');
+    $routes->get('desk/reports/create', 'ReportController::create');
+    $routes->get('desk/reports/edit/(:segment)', 'ReportController::edit/$1');
+});
+
+// Reports API (admin)
+$routes->group('api/reports', ['namespace' => 'Volt\Core\Report\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
+    $routes->post('save', 'ReportController::save');
+    $routes->post('delete/(:segment)', 'ReportController::delete/$1');
+    $routes->get('entities', 'ReportController::entities');
+    $routes->get('entity-fields/(:segment)', 'ReportController::entityFields/$1');
+    $routes->post('suggest-joins', 'ReportController::suggestJoins');
+});
+
+// Reports run (auth - respects roles)
+$routes->group('api/reports', ['namespace' => 'Volt\Core\Report\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->post('run/(:segment)', 'ReportController::run/$1');
+    $routes->post('export/(:segment)/(:segment)', 'ReportController::export/$1/$2');
+});
+
+// Dashboard (auth)
+$routes->group('', ['namespace' => 'Volt\Core\Report\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('desk/dashboard', 'ReportController::dashboard');
+});
+
 $routes->group('api/file', ['namespace' => 'Volt\Core\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->post('upload', 'FileController::upload');
     $routes->get('download/(:segment)', 'FileController::download/$1');

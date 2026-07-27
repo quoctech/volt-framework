@@ -45,6 +45,12 @@ $common = $lang['common'] ?? [];
                         <a href="<?= site_url('desk/pages') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'pages' ? 'font-semibold text-slate-900' : '' ?>">
                             Pages
                         </a>
+                        <a href="<?= site_url('desk/reports') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'reports' ? 'font-semibold text-slate-900' : '' ?>">
+                            Reports
+                        </a>
+                        <a href="<?= site_url('desk/dashboard') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'dashboard' ? 'font-semibold text-slate-900' : '' ?>">
+                            Dashboard
+                        </a>
                     <?php endif; ?>
                     <?php if ($canViewErrorLogs): ?>
                         <a href="<?= site_url('desk/error-logs') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'error-logs' ? 'font-semibold text-slate-900' : '' ?>">

@@ -43,9 +43,12 @@ class ThrottleFilter implements FilterInterface
             return mb_trim($username);
         }
 
-        $json = $request->getJSON(true);
-        if (is_array($json) && isset($json['name'])) {
-            return mb_trim((string) $json['name']);
+        try {
+            $json = $request->getJSON(true);
+            if (is_array($json) && isset($json['name'])) {
+                return mb_trim((string) $json['name']);
+            }
+        } catch (\CodeIgniter\HTTP\Exceptions\HTTPException) {
         }
 
         return null;
