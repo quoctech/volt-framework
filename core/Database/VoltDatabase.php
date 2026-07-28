@@ -6,7 +6,9 @@ namespace Volt\Core\Database;
 
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Config as DatabaseConfig;
+use CodeIgniter\Database\MigrationRunner;
 use Config\Database as AppDatabaseConfig;
+use Config\Migrations;
 
 final class VoltDatabase
 {
@@ -130,6 +132,74 @@ final class VoltDatabase
     public static function reset(): void
     {
         self::$instances = [];
+    }
+
+    public static function createTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
+    {
+        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$dbUser} password={$dbPassword}");
+
+        if ($conn === false) {
+            throw new \RuntimeException('Cannot connect to PostgreSQL to create database.');
+        }
+
+        $escapedDb = pg_escape_string($conn, $dbName);
+        $escapedUser = pg_escape_string($conn, $dbUser);
+        $sql = "CREATE DATABASE \"{$escapedDb}\" OWNER \"{$escapedUser}\"";
+
+        $result = pg_query($conn, $sql);
+
+        pg_close($conn);
+
+        if ($result === false) {
+            throw new \RuntimeException("Failed to create database '{$dbName}'.");
+        }
+    }
+
+    public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
+    {
+        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$dbUser} password={$dbPassword}");
+
+        if ($conn === false) {
+            throw new \RuntimeException('Cannot connect to PostgreSQL to drop database.');
+        }
+
+        $escapedDb = pg_escape_string($conn, $dbName);
+        $sql = "DROP DATABASE IF EXISTS \"{$escapedDb}\"";
+
+        $result = pg_query($conn, $sql);
+
+        pg_close($conn);
+
+        if ($result === false) {
+            throw new \RuntimeException("Failed to drop database '{$dbName}'.");
+        }
+    }
+
+    public static function migrateTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
+    {
+        $config = [
+            'DSN'      => '',
+            'hostname' => $dbHost,
+            'port'     => $dbPort,
+            'username' => $dbUser,
+            'password' => $dbPassword,
+            'database' => $dbName,
+            'DBDriver' => 'Postgre',
+            'DBPrefix' => '',
+            'pConnect' => false,
+            'DBDebug'  => true,
+            'charset'  => 'utf8',
+            'swapPre'  => '',
+            'encrypt'  => false,
+            'compress' => false,
+            'strictOn' => false,
+            'failover' => [],
+        ];
+
+        $db = DatabaseConfig::connect($config, true);
+        $runner = new MigrationRunner(config(Migrations::class), $db);
+        $runner->setNamespace('Volt\Core');
+        $runner->latest();
     }
 
     private static function defaultGroup(): string

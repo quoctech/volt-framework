@@ -64,7 +64,7 @@ class TenantController extends Controller
         }
 
         try {
-            $this->tenantService->save($this->request->getPost());
+            $tenant = $this->tenantService->save($this->request->getPost());
         } catch (\InvalidArgumentException $e) {
             return $this->renderView('Volt\\Core\\Tenant\\Views\\tenant_form', [
                 'pageTitle'  => 'New Tenant · Volt Desk',
@@ -73,6 +73,35 @@ class TenantController extends Controller
                 'errors'     => ['name' => $e->getMessage()],
             ]);
         }
+
+        try {
+            VoltDatabase::createTenantDatabase(
+                $tenant['db_name'],
+                $tenant['db_host'],
+                $tenant['db_port'],
+                $tenant['db_username'],
+                $tenant['db_password'],
+            );
+
+            VoltDatabase::migrateTenantDatabase(
+                $tenant['db_name'],
+                $tenant['db_host'],
+                $tenant['db_port'],
+                $tenant['db_username'],
+                $tenant['db_password'],
+            );
+        } catch (\Throwable $e) {
+            $this->tenantService->delete($tenant['name']);
+
+            return $this->renderView('Volt\\Core\\Tenant\\Views\\tenant_form', [
+                'pageTitle'  => 'New Tenant · Volt Desk',
+                'deskActive' => 'tenants',
+                'tenant'     => null,
+                'errors'     => ['name' => 'Không thể tạo database: ' . $e->getMessage()],
+            ]);
+        }
+
+        session()->setFlashdata('auth_success', 'Tenant "' . $tenant['label'] . '" đã được tạo với database "' . $tenant['db_name'] . '".');
 
         return redirect()->to(site_url('desk/tenants'));
     }
@@ -144,6 +173,26 @@ class TenantController extends Controller
             return redirect()->to(site_url('desk/tenants'));
         }
 
+        $tenant = $this->tenantService->getByName($name);
+
+        if ($tenant === null) {
+            return redirect()->to(site_url('desk/tenants'));
+        }
+
+        try {
+            VoltDatabase::dropTenantDatabase(
+                $tenant['db_name'],
+                $tenant['db_host'],
+                $tenant['db_port'],
+                $tenant['db_username'],
+                $tenant['db_password'],
+            );
+        } catch (\Throwable $e) {
+            session()->setFlashdata('auth_error', 'Không thể xoá database: ' . $e->getMessage());
+
+            return redirect()->to(site_url('desk/tenants'));
+        }
+
         $currentTenant = session()->get(VoltDatabase::TENANT_SESSION_KEY);
 
         $this->tenantService->delete($name);
@@ -151,6 +200,8 @@ class TenantController extends Controller
         if ($currentTenant === $name) {
             session()->remove([VoltDatabase::TENANT_SESSION_KEY]);
         }
+
+        session()->setFlashdata('auth_success', 'Tenant "' . $tenant['label'] . '" và database "' . $tenant['db_name'] . '" đã được xoá.');
 
         return redirect()->to(site_url('desk/tenants'));
     }
