@@ -35,4 +35,11 @@ class TenantModel extends Model
         $this->orderBy('label', 'ASC');
         return $this->findAll();
     }
+
+    public function findByDomain(string $host): ?array
+    {
+        $this->where('domain', $host);
+        $this->where('is_active', 1);
+        return $this->first() ?: null;
+    }
 }

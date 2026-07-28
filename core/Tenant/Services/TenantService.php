@@ -76,6 +76,11 @@ class TenantService
         return $this->tenantModel->find($name) !== null;
     }
 
+    public function resolveByDomain(string $host): ?array
+    {
+        return $this->tenantModel->findByDomain($host);
+    }
+
     private function normalizeName(string $name): string
     {
         $name = mb_strtolower(mb_trim($name));

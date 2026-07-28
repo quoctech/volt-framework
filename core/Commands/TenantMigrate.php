@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Volt\Core\Tenant\Commands;
+namespace Volt\Core\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\MigrationRunner;
+use CodeIgniter\Database\BaseConnection;
 use Config\Migrations;
 use Throwable;
 use Volt\Core\Database\VoltDatabase;
@@ -24,10 +25,8 @@ class TenantMigrate extends BaseCommand
         try {
             $db = VoltDatabase::tenantConnection($tenantName);
 
-            /** @var MigrationRunner $runner */
-            $runner = new MigrationRunner(config(Migrations::class));
+            $runner = new MigrationRunner(config(Migrations::class), $db);
             $runner->setNamespace('Volt\Core');
-            $runner->setDBGroup($db);
 
             CLI::write("Running migrations for tenant '{$tenantName}'...", 'yellow');
 

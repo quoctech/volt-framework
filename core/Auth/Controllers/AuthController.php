@@ -13,30 +13,12 @@ use Volt\Core\Tenant\Services\TenantService;
 class AuthController extends Controller
 {
     private readonly AuthService $authService;
-    private ?TenantService $tenantService = null;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
         $this->authService = service('voltAuth');
-    }
-
-    private function tenantService(): TenantService
-    {
-        if ($this->tenantService === null) {
-            $this->tenantService = new TenantService();
-        }
-        return $this->tenantService;
-    }
-
-    private function resolveActiveTenants(): array
-    {
-        try {
-            return $this->tenantService()->getActive();
-        } catch (\Throwable) {
-            return [];
-        }
     }
 
     public function index()
@@ -65,7 +47,6 @@ class AuthController extends Controller
             'mode'          => $isSetup ? 'setup' : 'login',
             'error'         => session()->getFlashdata('auth_error'),
             'success'       => session()->getFlashdata('auth_success'),
-            'tenants'       => $isSetup ? [] : $this->resolveActiveTenants(),
         ]);
     }
 
@@ -74,7 +55,6 @@ class AuthController extends Controller
         $rules = [
             'name'     => 'required|min_length[3]|max_length[100]',
             'password' => 'required|min_length[8]|max_length[255]',
-            'tenant'   => 'if_exist|max_length[100]',
         ];
 
         if (! $this->validate($rules)) {
@@ -82,29 +62,10 @@ class AuthController extends Controller
                 'setupRequired' => false,
                 'mode'          => 'login',
                 'error'         => implode(' ', $this->validator->getErrors()),
-                'tenants'       => $this->resolveActiveTenants(),
             ]);
         }
 
-        $tenant = mb_trim((string) ($this->request->getPost('tenant') ?? ''));
-
-        if ($tenant !== '') {
-            try {
-                $exists = $this->tenantService()->exists($tenant);
-            } catch (\Throwable) {
-                $exists = false;
-            }
-            if (! $exists) {
-                return view('auth/login', [
-                    'setupRequired' => false,
-                    'mode'          => 'login',
-                    'error'         => LangService::get('auth.invalid_tenant', 'Invalid tenant'),
-                    'tenants'       => $this->resolveActiveTenants(),
-                ]);
-            }
-        }
-
-        $tenant = $tenant !== '' ? $tenant : null;
+        $tenant = $this->resolveTenantFromDomain();
 
         $auth = $this->authService->login(
             mb_trim((string) $this->request->getPost('name')),
@@ -117,7 +78,6 @@ class AuthController extends Controller
                 'setupRequired' => $auth->setup_required,
                 'mode'          => $auth->setup_required ? 'setup' : 'login',
                 'error'         => $auth->message ?? LangService::get('auth.login_failed'),
-                'tenants'       => $this->resolveActiveTenants(),
             ]);
         }
 
@@ -173,7 +133,8 @@ class AuthController extends Controller
             ]);
         }
 
-        $auth = $this->authService->login(mb_trim($name), $password);
+        $tenant = $this->resolveTenantFromDomain();
+        $auth = $this->authService->login(mb_trim($name), $password, $tenant);
 
         if (! $auth->authenticated) {
             return $this->response->setStatusCode($auth->setup_required ? 409 : 401)->setJSON([
@@ -282,6 +243,34 @@ class AuthController extends Controller
         session()->setFlashdata('new_api_secret', $keys['api_secret']);
 
         return redirect()->to(site_url('desk/profile'));
+    }
+
+    private function resolveTenantFromDomain(): ?string
+    {
+        $host = $this->request->getServer('HTTP_HOST');
+
+        if (! is_string($host) || $host === '') {
+            return null;
+        }
+
+        $host = mb_strtolower(explode(':', $host)[0]);
+
+        try {
+            $tenant = (new TenantService())->resolveByDomain($host);
+
+            if ($tenant !== null) {
+                return $tenant['name'];
+            }
+        } catch (\Throwable) {
+        }
+
+        $parts = explode('.', $host);
+
+        if (count($parts) >= 3) {
+            return $parts[0];
+        }
+
+        return null;
     }
 
     private function profileViewData(UserEntity $user, array $extra = []): array

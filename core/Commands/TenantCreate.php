@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Volt\Core\Tenant\Commands;
+namespace Volt\Core\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
