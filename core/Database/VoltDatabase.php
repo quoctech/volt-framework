@@ -165,9 +165,11 @@ final class VoltDatabase
 
     public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
+        self::$instances = [];
+
         $default = self::getDefaultDbConfig();
         $sql = sprintf(
-            'DROP DATABASE IF EXISTS "%s"',
+            'DROP DATABASE IF EXISTS "%s" WITH (FORCE)',
             str_replace('"', '""', $dbName),
         );
         $cmd = sprintf(
