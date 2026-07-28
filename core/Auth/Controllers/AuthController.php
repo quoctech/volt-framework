@@ -267,7 +267,18 @@ class AuthController extends Controller
         $parts = explode('.', $host);
 
         if (count($parts) >= 3) {
-            return $parts[0];
+            $tenantName = $parts[0];
+
+            try {
+                $tenant = (new TenantService())->getByName($tenantName);
+
+                if ($tenant !== null) {
+                    return $tenant['name'];
+                }
+            } catch (\Throwable) {
+            }
+
+            session()->setFlashdata('auth_error', 'Tenant "' . $tenantName . '" không tồn tại hoặc đã bị xoá.');
         }
 
         return null;
