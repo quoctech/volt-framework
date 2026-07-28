@@ -206,6 +206,17 @@ class App extends BaseConfig
     {
         parent::__construct();
 
-        $this->baseURL = (string) env('app.baseURL', 'http://localhost:8080/');
+        if (PHP_SAPI !== 'cli' && isset($_SERVER['HTTP_HOST'])) {
+            $host = $_SERVER['HTTP_HOST'];
+            $scheme = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $this->baseURL = "{$scheme}://{$host}/";
+
+            $hostname = explode(':', $host)[0];
+            if ($hostname !== '' && ! in_array($hostname, $this->allowedHostnames, true)) {
+                $this->allowedHostnames[] = $hostname;
+            }
+        } else {
+            $this->baseURL = (string) env('app.baseURL', 'http://localhost:8080/');
+        }
     }
 }
