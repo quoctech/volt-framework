@@ -39,6 +39,7 @@ class Filters extends BaseFilters
         'apiauth'       => \Volt\Core\Auth\Filters\ApiAuthFilter::class,
         'admin'         => \Volt\Core\Auth\Filters\AdminFilter::class,
         'throttle'      => \Volt\Core\Auth\Filters\ThrottleFilter::class,
+        'domainurl'     => \Volt\Core\Auth\Filters\DomainBaseURLFilter::class,
     ];
 
     /**
@@ -75,6 +76,7 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'domainurl',
             'cors',
             'csrf' => ['except' => ['api/*', '*/api/*', '*/rest/*']],
             // 'invalidchars',
