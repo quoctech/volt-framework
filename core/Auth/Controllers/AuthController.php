@@ -67,6 +67,16 @@ class AuthController extends Controller
 
         $tenant = $this->resolveTenantFromDomain();
 
+        $tenantError = session()->getFlashdata('auth_error');
+
+        if ($tenantError !== null) {
+            return view('auth/login', [
+                'setupRequired' => false,
+                'mode'          => 'login',
+                'error'         => $tenantError,
+            ]);
+        }
+
         $auth = $this->authService->login(
             mb_trim((string) $this->request->getPost('name')),
             (string) $this->request->getPost('password'),
@@ -266,20 +276,26 @@ class AuthController extends Controller
 
         $parts = explode('.', $host);
 
-        if (count($parts) >= 3) {
-            $tenantName = $parts[0];
-
-            try {
-                $tenant = (new TenantService())->getByName($tenantName);
-
-                if ($tenant !== null) {
-                    return $tenant['name'];
-                }
-            } catch (\Throwable) {
-            }
-
-            session()->setFlashdata('auth_error', 'Tenant "' . $tenantName . '" không tồn tại hoặc đã bị xoá.');
+        if (count($parts) < 2) {
+            return null;
         }
+
+        $tenantName = $parts[0];
+
+        if ($tenantName === $parts[1]) {
+            return null;
+        }
+
+        try {
+            $tenant = (new TenantService())->getByName($tenantName);
+
+            if ($tenant !== null) {
+                return $tenant['name'];
+            }
+        } catch (\Throwable) {
+        }
+
+        session()->setFlashdata('auth_error', 'Tenant "' . $tenantName . '" không tồn tại hoặc đã bị xoá.');
 
         return null;
     }
