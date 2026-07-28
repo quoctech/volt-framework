@@ -26,7 +26,7 @@ class TenantModel extends Model
 
     public function __construct()
     {
-        parent::__construct(VoltDatabase::connection());
+        parent::__construct(VoltDatabase::hubConnection());
     }
 
     public function getActive(): array

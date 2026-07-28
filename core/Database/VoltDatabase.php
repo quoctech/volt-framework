@@ -47,9 +47,12 @@ final class VoltDatabase
 
     private static function fallbackConnection(): BaseConnection
     {
-        $group = self::defaultGroup();
+        return self::resolvedConnection(self::defaultGroup());
+    }
 
-        return self::resolvedConnection($group);
+    public static function hubConnection(): BaseConnection
+    {
+        return self::resolvedConnection(self::defaultGroup());
     }
 
     public static function tenantConnection(string $tenantName): BaseConnection
