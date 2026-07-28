@@ -137,43 +137,47 @@ final class VoltDatabase
     public static function createTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
         $default = self::getDefaultDbConfig();
-        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$default['username']} password={$default['password']}");
+        $sql = sprintf(
+            'CREATE DATABASE "%s" OWNER "%s"',
+            str_replace('"', '""', $dbName),
+            str_replace('"', '""', $default['username']),
+        );
+        $cmd = sprintf(
+            'PGPASSWORD=%s psql -U %s -h %s -p %d -d postgres -c %s 2>&1',
+            escapeshellarg($default['password']),
+            escapeshellarg($default['username']),
+            escapeshellarg($dbHost),
+            $dbPort,
+            escapeshellarg($sql),
+        );
 
-        if ($conn === false) {
-            throw new \RuntimeException('Cannot connect to PostgreSQL to create database.');
-        }
+        exec($cmd, $output, $exitCode);
 
-        $escapedDb = pg_escape_string($conn, $dbName);
-        $escapedUser = pg_escape_string($conn, $dbUser);
-        $sql = "CREATE DATABASE \"{$escapedDb}\" OWNER \"{$escapedUser}\"";
-
-        $result = pg_query($conn, $sql);
-
-        pg_close($conn);
-
-        if ($result === false) {
-            throw new \RuntimeException("Failed to create database '{$dbName}'.");
+        if ($exitCode !== 0) {
+            throw new \RuntimeException(implode("\n", $output));
         }
     }
 
     public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
         $default = self::getDefaultDbConfig();
-        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$default['username']} password={$default['password']}");
+        $sql = sprintf(
+            'DROP DATABASE IF EXISTS "%s"',
+            str_replace('"', '""', $dbName),
+        );
+        $cmd = sprintf(
+            'PGPASSWORD=%s psql -U %s -h %s -p %d -d postgres -c %s 2>&1',
+            escapeshellarg($default['password']),
+            escapeshellarg($default['username']),
+            escapeshellarg($dbHost),
+            $dbPort,
+            escapeshellarg($sql),
+        );
 
-        if ($conn === false) {
-            throw new \RuntimeException('Cannot connect to PostgreSQL to drop database.');
-        }
+        exec($cmd, $output, $exitCode);
 
-        $escapedDb = pg_escape_string($conn, $dbName);
-        $sql = "DROP DATABASE IF EXISTS \"{$escapedDb}\"";
-
-        $result = pg_query($conn, $sql);
-
-        pg_close($conn);
-
-        if ($result === false) {
-            throw new \RuntimeException("Failed to drop database '{$dbName}'.");
+        if ($exitCode !== 0) {
+            throw new \RuntimeException(implode("\n", $output));
         }
     }
 
