@@ -20,6 +20,12 @@ class DomainBaseURLFilter implements FilterInterface
 
         $config = config(\Config\App::class);
         $scheme = (! empty($request->getServer('HTTPS')) && $request->getServer('HTTPS') !== 'off') ? 'https' : 'http';
+
+        $hostname = explode(':', $host)[0];
+        if (! in_array($hostname, $config->allowedHostnames, true)) {
+            $config->allowedHostnames[] = $hostname;
+        }
+
         $config->baseURL = "{$scheme}://{$host}/";
     }
 
