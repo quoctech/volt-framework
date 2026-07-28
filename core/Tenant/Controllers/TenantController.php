@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Tenant\Controllers;
 
 use CodeIgniter\Controller;
+use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Tenant\Services\TenantService;
 
 class TenantController extends Controller
@@ -143,7 +144,13 @@ class TenantController extends Controller
             return redirect()->to(site_url('desk/tenants'));
         }
 
+        $currentTenant = session()->get(VoltDatabase::TENANT_SESSION_KEY);
+
         $this->tenantService->delete($name);
+
+        if ($currentTenant === $name) {
+            session()->remove([VoltDatabase::TENANT_SESSION_KEY]);
+        }
 
         return redirect()->to(site_url('desk/tenants'));
     }

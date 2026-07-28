@@ -47,9 +47,15 @@ class AuthService
             return null;
         }
 
-        $userModel = $this->resolveUserModel(
-            $session->get(VoltDatabase::TENANT_SESSION_KEY),
-        );
+        try {
+            $userModel = $this->resolveUserModel(
+                $session->get(VoltDatabase::TENANT_SESSION_KEY),
+            );
+        } catch (\Throwable) {
+            $session->remove([self::SESSION_USER_KEY, self::SESSION_ROLES_KEY, self::SESSION_LOGIN_KEY, VoltDatabase::TENANT_SESSION_KEY]);
+
+            return null;
+        }
 
         $user = $userModel->findByName($username);
 
