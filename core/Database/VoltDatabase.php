@@ -134,9 +134,10 @@ final class VoltDatabase
         self::$instances = [];
     }
 
-    public static function createTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
+    public static function createTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
-        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$dbUser} password={$dbPassword}");
+        $default = self::getDefaultDbConfig();
+        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$default['username']} password={$default['password']}");
 
         if ($conn === false) {
             throw new \RuntimeException('Cannot connect to PostgreSQL to create database.');
@@ -155,9 +156,10 @@ final class VoltDatabase
         }
     }
 
-    public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
+    public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
-        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$dbUser} password={$dbPassword}");
+        $default = self::getDefaultDbConfig();
+        $conn = pg_connect("host={$dbHost} port={$dbPort} dbname=postgres user={$default['username']} password={$default['password']}");
 
         if ($conn === false) {
             throw new \RuntimeException('Cannot connect to PostgreSQL to drop database.');
@@ -205,5 +207,19 @@ final class VoltDatabase
     private static function defaultGroup(): string
     {
         return config(AppDatabaseConfig::class)->defaultGroup;
+    }
+
+    private static function getDefaultDbConfig(): array
+    {
+        $db = config(AppDatabaseConfig::class);
+        $group = $db->defaultGroup;
+        $conn = $db->{$group};
+
+        return [
+            'hostname' => $conn['hostname'] ?? 'localhost',
+            'port'     => (int) ($conn['port'] ?? 5432),
+            'username' => $conn['username'] ?? 'volt_admin',
+            'password' => $conn['password'] ?? '',
+        ];
     }
 }

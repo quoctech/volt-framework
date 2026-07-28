@@ -78,15 +78,13 @@ class TenantController extends Controller
             VoltDatabase::createTenantDatabase(
                 $tenant['db_name'],
                 $tenant['db_host'],
-                $tenant['db_port'],
-                $tenant['db_username'],
-                $tenant['db_password'],
+                (int) $tenant['db_port'],
             );
 
             VoltDatabase::migrateTenantDatabase(
                 $tenant['db_name'],
                 $tenant['db_host'],
-                $tenant['db_port'],
+                (int) $tenant['db_port'],
                 $tenant['db_username'],
                 $tenant['db_password'],
             );
@@ -183,9 +181,7 @@ class TenantController extends Controller
             VoltDatabase::dropTenantDatabase(
                 $tenant['db_name'],
                 $tenant['db_host'],
-                $tenant['db_port'],
-                $tenant['db_username'],
-                $tenant['db_password'],
+                (int) $tenant['db_port'],
             );
         } catch (\Throwable $e) {
             session()->setFlashdata('auth_error', 'Không thể xoá database: ' . $e->getMessage());
