@@ -24,16 +24,32 @@ final class VoltDatabase
         if ($group === null) {
             $tenant = self::resolveTenant(null);
             if ($tenant !== null) {
-                return self::tenantConnection($tenant);
+                try {
+                    return self::tenantConnection($tenant);
+                } catch (\Throwable) {
+                    return self::fallbackConnection();
+                }
             }
             $group = self::defaultGroup();
         }
 
+        return self::resolvedConnection($group);
+    }
+
+    private static function resolvedConnection(string $group): BaseConnection
+    {
         if (! isset(self::$instances[$group])) {
             self::$instances[$group] = DatabaseConfig::connect($group, true);
         }
 
         return self::$instances[$group];
+    }
+
+    private static function fallbackConnection(): BaseConnection
+    {
+        $group = self::defaultGroup();
+
+        return self::resolvedConnection($group);
     }
 
     public static function tenantConnection(string $tenantName): BaseConnection
@@ -44,13 +60,31 @@ final class VoltDatabase
             return self::$instances[$cacheKey];
         }
 
-        $row = self::connection()
-            ->table('sys_tenant')
-            ->select('db_host, db_port, db_name, db_username, db_password')
-            ->where('name', $tenantName)
-            ->where('is_active', 1)
-            ->get()
-            ->getRowArray();
+        try {
+            $hub = self::fallbackConnection();
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                "Cannot connect to hub database to resolve tenant '{$tenantName}': " . $e->getMessage(),
+                (int) $e->getCode(),
+                $e,
+            );
+        }
+
+        try {
+            $row = $hub
+                ->table('sys_tenant')
+                ->select('db_host, db_port, db_name, db_username, db_password')
+                ->where('name', $tenantName)
+                ->where('is_active', 1)
+                ->get()
+                ->getRowArray();
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                "Cannot resolve tenant '{$tenantName}': sys_tenant table may not exist yet. Run 'php spark migrate -n Volt\\Core' first. Error: " . $e->getMessage(),
+                (int) $e->getCode(),
+                $e,
+            );
+        }
 
         if ($row === null) {
             throw new \RuntimeException("Tenant '{$tenantName}' not found or inactive.");

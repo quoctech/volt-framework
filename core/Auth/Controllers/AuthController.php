@@ -13,14 +13,30 @@ use Volt\Core\Tenant\Services\TenantService;
 class AuthController extends Controller
 {
     private readonly AuthService $authService;
-    private readonly TenantService $tenantService;
+    private ?TenantService $tenantService = null;
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         helper(['form', 'url']);
         $this->authService = service('voltAuth');
-        $this->tenantService = new TenantService();
+    }
+
+    private function tenantService(): TenantService
+    {
+        if ($this->tenantService === null) {
+            $this->tenantService = new TenantService();
+        }
+        return $this->tenantService;
+    }
+
+    private function resolveActiveTenants(): array
+    {
+        try {
+            return $this->tenantService()->getActive();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function index()
@@ -49,7 +65,7 @@ class AuthController extends Controller
             'mode'          => $isSetup ? 'setup' : 'login',
             'error'         => session()->getFlashdata('auth_error'),
             'success'       => session()->getFlashdata('auth_success'),
-            'tenants'       => $isSetup ? [] : $this->tenantService->getActive(),
+            'tenants'       => $isSetup ? [] : $this->resolveActiveTenants(),
         ]);
     }
 
@@ -66,19 +82,26 @@ class AuthController extends Controller
                 'setupRequired' => false,
                 'mode'          => 'login',
                 'error'         => implode(' ', $this->validator->getErrors()),
-                'tenants'       => $this->tenantService->getActive(),
+                'tenants'       => $this->resolveActiveTenants(),
             ]);
         }
 
         $tenant = mb_trim((string) ($this->request->getPost('tenant') ?? ''));
 
-        if ($tenant !== '' && ! $this->tenantService->exists($tenant)) {
-            return view('auth/login', [
-                'setupRequired' => false,
-                'mode'          => 'login',
-                'error'         => LangService::get('auth.invalid_tenant', 'Invalid tenant'),
-                'tenants'       => $this->tenantService->getActive(),
-            ]);
+        if ($tenant !== '') {
+            try {
+                $exists = $this->tenantService()->exists($tenant);
+            } catch (\Throwable) {
+                $exists = false;
+            }
+            if (! $exists) {
+                return view('auth/login', [
+                    'setupRequired' => false,
+                    'mode'          => 'login',
+                    'error'         => LangService::get('auth.invalid_tenant', 'Invalid tenant'),
+                    'tenants'       => $this->resolveActiveTenants(),
+                ]);
+            }
         }
 
         $tenant = $tenant !== '' ? $tenant : null;
@@ -94,7 +117,7 @@ class AuthController extends Controller
                 'setupRequired' => $auth->setup_required,
                 'mode'          => $auth->setup_required ? 'setup' : 'login',
                 'error'         => $auth->message ?? LangService::get('auth.login_failed'),
-                'tenants'       => $this->tenantService->getActive(),
+                'tenants'       => $this->resolveActiveTenants(),
             ]);
         }
 
