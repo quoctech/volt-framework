@@ -137,6 +137,11 @@ final class VoltDatabase
     public static function createTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
     {
         $default = self::getDefaultDbConfig();
+
+        if (self::databaseExists($dbName, $dbHost, $dbPort, $default)) {
+            return;
+        }
+
         $sql = sprintf(
             'CREATE DATABASE "%s" OWNER "%s"',
             str_replace('"', '""', $dbName),
@@ -225,5 +230,36 @@ final class VoltDatabase
             'username' => $conn['username'] ?? 'volt_admin',
             'password' => $conn['password'] ?? '',
         ];
+    }
+
+    private static function databaseExists(string $dbName, string $dbHost, int $dbPort, array $default): bool
+    {
+        $dsn = sprintf(
+            'host=%s port=%d dbname=postgres user=%s password=%s',
+            $dbHost,
+            $dbPort,
+            $default['username'],
+            $default['password'],
+        );
+
+        $conn = @pg_connect($dsn);
+
+        if ($conn === false) {
+            return false;
+        }
+
+        $escapedDb = pg_escape_string($conn, $dbName);
+        $r = @pg_query($conn, "SELECT 1 FROM pg_database WHERE datname = '{$escapedDb}'");
+
+        if ($r === false) {
+            pg_close($conn);
+
+            return false;
+        }
+
+        $exists = pg_fetch_row($r) !== false;
+        pg_close($conn);
+
+        return $exists;
     }
 }
