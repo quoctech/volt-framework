@@ -6,6 +6,7 @@ namespace Volt\Core\Database;
 
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Config as DatabaseConfig;
+use Config\Database as AppDatabaseConfig;
 
 final class VoltDatabase
 {
@@ -96,6 +97,6 @@ final class VoltDatabase
 
     private static function defaultGroup(): string
     {
-        return (new DatabaseConfig())->defaultGroup;
+        return config(AppDatabaseConfig::class)->defaultGroup;
     }
 }
