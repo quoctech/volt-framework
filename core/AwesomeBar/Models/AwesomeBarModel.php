@@ -124,6 +124,7 @@ class AwesomeBarModel
     public function seedCorePages(): void
     {
         $pages = [
+            ['item_name' => 'workspace',       'label' => 'Workspace',      'description' => 'Trang chủ cá nhân của bạn',                       'route' => 'desk',                  'module' => null],
             ['item_name' => 'entity_list',    'label' => 'Entity List',    'description' => 'Xem danh sách entity metadata',                'route' => 'desk/entities',         'module' => null],
             ['item_name' => 'entity_builder',  'label' => 'Entity Builder',  'description' => 'Xây dựng và cấu hình entity',                    'route' => 'desk/entity-builder',   'module' => null],
             ['item_name' => 'create_module',   'label' => 'Create Module',   'description' => 'Tạo module mới',                               'route' => 'desk/create-module',    'module' => null],

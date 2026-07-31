@@ -20,11 +20,24 @@ $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers'], static functio
     });
 });
 
+// Desk home: Workspace (mỗi user một workspace riêng).
+$routes->group('', ['namespace' => 'Volt\Core\Workspace\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('/', 'WorkspaceController::index');
+    $routes->get('desk', 'WorkspaceController::index');
+});
+
 // Desk: bất kỳ user đã login. Create Module / Entity Builder: chỉ admin.
 $routes->group('', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
-    $routes->get('/', 'EntityBuilderController::desk');
-    $routes->get('desk', 'EntityBuilderController::desk');
     $routes->get('desk/entities', 'EntityBuilderController::entityList');
+});
+
+// Workspace API (auth)
+$routes->group('api/workspace', ['namespace' => 'Volt\Core\Workspace\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
+    $routes->get('load', 'WorkspaceController::load');
+    $routes->post('block/save', 'WorkspaceController::saveBlock');
+    $routes->post('block/delete', 'WorkspaceController::deleteBlock');
+    $routes->post('block/reorder', 'WorkspaceController::reorderBlocks');
+    $routes->post('save', 'WorkspaceController::save');
 });
 
 $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {

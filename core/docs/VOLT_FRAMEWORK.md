@@ -27,6 +27,7 @@
 18. [Entity Builder — UI](#18-entity-builder--ui)
 19. [Pages (Custom Pages)](#19-pages-custom-pages)
 20. [Multi-tenancy](#20-multi-tenancy)
+21. [Workspace](#21-workspace)
 
 ---
 
@@ -78,6 +79,7 @@ core/
   Security/           Permission resolver
   System/             System status, settings, error logs
   Validation/         Metadata validator
+  Workspace/          User workspace & block engine
 ```
 
 Namespace: `Volt\Core` → `core/` (registered in `app/Config/Autoload.php`)
@@ -933,8 +935,8 @@ File: `app/Config/Routes.php`
 
 | Route | Controller | Filter |
 |-------|------------|--------|
-| `/` | EntityBuilderController::desk | auth |
-| `/desk` | EntityBuilderController::desk | auth |
+| `/` | WorkspaceController::index | auth |
+| `/desk` | WorkspaceController::index | auth |
 | `/desk/entities` | EntityBuilderController::entityList | auth |
 | `/desk/profile` | AuthController::profile | auth |
 | `/desk/profile` (POST) | AuthController::updateProfile | auth |
@@ -961,6 +963,11 @@ File: `app/Config/Routes.php`
 | `/api/file/download/{uuid}` | FileController::download | auth |
 | `/api/file/delete/{uuid}` | FileController::delete | auth |
 | `/api/file/list/{entity}/{name}/{field?}` | FileController::listByEntity | auth |
+| `/api/workspace/load` | WorkspaceController::load | auth |
+| `POST /api/workspace/block/save` | WorkspaceController::saveBlock | auth |
+| `POST /api/workspace/block/delete` | WorkspaceController::deleteBlock | auth |
+| `POST /api/workspace/block/reorder` | WorkspaceController::reorderBlocks | auth |
+| `POST /api/workspace/save` | WorkspaceController::save | auth |
 
 ### Page routes (auto-generated)
 
@@ -1013,7 +1020,7 @@ $routes->group('hrms', ['filter' => 'auth'], function (RouteCollection $routes):
 | `/desk/entity-builder` | Entity builder (admin) |
 | `/desk/create-module` | Tạo module mới |
 | `/desk/entities` | Entity list (auth) |
-| `/` + `/desk` | Desk home (auth) |
+| `/` + `/desk` | Workspace home (auth) |
 
 ### Entity Builder features
 
@@ -1127,7 +1134,7 @@ Khi delete hoặc đổi module, file cũ được xóa tự động.
 
 | Integration | Location |
 |-------------|----------|
-| Desk card | `/desk` — "Pages" card trong admin grid (`desk.php`) |
+| Desk card | Workspace — "Pages" shortcut trong workspace admin seed (`WorkspaceBlockModel::seedDefaults()`) |
 | Topbar nav | Admin topbar — "Pages" link (`desk_topbar.php`) |
 | AwesomeBar | `sys_awesome_bar` — "Pages" entry (`seedCorePages()`) + individual pages on save |
 
@@ -1226,6 +1233,107 @@ Files: `core/Commands/TenantCreate.php`, `core/Commands/TenantMigrate.php`
 - `core/Auth/Filters/PageAuthFilter.php` — redirect về login qua `site_url()`
 - `app/Config/App.php` — dynamic baseURL
 - `core/Database/Migrations/2026-07-27-000002_CreateSysTenantTable.php`
+
+---
+
+## 21. Workspace
+
+**Namespace:** `Volt\Core\Workspace`
+
+Desk home (`/` và `/desk`) là **Workspace cá nhân** của từng user: một grid các block có thể sắp xếp, mỗi user có workspace riêng (auto-create + seed khi truy cập lần đầu).
+
+### 21.1 Database
+
+**Bảng:** `sys_workspace`, `sys_workspace_block` (migration `2026-07-31-000001_CreateSysWorkspaceTables.php`)
+
+`sys_workspace`:
+
+| Column | Type | Mô tả |
+|--------|------|-------|
+| `id` | SERIAL PK | |
+| `user_name` | VARCHAR(100) | User sở hữu (PK `sys_user` là `name`, unique index `uq_sys_workspace_user`) |
+| `title` | VARCHAR(100) | Tiêu đề hiển thị |
+| `columns` | SMALLINT | Số cột grid (1–4, default 3) |
+| `is_active` | SMALLINT | 0/1 |
+| `created_at` / `updated_at` | TIMESTAMP | |
+
+`sys_workspace_block`:
+
+| Column | Type | Mô tả |
+|--------|------|-------|
+| `id` | SERIAL PK | |
+| `workspace_id` | INTEGER | FK → `sys_workspace.id` |
+| `block_type` | VARCHAR(20) | `shortcut` / `note` / `entity_list` / `count` |
+| `title` | VARCHAR(255) | Tiêu đề block |
+| `data` | JSONB | Payload theo type (xem 21.3) |
+| `size` | SMALLINT | Số cột chiếm (1–3, clamp vào `columns`) |
+| `sort` | INTEGER | Thứ tự hiển thị (0-based) |
+| `is_visible` | SMALLINT | 0/1 |
+| `created_at` / `updated_at` | TIMESTAMP | |
+
+### 21.2 Components
+
+| Component | File | Chức năng |
+|-----------|------|-----------|
+| `WorkspaceController` | `core/Workspace/Controllers/WorkspaceController.php` | Trang `/` + `/desk`, API `api/workspace/*`, resolve live data |
+| `WorkspaceModel` | `core/Workspace/Models/WorkspaceModel.php` | CRUD `sys_workspace`, `getOrCreateForUser()` (auto-create + seed) |
+| `WorkspaceBlockModel` | `core/Workspace/Models/WorkspaceBlockModel.php` | CRUD `sys_workspace_block`, reorder, seed defaults |
+| `workspace.php` | `core/Workspace/Views/workspace.php` | Alpine.js component + SortableJS drag-drop + dialog picker |
+
+**Frontend:** view dùng Alpine.js (`workspaceApp()`) + SortableJS (`public/assets/vendor/sortablejs/`) + các class `.claro-workspace-*` trong `public/assets/volt/claro.css` (section 24).
+
+### 21.3 Block types & data
+
+| Type | `data` | Hiển thị |
+|------|--------|----------|
+| `shortcut` | `{url, icon}` | Link card + icon (inline SVG, x-show theo `icon`) |
+| `note` | `{text}` | Card ghi chú |
+| `entity_list` | `{entity, max_rows}` (≤5) | Bảng live data (3 cột đầu tiên theo field catalog) |
+| `count` | `{entity}` | Số bản ghi live |
+
+Icon pool: `doc, user, shield, server, chart, folder, link, star`.
+
+### 21.4 UX flow
+
+- **Xem:** block render sạch, không có toolbar (ẩn `opacity:0` + `visibility:hidden`).
+- **Customize:** nút header bật `editMode` → hiện toolbar từng block (kéo thả ⠿, ✎ sửa, 🗑 xóa), thanh "Add block" dashed, selector cột (1–4), dòng hint.
+- **Drag-drop:** SortableJS chỉ enable trong `editMode` (`sortable.option('disabled', !editMode)`), `onEnd` ánh xạ DOM order qua `data-block-id` → `persistOrder()`.
+- **Add/Edit dialog:** 4 type-card, quick-pick trang (admin thấy nhiều trang hơn), icon picker, width chips (1–3 col).
+- **Empty state:** user mới chưa có block → nút "Add your first block" (luôn hiển thị cả 2 mode).
+
+### 21.5 API
+
+| Endpoint | Method | Chức năng |
+|----------|--------|-----------|
+| `/api/workspace/load` | GET | Workspace + blocks (đã resolve live data) + entities |
+| `/api/workspace/block/save` | POST | Upsert block (`{id, block_type, title, size, data}`) |
+| `/api/workspace/block/delete` | POST | Xóa block (`{id}`) |
+| `/api/workspace/block/reorder` | POST | Sắp thứ tự (`{ids}`) |
+| `/api/workspace/save` | POST | Cập nhật columns / title |
+
+- Lỗi validate (type không hợp lệ, block không thuộc workspace) → HTTP 422 JSON.
+- Tất cả API đều cần filter `auth`; block ownership được kiểm tra bằng `WHERE id = ? AND workspace_id = ?`.
+
+### 21.6 Performance
+
+- **Batch resolve:** `resolveBlocks()` gom block theo `(entity, max_rows)` cho `entity_list` và theo `entity` cho `count` → **1 query cho mỗi nhóm** thay vì 1 query/block (tránh N+1 khi nhiều block cùng entity).
+- **Memoize per-request:** `entityOptions()` (danh sách entity) và `fieldCatalog()` (toàn bộ field) query 1 lần/request, dùng lại cho mọi block — bỏ việc query lại `sys_entity` / `sys_entity_field` từng block.
+- **Reorder 1 câu SQL:** `UPDATE ... SET sort = CASE id ... END ... WHERE id IN (...)` gộp N UPDATE.
+- **Upsert ít round-trip:** check ownership bằng `affectedRows()` sau `UPDATE ... WHERE id AND workspace_id` thay vì `findById` trước.
+
+### 21.7 Multilingual
+
+Tất cả chuỗi hiển thị trong view và `quickPickPages()` đều qua `core/Config/Lang/{en,vi}.php` (section `workspace`): title, nút Customize/Done, hint, type-card, width, quick-pick labels, cột `name_label` (Name/Tên), welcome text. Default seed blocks dùng `LangService::get()` nên workspace mới tự chọn đúng ngôn ngữ theo session/setting.
+
+### 21.8 Files
+
+- `core/Workspace/Controllers/WorkspaceController.php`
+- `core/Workspace/Models/WorkspaceModel.php`
+- `core/Workspace/Models/WorkspaceBlockModel.php`
+- `core/Workspace/Views/workspace.php`
+- `core/Database/Migrations/2026-07-31-000001_CreateSysWorkspaceTables.php`
+- `public/assets/vendor/sortablejs/Sortable.min.js`
+- `public/assets/volt/claro.css` (section 24)
 
 ---
 

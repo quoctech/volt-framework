@@ -11,8 +11,8 @@ Entity Builder là giao diện metadata trong Volt để tạo module, entity v�
 
 ## Route chính
 
-- `GET /`: Desk home (yêu cầu đăng nhập) — card điều hướng, không nhúng Entity List.
-- `GET /desk`: Desk home.
+- `GET /`: Desk home — Workspace cá nhân (`Volt\Core\Workspace`).
+- `GET /desk`: Desk home — Workspace cá nhân.
 - `GET /desk/entities`: Entity List (lọc theo module).
 - `GET /desk/profile`: Edit profile (đổi mật khẩu); dropdown user góc phải.
 - `POST /desk/profile`: Lưu mật khẩu mới.

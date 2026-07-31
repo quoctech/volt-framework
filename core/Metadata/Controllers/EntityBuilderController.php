@@ -36,18 +36,6 @@ class EntityBuilderController extends Controller
         ]);
     }
 
-    public function desk(): string
-    {
-        $userContext = $this->deskUserContext();
-
-        return view('Volt\\Core\\Metadata\\Views\\desk', [
-            'moduleCount' => count($this->builderService->listModules()),
-            'entityCount' => count($this->builderService->listEntityNames()),
-            'isAdmin' => $userContext['isAdmin'],
-            'currentUserName' => $userContext['currentUserName'],
-        ]);
-    }
-
     public function entityList(): string
     {
         $moduleFilter = mb_trim((string) ($this->request->getGet('module') ?? ''));

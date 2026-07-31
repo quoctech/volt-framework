@@ -75,7 +75,7 @@ $c = $lang['common'] ?? [];
                     <div style="display:grid;gap:var(--claro-space-xs);grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));margin-top:var(--claro-space-xs)">
                         <?php foreach ($allRoles as $role): ?>
                             <label class="claro-checkbox" style="border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);padding:var(--claro-space-s) var(--claro-space-m);transition:var(--claro-transition);cursor:pointer;align-items:flex-start">
-                                <input type="checkbox" name="roles[]" value="<?= esc($role->name) ?>" <?= in_array($role->name, $currentRoles, true) ? 'checked' : ?> style="margin-top:2px">
+                                <input type="checkbox" name="roles[]" value="<?= esc($role->name) ?>" <?= in_array($role->name, $currentRoles, true) ? 'checked' : '' ?> style="margin-top:2px">
                                 <div>
                                     <span style="font-weight:500"><?= esc($role->label) ?></span>
                                     <?php if ($role->description): ?>
