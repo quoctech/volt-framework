@@ -1,0 +1,1138 @@
+/* ============================================================
+   Volt Claro Theme — design tokens & component system
+   Inspired by Drupal Claro admin theme
+   ============================================================ */
+
+/* =================================================================
+   1. DESIGN TOKENS
+   ================================================================= */
+:root {
+  /* ---- Primary ---- */
+  --claro-color-primary: #003ecc;
+  --claro-color-primary-hover: #0036b1;
+  --claro-color-primary-active: #002e9a;
+  --claro-color-primary-light: #e5edff;
+  --claro-color-primary-dark: #000f33;
+
+  /* ---- Text ---- */
+  --claro-color-text: #232429;
+  --claro-color-text-light: #919297;
+  --claro-color-text-subtle: #55565b;
+
+  /* ---- Surface ---- */
+  --claro-color-bg: #ffffff;
+  --claro-color-bg-page: #f3f4f9;
+  --claro-color-bg-hover: #f5f8ff;
+  --claro-color-bg-subtle: #f9faff;
+
+  /* ---- Gray scale ---- */
+  --claro-gray-900: #393a3f;
+  --claro-gray-800: #55565b;
+  --claro-gray-700: #75767b;
+  --claro-gray-600: #828388;
+  --claro-gray-500: #919297;
+  --claro-gray-400: #adaeb3;
+  --claro-gray-300: #c1c2c7;
+  --claro-gray-200: #d3d4d9;
+  --claro-gray-100: #dedfe4;
+  --claro-gray-050: #f3f4f9;
+  --claro-gray-025: #f9faff;
+
+  /* ---- Semantic ---- */
+  --claro-color-success: #26a769;
+  --claro-color-success-bg: #e9f5ef;
+  --claro-color-success-border: #42a877;
+  --claro-color-warning: #e0ac00;
+  --claro-color-warning-bg: #fdf6e5;
+  --claro-color-warning-border: #e0ac00;
+  --claro-color-error: #dc2323;
+  --claro-color-error-bg: #fce9e9;
+  --claro-color-error-border: #e34f4f;
+  --claro-color-focus: #26a769;
+
+  /* ---- Typography ---- */
+  --claro-font-family: BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto,
+    Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --claro-font-size-xxs: 0.702rem;
+  --claro-font-size-xs: 0.79rem;
+  --claro-font-size-s: 0.889rem;
+  --claro-font-size-base: 1rem;
+  --claro-font-size-h6: 1.125rem;
+  --claro-font-size-h5: 1.266rem;
+  --claro-font-size-h4: 1.424rem;
+  --claro-font-size-h3: 1.602rem;
+  --claro-font-size-h2: 1.802rem;
+  --claro-font-size-h1: 2.027rem;
+  --claro-font-size-xl: 2.25rem;
+  --claro-line-height: 1.5;
+  --claro-line-height-heading: 1.3;
+
+  /* ---- Spacing ---- */
+  --claro-space-xs: 0.5rem;
+  --claro-space-s: 0.75rem;
+  --claro-space-m: 1rem;
+  --claro-space-l: 1.5rem;
+  --claro-space-xl: 3rem;
+
+  /* ---- Borders ---- */
+  --claro-border-radius: 2px;
+  --claro-border-color: #c1c2c7;
+  --claro-border-color-light: #dedfe4;
+
+  /* ---- Shadows ---- */
+  --claro-shadow-card: 0 4px 10px rgba(0, 0, 0, 0.1);
+  --claro-shadow-dialog: 0 0 16px -4px #232429;
+  --claro-shadow-details: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --claro-shadow-button: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  /* ---- Layout ---- */
+  --claro-layout-max-width: 960px;
+  --claro-layout-extended-width: 1088px;
+  --claro-sidebar-width: 20em;
+  --claro-topbar-height: 3.25rem;
+
+  /* ---- Transitions ---- */
+  --claro-transition: all 0.2s ease-out;
+}
+
+/* =================================================================
+   2. BASE / RESET
+   ================================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--claro-font-family);
+  font-size: var(--claro-font-size-base);
+  line-height: var(--claro-line-height);
+  color: var(--claro-color-text);
+  background: var(--claro-color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0 0 var(--claro-space-s);
+  font-weight: 700;
+  line-height: var(--claro-line-height-heading);
+  color: var(--claro-color-text);
+}
+h1 { font-size: var(--claro-font-size-h1); }
+h2 { font-size: var(--claro-font-size-h2); }
+h3 { font-size: var(--claro-font-size-h3); }
+h4 { font-size: var(--claro-font-size-h4); }
+h5 { font-size: var(--claro-font-size-h5); }
+h6 { font-size: var(--claro-font-size-h6); }
+
+a {
+  color: var(--claro-color-primary);
+  text-decoration: none;
+  transition: var(--claro-transition);
+}
+a:hover {
+  color: var(--claro-color-primary-hover);
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =================================================================
+   3. CLARO FOCUS RING (green)
+   ================================================================= */
+.claro-focus-ring,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px dotted transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--claro-color-bg), 0 0 0 5px var(--claro-color-focus);
+}
+
+/* =================================================================
+   4. PAGE HEADER
+   ================================================================= */
+.claro-page-header {
+  margin-bottom: var(--claro-space-l);
+}
+.claro-page-header__title {
+  font-size: var(--claro-font-size-h2);
+  font-weight: 700;
+  margin: 0;
+  color: var(--claro-color-text);
+}
+.claro-page-header__subtitle {
+  margin: var(--claro-space-xs) 0 0;
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text-light);
+}
+
+/* =================================================================
+   5. BUTTONS
+   ================================================================= */
+.claro-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  margin: var(--claro-space-m) 0;
+  padding: calc(var(--claro-space-m) - 1px) calc(var(--claro-space-l) - 1px);
+  border: 1px solid transparent;
+  border-radius: var(--claro-border-radius);
+  font-size: var(--claro-font-size-base);
+  font-weight: 700;
+  line-height: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--claro-transition);
+  box-shadow: var(--claro-shadow-button);
+  background: var(--claro-gray-200);
+  color: var(--claro-color-text);
+  user-select: none;
+}
+.claro-button:hover {
+  background: var(--claro-gray-300);
+  text-decoration: none;
+  color: var(--claro-color-text);
+}
+.claro-button:active {
+  background: var(--claro-gray-400);
+}
+.claro-button:disabled,
+.claro-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Primary */
+.claro-button--primary {
+  background: var(--claro-color-primary);
+  color: #ffffff;
+}
+.claro-button--primary:hover {
+  background: var(--claro-color-primary-hover);
+  color: #ffffff;
+}
+.claro-button--primary:active {
+  background: var(--claro-color-primary-active);
+  color: #ffffff;
+}
+.claro-button--primary:disabled {
+  background: var(--claro-gray-200);
+  color: var(--claro-gray-600);
+}
+
+/* Danger */
+.claro-button--danger {
+  background: var(--claro-color-error);
+  color: #ffffff;
+}
+.claro-button--danger:hover {
+  background: #c61f1f;
+  color: #ffffff;
+}
+.claro-button--danger:active {
+  background: #b01c1c;
+  color: #ffffff;
+}
+
+/* Sizes */
+.claro-button--small {
+  padding: calc(var(--claro-space-xs) - 1px) calc(var(--claro-space-m) - 1px);
+  font-size: var(--claro-font-size-xs);
+  margin: var(--claro-space-s) 0;
+}
+.claro-button--extrasmall {
+  padding: calc(4px - 1px) calc(var(--claro-space-s) - 1px);
+  font-size: var(--claro-font-size-xs);
+  margin: var(--claro-space-xs) 0;
+}
+
+/* Link-style button */
+.claro-button--link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--claro-color-primary);
+  padding: 0;
+  margin: 0;
+  font-weight: 400;
+}
+.claro-button--link:hover {
+  background: none;
+  color: var(--claro-color-primary-hover);
+  text-decoration: underline;
+}
+
+/* =================================================================
+   6. FORM INPUTS
+   ================================================================= */
+.claro-input,
+.claro-select,
+.claro-textarea {
+  display: block;
+  width: 100%;
+  padding: calc(0.75rem - 1px) calc(1rem - 1px);
+  border: 1px solid var(--claro-gray-500);
+  border-radius: var(--claro-border-radius);
+  font-size: var(--claro-font-size-base);
+  line-height: 1.5rem;
+  color: var(--claro-color-text);
+  background: var(--claro-color-bg);
+  transition: var(--claro-transition);
+}
+.claro-input:hover,
+.claro-select:hover,
+.claro-textarea:hover {
+  border-color: var(--claro-color-text);
+}
+.claro-input:focus,
+.claro-select:focus,
+.claro-textarea:focus {
+  border-color: var(--claro-color-primary);
+  box-shadow: 0 0 0 2px var(--claro-color-bg), 0 0 0 5px var(--claro-color-focus);
+  outline: none;
+}
+.claro-input::placeholder,
+.claro-textarea::placeholder {
+  color: var(--claro-gray-700);
+}
+.claro-input:disabled,
+.claro-select:disabled,
+.claro-textarea:disabled {
+  background: #f2f2f3;
+  color: var(--claro-gray-800);
+  border-color: #bababf;
+}
+
+/* Input errors */
+.claro-input--error,
+.claro-select--error,
+.claro-textarea--error {
+  border-width: 2px;
+  border-color: var(--claro-color-error);
+}
+
+/* Select */
+.claro-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23232429' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  padding-right: 2rem;
+}
+
+/* Checkbox / Radio */
+.claro-checkbox,
+.claro-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  cursor: pointer;
+  font-size: var(--claro-font-size-base);
+}
+.claro-checkbox input[type="checkbox"],
+.claro-radio input[type="radio"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  accent-color: var(--claro-color-primary);
+  cursor: pointer;
+}
+
+/* =================================================================
+   7. FORM LAYOUT
+   ================================================================= */
+.claro-form-item {
+  margin-bottom: var(--claro-space-l);
+}
+.claro-form-item--inline {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-m);
+}
+.claro-form-item__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--claro-font-size-s);
+  font-weight: 700;
+  line-height: 1.125rem;
+  color: var(--claro-color-text);
+}
+.claro-form-item__description {
+  margin-top: 6px;
+  font-size: var(--claro-font-size-xs);
+  color: var(--claro-color-text-subtle);
+  line-height: 1.0625rem;
+}
+.claro-form-item__error {
+  margin-top: 6px;
+  font-size: var(--claro-font-size-xs);
+  color: var(--claro-color-error);
+  line-height: 1.0625rem;
+}
+.claro-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--claro-space-xs);
+  align-items: center;
+}
+.claro-form-actions .claro-button {
+  margin: var(--claro-space-xs) 0;
+}
+
+/* =================================================================
+   8. TABLES
+   ================================================================= */
+.claro-table {
+  width: 100%;
+  margin: var(--claro-space-l) 0;
+  border-collapse: collapse;
+  font-size: var(--claro-font-size-base);
+}
+.claro-table th {
+  padding: var(--claro-space-xs) var(--claro-space-m);
+  height: var(--claro-space-xl);
+  background: var(--claro-gray-050);
+  font-weight: 700;
+  font-size: var(--claro-font-size-s);
+  text-align: left;
+  line-height: 1.25rem;
+  color: var(--claro-color-text);
+  border-bottom: 1px solid var(--claro-gray-200);
+  white-space: nowrap;
+}
+.claro-table td {
+  padding: var(--claro-space-xs) var(--claro-space-m);
+  min-height: 4rem;
+  line-height: var(--claro-line-height);
+  border-bottom: 1px solid var(--claro-gray-200);
+  vertical-align: middle;
+}
+.claro-table tr {
+  transition: var(--claro-transition);
+}
+.claro-table tbody tr:hover {
+  background: var(--claro-color-bg-hover);
+}
+.claro-table--striped tbody tr:nth-child(even) {
+  background: var(--claro-gray-025);
+}
+.claro-table--striped tbody tr:nth-child(even):hover {
+  background: var(--claro-color-bg-hover);
+}
+
+/* Table actions column */
+.claro-table__actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.claro-table__actions .claro-button {
+  margin: 0;
+}
+
+/* =================================================================
+   9. CARDS
+   ================================================================= */
+.claro-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--claro-color-bg);
+  border: 1px solid var(--claro-gray-200);
+  border-radius: var(--claro-border-radius);
+  box-shadow: var(--claro-shadow-card);
+  overflow: hidden;
+}
+.claro-card__content {
+  padding: var(--claro-space-l);
+}
+.claro-card__title {
+  font-size: var(--claro-font-size-h5);
+  font-weight: 700;
+  margin: 0 0 var(--claro-space-xs);
+  color: var(--claro-color-text);
+}
+.claro-card__subtitle {
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text-light);
+  margin: 0 0 var(--claro-space-m);
+}
+.claro-card__footer {
+  padding: var(--claro-space-m) var(--claro-space-l);
+  border-top: 1px solid var(--claro-gray-100);
+  background: var(--claro-gray-025);
+}
+
+/* Card grid */
+.claro-card-grid {
+  display: grid;
+  gap: var(--claro-space-m);
+}
+
+/* =================================================================
+   10. LINK CARD (desk card grid)
+   ================================================================= */
+.claro-link-card {
+  display: block;
+  padding: var(--claro-space-l);
+  background: var(--claro-color-bg);
+  border: 1px solid var(--claro-gray-200);
+  border-radius: var(--claro-border-radius);
+  box-shadow: var(--claro-shadow-card);
+  transition: var(--claro-transition);
+  text-decoration: none;
+  color: var(--claro-color-text);
+}
+.claro-link-card:hover {
+  border-color: var(--claro-color-primary);
+  box-shadow: 0 4px 14px rgba(0, 62, 204, 0.12);
+  text-decoration: none;
+  color: var(--claro-color-text);
+}
+.claro-link-card__badge {
+  display: inline-block;
+  font-size: var(--claro-font-size-xxs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--claro-color-text-light);
+  margin-bottom: var(--claro-space-xs);
+}
+.claro-link-card__title {
+  font-size: var(--claro-font-size-h5);
+  font-weight: 700;
+  margin: 0 0 var(--claro-space-xs);
+}
+.claro-link-card__desc {
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text-subtle);
+  margin: 0 0 var(--claro-space-s);
+}
+.claro-link-card__meta {
+  font-size: var(--claro-font-size-xs);
+  color: var(--claro-color-text-light);
+  margin: 0;
+}
+
+/* =================================================================
+   11. MESSAGES / ALERTS
+   ================================================================= */
+.claro-message {
+  display: flex;
+  gap: var(--claro-space-m);
+  align-items: flex-start;
+  padding: var(--claro-space-l) var(--claro-space-l) var(--claro-space-l)
+    calc(var(--claro-space-l) - 5px);
+  border-radius: var(--claro-border-radius);
+  border-left: 5px solid;
+  background: #353641;
+  color: #ffffff;
+  font-size: var(--claro-font-size-s);
+  margin-bottom: var(--claro-space-l);
+}
+.claro-message--status {
+  border-left-color: var(--claro-color-success-border);
+  background: var(--claro-color-success-bg);
+  color: var(--claro-color-text);
+}
+.claro-message--warning {
+  border-left-color: var(--claro-color-warning-border);
+  background: var(--claro-color-warning-bg);
+  color: var(--claro-color-text);
+}
+.claro-message--error {
+  border-left-color: var(--claro-color-error-border);
+  background: var(--claro-color-error-bg);
+  color: var(--claro-color-text);
+}
+.claro-message__icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 1px;
+}
+.claro-message__content {
+  flex: 1;
+}
+.claro-message__title {
+  font-weight: 700;
+  margin-bottom: var(--claro-space-xs);
+}
+.claro-message a {
+  color: var(--claro-color-primary);
+  text-decoration: underline;
+}
+.claro-message a:hover {
+  color: #ffffff;
+}
+.claro-message--status a:hover,
+.claro-message--warning a:hover,
+.claro-message--error a:hover {
+  color: var(--claro-color-primary-hover);
+}
+
+/* =================================================================
+   12. BADGES
+   ================================================================= */
+.claro-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: var(--claro-font-size-xxs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--claro-border-radius);
+  background: var(--claro-gray-100);
+  color: var(--claro-color-text);
+}
+.claro-badge--success {
+  background: var(--claro-color-success-bg);
+  color: #1a7a4a;
+}
+.claro-badge--warning {
+  background: var(--claro-color-warning-bg);
+  color: #7a5a00;
+}
+.claro-badge--error {
+  background: var(--claro-color-error-bg);
+  color: var(--claro-color-error);
+}
+.claro-badge--info {
+  background: var(--claro-color-primary-light);
+  color: var(--claro-color-primary);
+}
+
+/* =================================================================
+   13. DROPDOWN MENU
+   ================================================================= */
+.claro-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.claro-dropdown__menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 12rem;
+  padding: var(--claro-space-xs) 0;
+  margin-top: 4px;
+  background: var(--claro-color-bg);
+  border: 1px solid var(--claro-gray-200);
+  border-radius: var(--claro-border-radius);
+  box-shadow: var(--claro-shadow-dialog);
+  display: none;
+}
+.claro-dropdown__menu--open {
+  display: block;
+}
+.claro-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  padding: var(--claro-space-xs) var(--claro-space-m);
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--claro-transition);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--claro-font-family);
+}
+.claro-dropdown__item:hover {
+  background: var(--claro-color-bg-hover);
+  color: var(--claro-color-primary);
+  text-decoration: none;
+}
+.claro-dropdown__item--danger:hover {
+  background: var(--claro-color-error-bg);
+  color: var(--claro-color-error);
+}
+.claro-dropdown__divider {
+  height: 1px;
+  margin: var(--claro-space-xs) 0;
+  background: var(--claro-gray-100);
+}
+
+/* =================================================================
+   14. DIALOG / MODAL
+   ================================================================= */
+.claro-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--claro-space-l);
+}
+.claro-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+.claro-dialog__panel {
+  width: 100%;
+  max-width: 32rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--claro-color-bg);
+  border-radius: 4px;
+  box-shadow: var(--claro-shadow-dialog);
+}
+.claro-dialog__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--claro-space-m) var(--claro-space-l);
+  background: var(--claro-color-text);
+  color: #ffffff;
+  font-size: var(--claro-font-size-h4);
+  font-weight: 700;
+}
+.claro-dialog__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: var(--claro-font-size-h5);
+  transition: var(--claro-transition);
+}
+.claro-dialog__close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.claro-dialog__body {
+  padding: var(--claro-space-l);
+}
+.claro-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--claro-space-xs);
+  padding: var(--claro-space-m) var(--claro-space-l);
+  border-top: 1px solid var(--claro-gray-100);
+}
+.claro-dialog__actions .claro-button {
+  margin: 0;
+}
+
+/* =================================================================
+   15. TABS
+   ================================================================= */
+.claro-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--claro-gray-200);
+  margin-bottom: var(--claro-space-l);
+  overflow-x: auto;
+}
+.claro-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  padding: var(--claro-space-s) var(--claro-space-m);
+  font-size: var(--claro-font-size-s);
+  font-weight: 700;
+  color: var(--claro-color-text-subtle);
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  cursor: pointer;
+  transition: var(--claro-transition);
+  white-space: nowrap;
+  font-family: var(--claro-font-family);
+}
+.claro-tabs__tab:hover {
+  color: var(--claro-color-text);
+  background: var(--claro-gray-025);
+}
+.claro-tabs__tab--active {
+  color: var(--claro-color-primary);
+  border-bottom-color: var(--claro-color-primary);
+}
+
+/* =================================================================
+   16. BREADCRUMB
+   ================================================================= */
+.claro-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: var(--claro-space-m);
+  font-size: var(--claro-font-size-xs);
+}
+.claro-breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--claro-color-text);
+}
+.claro-breadcrumb__item + .claro-breadcrumb__item::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0 var(--claro-space-s);
+  border-right: 2px solid var(--claro-gray-400);
+  border-bottom: 2px solid var(--claro-gray-400);
+  transform: rotate(-45deg);
+}
+.claro-breadcrumb a {
+  color: var(--claro-color-text);
+  text-decoration: none;
+}
+.claro-breadcrumb a:hover {
+  color: var(--claro-color-primary);
+}
+
+/* =================================================================
+   17. PROGRESS BAR
+   ================================================================= */
+.claro-progress {
+  width: 100%;
+  height: 0.5rem;
+  border-radius: var(--claro-border-radius);
+  background: var(--claro-gray-200);
+  overflow: hidden;
+}
+.claro-progress__fill {
+  height: 100%;
+  border-radius: var(--claro-border-radius);
+  background: var(--claro-color-primary);
+  transition: width 0.5s ease-out;
+}
+
+/* =================================================================
+   18. TOPBAR (Claro-style admin toolbar)
+   ================================================================= */
+.claro-topbar {
+  display: flex;
+  align-items: center;
+  height: var(--claro-topbar-height);
+  padding: 0 var(--claro-space-l);
+  background: var(--claro-color-text);
+  color: #ffffff;
+  gap: var(--claro-space-m);
+}
+.claro-topbar__brand {
+  font-size: var(--claro-font-size-base);
+  font-weight: 700;
+  color: #ffffff;
+  text-decoration: none;
+  margin-right: var(--claro-space-l);
+}
+.claro-topbar__brand:hover {
+  color: #ffffff;
+  text-decoration: none;
+}
+.claro-topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  flex: 1;
+}
+.claro-topbar__link {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--claro-space-xs) var(--claro-space-s);
+  font-size: var(--claro-font-size-s);
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  border-radius: var(--claro-border-radius);
+  transition: var(--claro-transition);
+}
+.claro-topbar__link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  text-decoration: none;
+}
+.claro-topbar__link--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+.claro-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  margin-left: auto;
+}
+
+/* =================================================================
+   19. MAIN CONTENT LAYOUT
+   ================================================================= */
+.claro-page {
+  max-width: var(--claro-layout-max-width);
+  margin: 0 auto;
+  padding: var(--claro-space-l);
+}
+.claro-page--wide {
+  max-width: var(--claro-layout-extended-width);
+}
+
+/* =================================================================
+   20. TABLE TOOLBAR (list view header)
+   ================================================================= */
+.claro-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--claro-space-m);
+  margin-bottom: var(--claro-space-m);
+}
+.claro-table-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-m);
+}
+.claro-table-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+}
+
+/* =================================================================
+   21. SEARCH INPUT
+   ================================================================= */
+.claro-search {
+  position: relative;
+}
+.claro-search__input {
+  padding-left: 2rem;
+}
+.claro-search__icon {
+  position: absolute;
+  left: var(--claro-space-s);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--claro-gray-500);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* =================================================================
+   22. EMPTY STATE
+   ================================================================= */
+.claro-empty {
+  text-align: center;
+  padding: var(--claro-space-xl) var(--claro-space-l);
+  color: var(--claro-color-text-light);
+}
+.claro-empty__icon {
+  font-size: 2rem;
+  margin-bottom: var(--claro-space-m);
+}
+.claro-empty__text {
+  font-size: var(--claro-font-size-s);
+}
+
+/* =================================================================
+   23. PERMISSION MATRIX
+   ================================================================= */
+.claro-permission-matrix {
+  width: 100%;
+  border-collapse: collapse;
+}
+.claro-permission-matrix th,
+.claro-permission-matrix td {
+  padding: var(--claro-space-xs) var(--claro-space-s);
+  border: 1px solid var(--claro-gray-200);
+  text-align: center;
+  font-size: var(--claro-font-size-xs);
+}
+.claro-permission-matrix th {
+  background: var(--claro-gray-050);
+  font-weight: 700;
+}
+.claro-permission-matrix td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
+/* =================================================================
+   23. AWESOME BAR (Command Palette)
+   ================================================================= */
+.claro-awesome-bar__header {
+  padding: var(--claro-space-m) var(--claro-space-l);
+  background: var(--claro-gray-050);
+}
+.claro-awesome-bar__input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-s);
+  border: 1px solid var(--claro-gray-200);
+  border-radius: var(--claro-border-radius);
+  background: var(--claro-color-bg);
+  padding: var(--claro-space-s) var(--claro-space-m);
+  transition: var(--claro-transition);
+}
+.claro-awesome-bar__input-wrapper:focus-within {
+  border-color: var(--claro-color-primary);
+  box-shadow: var(--claro-focus-ring);
+}
+.claro-awesome-bar__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: var(--claro-font-size-base);
+  color: var(--claro-color-text);
+  font-family: var(--claro-font-family);
+}
+.claro-awesome-bar__section {
+  padding: var(--claro-space-xs) var(--claro-space-l);
+  border-bottom: 1px solid var(--claro-gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--claro-gray-500);
+}
+.claro-awesome-bar__result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--claro-space-s);
+  padding: var(--claro-space-s) var(--claro-space-l);
+  border-bottom: 1px solid var(--claro-gray-100);
+  text-decoration: none;
+  color: var(--claro-color-text);
+  transition: var(--claro-transition);
+  cursor: pointer;
+}
+.claro-awesome-bar__result:hover,
+.claro-awesome-bar__result--active {
+  background: var(--claro-color-primary);
+  color: #ffffff;
+}
+.claro-awesome-bar__result-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--claro-border-radius);
+  border: 1px solid var(--claro-gray-200);
+  font-size: var(--claro-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  background: var(--claro-gray-050);
+  color: var(--claro-gray-600);
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-icon {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.claro-awesome-bar__result-body {
+  min-width: 0;
+  flex: 1;
+}
+.claro-awesome-bar__result-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--claro-font-size-s);
+  font-weight: 700;
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-label {
+  color: #ffffff;
+}
+.claro-awesome-bar__result-badge {
+  border-radius: var(--claro-border-radius);
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--claro-gray-100);
+  color: var(--claro-gray-500);
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+.claro-awesome-bar__result-desc {
+  margin: var(--claro-space-xs) 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--claro-font-size-xs);
+  color: var(--claro-gray-500);
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+.claro-awesome-bar__result-meta {
+  margin-top: var(--claro-space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+  font-size: var(--claro-font-size-xxs);
+  color: var(--claro-gray-400);
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-meta {
+  color: rgba(255, 255, 255, 0.6);
+}
+.claro-awesome-bar__result-enter {
+  font-size: var(--claro-font-size-xs);
+  padding-top: var(--claro-space-xs);
+  color: var(--claro-gray-300);
+}
+.claro-awesome-bar__result--active .claro-awesome-bar__result-enter {
+  color: rgba(255, 255, 255, 0.6);
+}
+.claro-awesome-bar__results {
+  max-height: min(60vh, 34rem);
+  overflow-y: auto;
+  background: var(--claro-color-bg);
+}
+.claro-awesome-bar__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--claro-gray-100);
+  background: var(--claro-gray-050);
+  padding: var(--claro-space-s) var(--claro-space-l);
+  font-size: var(--claro-font-size-xs);
+  color: var(--claro-gray-400);
+}
+.claro-awesome-bar__kbd {
+  border: 1px solid var(--claro-gray-200);
+  border-radius: 2px;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: var(--claro-gray-500);
+}
+.claro-awesome-bar__spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--claro-gray-200);
+  border-top-color: var(--claro-color-primary);
+  border-radius: 50%;
+  animation: claro-spin 0.6s linear infinite;
+}

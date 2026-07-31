@@ -19,12 +19,12 @@ $htmlLang = $lang['code'] ?? 'en';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($cm['title'] ?? 'Create Module · Volt Desk') ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
-    <style>
-        [x-cloak] { display: none !important; }
-    </style>
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
+<body class="claro-body">
     <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
 
     <main
@@ -38,47 +38,49 @@ $htmlLang = $lang['code'] ?? 'en';
                 'created' => $cm['success_created'] ?? 'Created module {name}.',
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
-        class="mx-auto max-w-5xl p-4 lg:p-8"
+        class="claro-page"
     >
-        <div class="mb-6">
-            <h1 class="text-2xl font-semibold"><?= esc($cm['heading'] ?? 'Create Module') ?></h1>
-            <p class="mt-1 text-sm text-slate-500"><?= esc($cm['description'] ?? '') ?></p>
+        <div class="claro-page-header">
+            <h1 class="claro-page-header__title"><?= esc($cm['heading'] ?? 'Create Module') ?></h1>
+            <p class="claro-page-header__subtitle"><?= esc($cm['description'] ?? '') ?></p>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <section class="border border-zinc-300 bg-white p-4">
-                <div class="grid gap-3 md:grid-cols-2">
-                    <label class="block">
-                        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500"><?= esc($cm['module_name_label'] ?? 'Module Name') ?></span>
-                        <input x-model="form.name" type="text" class="w-full border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500" placeholder="sales">
-                    </label>
-
-                    <label class="block">
-                        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500"><?= esc($cm['label_label'] ?? 'Label') ?></span>
-                        <input x-model="form.label" type="text" class="w-full border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500" placeholder="Sales">
-                    </label>
-                </div>
-
-                <div class="mt-4 flex gap-2">
-                    <button @click="saveModule()" type="button" class="border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700"><?= esc($cm['create_button'] ?? 'Create Module') ?></button>
-                    <a href="<?= site_url('desk/entity-builder') ?>" class="border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-50"><?= esc($cm['go_to_builder'] ?? 'Go to Builder') ?></a>
-                </div>
-            </section>
-
-            <aside class="border border-zinc-300 bg-white p-4">
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500"><?= esc($cm['existing'] ?? 'Existing Modules') ?></p>
-                <div class="mt-3 space-y-2">
-                    <template x-for="module in modules" :key="module">
-                        <div class="border border-zinc-300 px-3 py-2 text-sm" x-text="module"></div>
-                    </template>
-                    <div x-show="modules.length === 0" x-cloak class="text-sm text-zinc-500">
-                        <?= esc($cm['empty'] ?? 'No modules yet.') ?>
+        <div style="display:grid;gap:var(--claro-space-m);grid-template-columns:minmax(0,1fr) 280px">
+            <div class="claro-card">
+                <div class="claro-card__content">
+                    <div style="display:grid;gap:var(--claro-space-m);grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))">
+                        <div class="claro-form-item" style="margin-bottom:0">
+                            <label class="claro-form-item__label"><?= esc($cm['module_name_label'] ?? 'Module Name') ?></label>
+                            <input x-model="form.name" type="text" class="claro-input" placeholder="sales">
+                        </div>
+                        <div class="claro-form-item" style="margin-bottom:0">
+                            <label class="claro-form-item__label"><?= esc($cm['label_label'] ?? 'Label') ?></label>
+                            <input x-model="form.label" type="text" class="claro-input" placeholder="Sales">
+                        </div>
+                    </div>
+                    <div class="claro-form-actions" style="margin-top:var(--claro-space-l)">
+                        <button @click="saveModule()" type="button" class="claro-button claro-button--primary"><?= esc($cm['create_button'] ?? 'Create Module') ?></button>
+                        <a href="<?= site_url('desk/entity-builder') ?>" class="claro-button"><?= esc($cm['go_to_builder'] ?? 'Go to Builder') ?></a>
                     </div>
                 </div>
-            </aside>
+            </div>
+
+            <div class="claro-card">
+                <div class="claro-card__content">
+                    <p style="font-size:var(--claro-font-size-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light);margin:0 0 var(--claro-space-m)"><?= esc($cm['existing'] ?? 'Existing Modules') ?></p>
+                    <div style="display:flex;flex-direction:column;gap:var(--claro-space-xs)">
+                        <template x-for="module in modules" :key="module">
+                            <div style="border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);padding:var(--claro-space-xs) var(--claro-space-s);font-size:var(--claro-font-size-s)" x-text="module"></div>
+                        </template>
+                        <div x-show="modules.length === 0" x-cloak style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)">
+                            <?= esc($cm['empty'] ?? 'No modules yet.') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div x-show="flash.message" x-cloak class="fixed bottom-4 right-4 border border-zinc-300 bg-white px-4 py-3 text-sm shadow-sm" :class="flash.type === 'error' ? 'text-red-700' : 'text-zinc-800'">
+        <div x-show="flash.message" x-cloak style="position:fixed;bottom:var(--claro-space-m);right:var(--claro-space-m);border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);background:var(--claro-color-bg);padding:var(--claro-space-s) var(--claro-space-m);font-size:var(--claro-font-size-s);box-shadow:var(--claro-shadow-dialog)" :style="flash.type === 'error' ? 'color:var(--claro-color-error)' : ''">
             <span x-text="flash.message"></span>
         </div>
     </main>

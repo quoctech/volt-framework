@@ -135,7 +135,6 @@ class AwesomeBarModel
             ['item_name' => 'error_logs',      'label' => 'Error Logs',      'description' => 'Xem nhật ký lỗi hệ thống và stack trace runtime', 'route' => 'desk/error-logs',       'module' => null],
             ['item_name' => 'desk',            'label' => 'Desk',            'description' => 'Trang chủ Volt Desk',                           'route' => 'desk',                  'module' => null],
             ['item_name' => 'reports',         'label' => 'Reports',         'description' => 'Xây dựng báo cáo, pivot table và biểu đồ',      'route' => 'desk/reports',          'module' => null],
-            ['item_name' => 'dashboard',       'label' => 'Dashboard',       'description' => 'Trực quan hóa báo cáo với biểu đồ',             'route' => 'desk/dashboard',        'module' => null],
         ];
 
         foreach ($pages as $page) {

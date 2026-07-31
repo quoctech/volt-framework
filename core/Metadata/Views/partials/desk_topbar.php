@@ -21,110 +21,105 @@ $nav = $lang['nav'] ?? [];
 $common = $lang['common'] ?? [];
 ?>
 <header
-    class="border-b border-slate-300 bg-white"
+    class="claro-topbar"
     x-data="awesomeBar('<?= esc($searchUrl, 'js') ?>')"
     @keydown.window.ctrl.k.prevent="openModal()"
     @keydown.window.cmd.k.prevent="openModal()"
     @keydown.window.escape="closeModal()"
 >
-    <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 lg:px-8">
-        <div class="flex min-w-0 items-center gap-6">
-            <a href="<?= site_url('desk') ?>" class="shrink-0 text-sm font-semibold tracking-wide text-slate-900">
-                Volt Desk
-            </a>
+    <a href="<?= site_url('desk') ?>" class="claro-topbar__brand">
+        Volt Desk
+    </a>
 
-            <?php if ($isAdmin || $canViewErrorLogs): ?>
-                <nav class="hidden items-center gap-4 md:flex">
-                    <?php if ($isAdmin): ?>
-                        <a href="<?= site_url('desk/system-settings') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-settings' ? 'font-semibold text-slate-900' : '' ?>">
-                            <?= esc($nav['system_settings'] ?? 'System Settings') ?>
-                        </a>
-                        <a href="<?= site_url('desk/system-status') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'system-status' ? 'font-semibold text-slate-900' : '' ?>">
-                            <?= esc($nav['system_status'] ?? 'System Status') ?>
-                        </a>
-                        <a href="<?= site_url('desk/pages') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'pages' ? 'font-semibold text-slate-900' : '' ?>">
-                            Pages
-                        </a>
-                        <a href="<?= site_url('desk/reports') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'reports' ? 'font-semibold text-slate-900' : '' ?>">
-                            Reports
-                        </a>
-                        <a href="<?= site_url('desk/dashboard') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'dashboard' ? 'font-semibold text-slate-900' : '' ?>">
-                            Dashboard
-                        </a>
-                        <a href="<?= site_url('desk/tenants') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'tenants' ? 'font-semibold text-slate-900' : '' ?>">
-                            <?= esc($nav['tenants'] ?? 'Tenants') ?>
-                        </a>
-                    <?php endif; ?>
-                    <?php if ($canViewErrorLogs): ?>
-                        <a href="<?= site_url('desk/error-logs') ?>" class="text-sm text-slate-500 transition hover:text-slate-900 <?= $deskActive === 'error-logs' ? 'font-semibold text-slate-900' : '' ?>">
-                            <?= esc($nav['error_logs'] ?? 'Error Logs') ?>
-                        </a>
-                    <?php endif; ?>
-                </nav>
+    <?php if ($isAdmin || $canViewErrorLogs): ?>
+        <nav class="claro-topbar__nav">
+            <?php if ($isAdmin): ?>
+                <a href="<?= site_url('desk/system-settings') ?>" class="claro-topbar__link <?= $deskActive === 'system-settings' ? 'claro-topbar__link--active' : '' ?>">
+                    <?= esc($nav['system_settings'] ?? 'System Settings') ?>
+                </a>
+                <a href="<?= site_url('desk/system-status') ?>" class="claro-topbar__link <?= $deskActive === 'system-status' ? 'claro-topbar__link--active' : '' ?>">
+                    <?= esc($nav['system_status'] ?? 'System Status') ?>
+                </a>
+                <a href="<?= site_url('desk/pages') ?>" class="claro-topbar__link <?= $deskActive === 'pages' ? 'claro-topbar__link--active' : '' ?>">
+                    Pages
+                </a>
+                <a href="<?= site_url('desk/reports') ?>" class="claro-topbar__link <?= $deskActive === 'reports' ? 'claro-topbar__link--active' : '' ?>">
+                    Reports
+                </a>
+                <a href="<?= site_url('desk/tenants') ?>" class="claro-topbar__link <?= $deskActive === 'tenants' ? 'claro-topbar__link--active' : '' ?>">
+                    <?= esc($nav['tenants'] ?? 'Tenants') ?>
+                </a>
             <?php endif; ?>
-        </div>
+            <?php if ($canViewErrorLogs): ?>
+                <a href="<?= site_url('desk/error-logs') ?>" class="claro-topbar__link <?= $deskActive === 'error-logs' ? 'claro-topbar__link--active' : '' ?>">
+                    <?= esc($nav['error_logs'] ?? 'Error Logs') ?>
+                </a>
+            <?php endif; ?>
+        </nav>
+    <?php endif; ?>
 
-        <div class="flex items-center gap-3">
+    <div class="claro-topbar__right">
+        <button
+            type="button"
+            @click="openModal()"
+            style="display:inline-flex;align-items:center;gap:var(--claro-space-xs);padding:var(--claro-space-xs) var(--claro-space-s);border:1px solid rgba(255,255,255,0.2);border-radius:var(--claro-border-radius);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);font-size:var(--claro-font-size-s);cursor:pointer"
+        >
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+            </svg>
+            <span class="hidden sm:inline"><?= esc($common['search_or_jump'] ?? 'Search or jump to...') ?></span>
+            <kbd style="padding:1px 6px;border:1px solid rgba(255,255,255,0.2);border-radius:2px;font-size:10px;font-weight:500">Ctrl K</kbd>
+        </button>
+
+        <div
+            class="claro-dropdown"
+            x-data="claroDropdown"
+            @click.outside="close()"
+            @keydown.escape.window="close()"
+        >
             <button
                 type="button"
-                @click="openModal()"
-                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700"
+                class="claro-topbar__link"
+                @click="toggle()"
+                :aria-expanded="open.toString()"
+                aria-haspopup="menu"
             >
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:50%;background:rgba(255,255,255,0.2);font-size:var(--claro-font-size-xs);font-weight:700;color:#ffffff;margin-right:var(--claro-space-xs)">
+                    <?= esc($initial) ?>
+                </span>
+                <span class="hidden sm:inline" style="max-width:10rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= esc($currentUserName) ?></span>
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
                 </svg>
-                <span class="hidden sm:inline"><?= esc($common['search_or_jump'] ?? 'Search or jump to...') ?></span>
-                <kbd class="hidden rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400 sm:inline-flex">Ctrl K</kbd>
             </button>
 
             <div
-                class="relative"
-                x-data="{ open: false }"
-                @click.outside="open = false"
-                @keydown.escape.window="open = false"
+                x-cloak
+                x-show="open"
+                x-transition.origin.top.right
+                class="claro-dropdown__menu"
+                :class="{ 'claro-dropdown__menu--open': open }"
+                role="menu"
             >
-                <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
-                    @click="open = !open"
-                    :aria-expanded="open.toString()"
-                    aria-haspopup="menu"
-                >
-                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-                        <?= esc($initial) ?>
-                    </span>
-                    <span class="hidden max-w-[10rem] truncate sm:inline"><?= esc($currentUserName) ?></span>
-                    <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-
-                <div
-                    x-cloak
-                    x-show="open"
-                    x-transition.origin.top.right
-                    class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded border border-slate-300 bg-white shadow-lg"
-                    role="menu"
-                >
-                    <div class="border-b border-slate-200 px-3 py-2">
-                        <p class="truncate text-sm font-medium text-slate-900"><?= esc($currentUserName) ?></p>
-                        <p class="text-xs text-slate-500"><?= $isAdmin ? esc($common['admin'] ?? 'Admin') : esc($common['user'] ?? 'User') ?></p>
-                    </div>
-                    <a
-                        href="<?= site_url('desk/profile') ?>"
-                        class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        role="menuitem"
-                        @click="open = false"
-                    ><?= esc($nav['profile'] ?? 'Edit Profile') ?></a>
-                    <form action="<?= site_url('logout') ?>" method="post">
-                        <?= csrf_field() ?>
-                        <button
-                            type="submit"
-                            class="block w-full px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"
-                            role="menuitem"
-                        ><?= esc($nav['logout'] ?? 'Logout') ?></button>
-                    </form>
+                <div style="padding:var(--claro-space-xs) var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                    <p style="font-size:var(--claro-font-size-s);font-weight:500;margin:0"><?= esc($currentUserName) ?></p>
+                    <p style="font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light);margin:0"><?= $isAdmin ? esc($common['admin'] ?? 'Admin') : esc($common['user'] ?? 'User') ?></p>
                 </div>
+                <a
+                    href="<?= site_url('desk/profile') ?>"
+                    class="claro-dropdown__item"
+                    role="menuitem"
+                    @click="close()"
+                ><?= esc($nav['profile'] ?? 'Edit Profile') ?></a>
+                <div class="claro-dropdown__divider"></div>
+                <form action="<?= site_url('logout') ?>" method="post">
+                    <?= csrf_field() ?>
+                    <button
+                        type="submit"
+                        class="claro-dropdown__item claro-dropdown__item--danger"
+                        role="menuitem"
+                    ><?= esc($nav['logout'] ?? 'Logout') ?></button>
+                </form>
             </div>
         </div>
     </div>
@@ -132,21 +127,11 @@ $common = $lang['common'] ?? [];
     <div
         x-cloak
         x-show="modalOpen"
-        class="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6"
+        class="claro-dialog"
         aria-modal="true"
         role="dialog"
     >
-        <div
-            x-show="modalOpen"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="absolute inset-0 bg-slate-950/45"
-            @click="closeModal()"
-        ></div>
+        <div class="claro-dialog__overlay" @click="closeModal()"></div>
 
         <div
             x-show="modalOpen"
@@ -156,13 +141,13 @@ $common = $lang['common'] ?? [];
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="relative z-[121] flex w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.28)]"
-            style="will-change: transform, opacity"
+            class="claro-dialog__panel"
+            style="max-width:40rem"
             @click.stop
         >
-            <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <svg class="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <div class="claro-awesome-bar__header">
+                <div class="claro-awesome-bar__input-wrapper">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="flex-shrink:0;color:var(--claro-gray-500)">
                         <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
                     </svg>
                     <input
@@ -173,98 +158,75 @@ $common = $lang['common'] ?? [];
                         @keydown.up.prevent="prevResult()"
                         @keydown.enter.prevent="goResult()"
                         type="text"
-                        class="w-full border-0 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
+                        class="claro-awesome-bar__input"
                         placeholder="<?= esc($common['search_placeholder'] ?? 'Search documents, pages, modules...') ?>"
                         autocomplete="off"
                     >
-                    <div class="flex items-center gap-2">
-                        <div
-                            x-show="loading"
-                            class="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500"
-                        ></div>
-                        <kbd class="rounded-full border border-slate-200 px-2 py-1 text-[10px] font-medium text-slate-400">ESC</kbd>
+                    <div style="display:flex;align-items:center;gap:var(--claro-space-xs)">
+                        <div x-show="loading" class="claro-awesome-bar__spinner"></div>
+                        <kbd class="claro-awesome-bar__kbd">ESC</kbd>
                     </div>
                 </div>
             </div>
 
-            <div class="border-b border-slate-100 bg-white px-4 py-2">
-                <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                    <span x-text="query.trim() === '' ? '<?= esc($common['quick_access'] ?? 'Quick Access') ?>' : '<?= esc($common['search_results'] ?? 'Search Results') ?>'"></span>
-                    <span x-text="results.length > 0 ? `${results.length} <?= esc($common['items'] ?? 'item(s)') ?>` : '<?= esc($common['no_selection'] ?? 'No selection') ?>'"></span>
-                </div>
+            <div class="claro-awesome-bar__section">
+                <span x-text="query.trim() === '' ? '<?= esc($common['quick_access'] ?? 'Quick Access') ?>' : '<?= esc($common['search_results'] ?? 'Search Results') ?>'"></span>
+                <span x-text="results.length > 0 ? `${results.length} <?= esc($common['items'] ?? 'item(s)') ?>` : '<?= esc($common['no_selection'] ?? 'No selection') ?>'"></span>
             </div>
 
-            <div class="max-h-[min(60vh,34rem)] overflow-y-auto bg-white">
+            <div class="claro-awesome-bar__results">
                 <template x-for="(item, idx) in results" :key="item.item_type + '-' + item.item_name + '-' + idx">
                     <a
                         :href="item.route"
-                        :class="idx === activeIndex ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'"
-                        class="flex items-start gap-3 border-b border-slate-100 px-4 py-3.5 transition last:border-b-0"
+                        class="claro-awesome-bar__result"
+                        :class="{ 'claro-awesome-bar__result--active': idx === activeIndex }"
                         @mouseenter="activeIndex = idx"
                         @click="closeModal()"
                     >
-                        <div
-                            :class="idx === activeIndex ? 'border-white/10 bg-white/10 text-white' : 'border-slate-200 bg-slate-50 text-slate-600'"
-                            class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold uppercase tracking-wide"
-                            x-text="item.item_type === 'entity' ? '<?= esc($common['document'] ?? 'Doc') ?>' : '<?= esc($common['page'] ?? 'Page') ?>'"
-                        ></div>
+                        <div class="claro-awesome-bar__result-icon" x-text="item.item_type === 'entity' ? '<?= esc($common['document'] ?? 'Doc') ?>' : '<?= esc($common['page'] ?? 'Page') ?>'"></div>
 
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="truncate text-sm font-semibold" x-text="item.label"></span>
-                                <span
-                                    x-show="item.is_core"
-                                    :class="idx === activeIndex ? 'bg-white/10 text-white/80' : 'bg-slate-100 text-slate-500'"
-                                    class="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-                                ><?= esc($common['core'] ?? 'Core') ?></span>
+                        <div class="claro-awesome-bar__result-body">
+                            <div style="display:flex;align-items:center;gap:var(--claro-space-xs)">
+                                <span class="claro-awesome-bar__result-label" x-text="item.label"></span>
+                                <span x-show="item.is_core" class="claro-awesome-bar__result-badge"><?= esc($common['core'] ?? 'Core') ?></span>
                             </div>
 
-                            <p
-                                :class="idx === activeIndex ? 'text-white/70' : 'text-slate-500'"
-                                class="mt-1 truncate text-sm"
-                                x-text="item.description || '<?= esc($common['no_description'] ?? 'No description.') ?>'"
-                            ></p>
+                            <p class="claro-awesome-bar__result-desc" x-text="item.description || '<?= esc($common['no_description'] ?? 'No description.') ?>'"></p>
 
-                            <div
-                                :class="idx === activeIndex ? 'text-white/60' : 'text-slate-400'"
-                                class="mt-2 flex items-center gap-2 text-xs"
-                            >
+                            <div class="claro-awesome-bar__result-meta">
                                 <span x-text="item.item_type === 'entity' ? '<?= esc($common['document'] ?? 'Document') ?>' : '<?= esc($common['page'] ?? 'Desk page') ?>'"></span>
                                 <span>&middot;</span>
-                                <span class="truncate" x-text="item.module || item.route"></span>
+                                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" x-text="item.module || item.route"></span>
                             </div>
                         </div>
 
-                        <div
-                            :class="idx === activeIndex ? 'text-white/60' : 'text-slate-300'"
-                            class="hidden pt-1 text-xs sm:block"
-                        >↵</div>
+                        <div class="claro-awesome-bar__result-enter">↵</div>
                     </a>
                 </template>
 
                 <div
                     x-show="loading && results.length === 0"
-                    class="px-4 py-10 text-center text-sm text-slate-400"
+                    style="padding:var(--claro-space-xl) var(--claro-space-l);text-align:center;font-size:var(--claro-font-size-s);color:var(--claro-gray-400)"
                 ><?= esc($common['loading'] ?? 'Loading...') ?></div>
 
                 <div
                     x-show="query.trim() !== '' && results.length === 0 && !loading"
-                    class="px-4 py-10 text-center"
+                    style="padding:var(--claro-space-xl) var(--claro-space-l);text-align:center"
                 >
-                    <p class="text-sm font-medium text-slate-700"><?= esc($common['no_results'] ?? 'No matching results found.') ?></p>
-                    <p class="mt-1 text-sm text-slate-400"><?= esc($common['no_results_hint'] ?? '') ?></p>
+                    <p style="font-size:var(--claro-font-size-s);font-weight:500;color:var(--claro-gray-700);margin:0"><?= esc($common['no_results'] ?? 'No matching results found.') ?></p>
+                    <p style="font-size:var(--claro-font-size-xs);color:var(--claro-gray-400);margin:var(--claro-space-xs) 0 0"><?= esc($common['no_results_hint'] ?? '') ?></p>
                 </div>
 
                 <div
                     x-show="query.trim() === '' && results.length === 0 && !loading"
-                    class="px-4 py-10 text-center"
+                    style="padding:var(--claro-space-xl) var(--claro-space-l);text-align:center"
                 >
-                    <p class="text-sm font-medium text-slate-700"><?= esc($common['start_typing'] ?? 'Start typing to search quickly.') ?></p>
-                    <p class="mt-1 text-sm text-slate-400"><?= esc($common['start_typing_hint'] ?? '') ?></p>
+                    <p style="font-size:var(--claro-font-size-s);font-weight:500;color:var(--claro-gray-700);margin:0"><?= esc($common['start_typing'] ?? 'Start typing to search quickly.') ?></p>
+                    <p style="font-size:var(--claro-font-size-xs);color:var(--claro-gray-400);margin:var(--claro-space-xs) 0 0"><?= esc($common['start_typing_hint'] ?? '') ?></p>
                 </div>
             </div>
 
-            <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-400">
+            <div class="claro-awesome-bar__footer">
                 <span>&uarr;&darr; <?= esc($common['navigate'] ?? 'Navigate') ?></span>
                 <span><?= esc($common['open'] ?? 'Enter to open') ?></span>
                 <span><?= esc($common['close'] ?? 'Esc to close') ?></span>
@@ -272,6 +234,12 @@ $common = $lang['common'] ?? [];
         </div>
     </div>
 </header>
+
+<style>
+@keyframes claro-spin {
+    to { transform: rotate(360deg); }
+}
+</style>
 
 <script>
     function awesomeBar(searchUrl) {

@@ -14,72 +14,69 @@ $resolver = service('voltPermissionResolver');
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $el = $lang['entity_list'] ?? [];
 $c = $lang['common'] ?? [];
-?><div class="space-y-6">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900"><?= esc($el['title'] ?? 'Entity List') ?></h1>
-            <div class="mt-1 text-sm text-gray-600"><?= esc($el['description'] ?? '') ?></div>
+?><div>
+    <div class="claro-table-toolbar">
+        <div class="claro-table-toolbar__left">
+            <div class="claro-page-header" style="margin-bottom:0">
+                <h1 class="claro-page-header__title"><?= esc($el['title'] ?? 'Entity List') ?></h1>
+                <p class="claro-page-header__subtitle"><?= esc($el['description'] ?? '') ?></p>
+            </div>
         </div>
-
-        <form method="get" action="<?= site_url('desk/entities') ?>" class="flex gap-2">
-            <select name="module" class="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500">
-                <option value=""><?= esc($el['all_modules'] ?? 'All modules') ?></option>
-                <?php foreach ($modules as $module): ?>
-                    <option value="<?= esc($module) ?>" <?= $moduleFilter === $module ? 'selected' : '' ?>><?= esc($module) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="submit" class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1"><?= esc($el['filter'] ?? 'Filter') ?></button>
-        </form>
+        <div class="claro-table-toolbar__right">
+            <form method="get" action="<?= site_url('desk/entities') ?>" style="display:flex;gap:var(--claro-space-xs);align-items:center">
+                <select name="module" class="claro-select" style="width:auto">
+                    <option value=""><?= esc($el['all_modules'] ?? 'All modules') ?></option>
+                    <?php foreach ($modules as $module): ?>
+                        <option value="<?= esc($module) ?>" <?= $moduleFilter === $module ? 'selected' : '' ?>><?= esc($module) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="claro-button claro-button--small"><?= esc($el['filter'] ?? 'Filter') ?></button>
+            </form>
+        </div>
     </div>
 
-    <div class="overflow-x-auto rounded border border-gray-300 bg-white">
-        <table class="min-w-full text-sm">
-            <thead>
-                <tr class="border-b border-gray-300 bg-gray-100">
-                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600"><?= esc($el['table_entity'] ?? 'Entity') ?></th>
-                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600"><?= esc($el['table_label'] ?? 'Label') ?></th>
-                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600"><?= esc($el['table_module'] ?? 'Module') ?></th>
-                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600"><?= esc($el['table_autoname'] ?? 'Autoname') ?></th>
-                    <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-600"><?= esc($el['table_submittable'] ?? 'Submittable') ?></th>
+    <table class="claro-table">
+        <thead>
+            <tr>
+                <th><?= esc($el['table_entity'] ?? 'Entity') ?></th>
+                <th><?= esc($el['table_label'] ?? 'Label') ?></th>
+                <th><?= esc($el['table_module'] ?? 'Module') ?></th>
+                <th><?= esc($el['table_autoname'] ?? 'Autoname') ?></th>
+                <th><?= esc($el['table_submittable'] ?? 'Submittable') ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if ($entities === []): ?>
+                <tr>
+                    <td colspan="5" style="text-align:center;padding:var(--claro-space-xl) var(--claro-space-m);color:var(--claro-color-text-light)"><?= esc($el['empty'] ?? 'No entities match the current filter.') ?></td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php if ($entities === []): ?>
-                    <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-gray-500"><?= esc($el['empty'] ?? 'No entities match the current filter.') ?></td>
-                    </tr>
-                <?php endif; ?>
+            <?php endif; ?>
 
-                <?php foreach ($entities as $i => $entity): ?>
-                    <?php
-                    $entityName = (string) ($entity['name'] ?? '');
-                    $moduleSnake = (string) ($entity['module'] ?? '');
-                    $recordListUrl = $moduleSnake !== '' && $entityName !== ''
-                        ? site_url("{$moduleSnake}/{$entityName}")
-                        : '';
-                    $hasAccess = $isAdmin || ($entityName !== '' && $resolver->hasEntityPermission($entityName));
-                    ?>
-                    <tr class="border-b border-gray-200 <?= $i % 2 === 0 ? 'bg-white' : 'bg-gray-50' ?>">
-                        <td class="px-4 py-3">
-                            <?php if ($hasAccess && $recordListUrl !== ''): ?>
-                                <a href="<?= $recordListUrl ?>" class="font-semibold text-gray-900 underline hover:text-gray-700">
-                                    <?= esc($entityName) ?>
-                                </a>
-                            <?php elseif ($isAdmin): ?>
-                                <a href="<?= site_url('desk/entity-builder?entity=' . rawurlencode($entityName)) ?>" class="font-semibold text-gray-900 underline hover:text-gray-700">
-                                    <?= esc($entityName) ?>
-                                </a>
-                            <?php else: ?>
-                                <span class="text-gray-700"><?= esc($entityName) ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-4 py-3 text-gray-700"><?= esc((string) ($entity['label'] ?? '')) ?></td>
-                        <td class="px-4 py-3 text-gray-600"><?= esc($moduleSnake) ?></td>
-                        <td class="px-4 py-3 text-gray-600"><?= esc((string) ($entity['autoname'] ?? '')) ?></td>
-                        <td class="px-4 py-3"><?= ! empty($entity['is_submittable']) ? esc($c['yes'] ?? 'Yes') : esc($c['no'] ?? 'No') ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+            <?php foreach ($entities as $entity): ?>
+                <?php
+                $entityName = (string) ($entity['name'] ?? '');
+                $moduleSnake = (string) ($entity['module'] ?? '');
+                $recordListUrl = $moduleSnake !== '' && $entityName !== ''
+                    ? site_url("{$moduleSnake}/{$entityName}")
+                    : '';
+                $hasAccess = $isAdmin || ($entityName !== '' && $resolver->hasEntityPermission($entityName));
+                ?>
+                <tr>
+                    <td style="font-weight:600">
+                        <?php if ($hasAccess && $recordListUrl !== ''): ?>
+                            <a href="<?= $recordListUrl ?>" style="color:var(--claro-color-primary);text-decoration:underline"><?= esc($entityName) ?></a>
+                        <?php elseif ($isAdmin): ?>
+                            <a href="<?= site_url('desk/entity-builder?entity=' . rawurlencode($entityName)) ?>" style="color:var(--claro-color-primary);text-decoration:underline"><?= esc($entityName) ?></a>
+                        <?php else: ?>
+                            <?= esc($entityName) ?>
+                        <?php endif; ?>
+                    </td>
+                    <td><?= esc((string) ($entity['label'] ?? '')) ?></td>
+                    <td style="color:var(--claro-gray-600)"><?= esc($moduleSnake) ?></td>
+                    <td style="color:var(--claro-gray-600)"><?= esc((string) ($entity['autoname'] ?? '')) ?></td>
+                    <td><?= ! empty($entity['is_submittable']) ? '<span class="claro-badge claro-badge--success">' . esc($c['yes'] ?? 'Yes') . '</span>' : '<span style="color:var(--claro-gray-500)">' . esc($c['no'] ?? 'No') . '</span>' ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
 </div>

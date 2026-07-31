@@ -26,6 +26,7 @@
 17. [Routes](#17-routes)
 18. [Entity Builder — UI](#18-entity-builder--ui)
 19. [Pages (Custom Pages)](#19-pages-custom-pages)
+20. [Multi-tenancy](#20-multi-tenancy)
 
 ---
 
@@ -1129,6 +1130,102 @@ Khi delete hoặc đổi module, file cũ được xóa tự động.
 | Desk card | `/desk` — "Pages" card trong admin grid (`desk.php`) |
 | Topbar nav | Admin topbar — "Pages" link (`desk_topbar.php`) |
 | AwesomeBar | `sys_awesome_bar` — "Pages" entry (`seedCorePages()`) + individual pages on save |
+
+---
+
+## 20. Multi-tenancy
+
+Volt sử dụng kiến trúc **Database-per-Tenant**: mỗi tenant có một PostgreSQL database riêng biệt.
+
+### 20.1 Hub DB vs Tenant DB
+
+| Database | Mục đích | Bảng |
+|----------|----------|------|
+| `volt_enterprise` (hub) | Quản lý tenant, route auth | `sys_tenant` |
+| `volt_{tenant_name}` (tenant) | Dữ liệu của tenant | `sys_user`, `sys_role`, `sys_permission`, `sys_awesome_bar`, ... (tất cả bảng core còn lại) |
+
+### 20.2 Domain-based resolution
+
+Tenant được xác định từ `HTTP_HOST` chứ không dùng dropdown:
+
+1. **Exact match**: `sys_tenant.domain` = hostname → dùng tenant đó
+2. **Subdomain extraction**: `ilsungtech.localhost` → tên tenant = `ilsungtech`
+3. Nếu host khớp hub host (`localhost`) → hub mode (không tenant)
+
+Implementation: `AuthController::resolveTenantFromDomain()` → `TenantService::resolveByDomain()` → `TenantService::getByName()`
+
+### 20.3 VoltDatabase class
+
+**File:** `core/Database/VoltDatabase.php`
+
+Class tĩnh quản lý kết nối DB:
+
+| Method | Chức năng |
+|--------|-----------|
+| `connection()` | Auto-route: nếu session có tenant → kết nối tenant DB, else hub DB |
+| `hubConnection()` | Luôn kết nối hub DB (`volt_enterprise`) |
+| `tenantConnection(name)` | Đọc `sys_tenant` → kết nối tenant DB |
+| `resolveTenant(name?)` | Lấy tenant từ session hoặc tham số |
+| `createTenantDatabase(name, host, port)` | `exec(psql)` → `CREATE DATABASE ... OWNER ...` |
+| `dropTenantDatabase(name, host, port)` | `exec(psql)` → `DROP DATABASE IF EXISTS ... WITH (FORCE)` |
+| `migrateTenantDatabase(name, host, port, user, password)` | Chạy `MigrationRunner` namespace `Volt\Core` trên tenant DB |
+
+**Caching**: `VoltDatabase` cache connection instances trong `self::$instances` để tránh tạo kết nối mới mỗi request.
+
+### 20.4 Auth flow
+
+```
+Request → HTTP_HOST = ilsungtech.localhost
+  → App::__construct() set baseURL động
+  → resolveTenantFromDomain() → 'ilsungtech'
+  → AuthService::login(name, password, 'ilsungtech')
+    → VoltDatabase::tenantConnection('ilsungtech') → kết nối tenant DB
+    → UserModel::findByName(name) trên tenant DB
+    → startSession(user, 'ilsungtech') — lưu tenant vào session
+  → Các request sau: VoltDatabase::connection() auto-route nhờ session tenant
+```
+
+**Fallback**: Nếu tenant không tồn tại (đã xoá), `resolveTenantFromDomain()` set flashdata error và trả về `null` → login fallback hub DB → user không có trong hub → login fail.
+
+**Session cleanup**: `currentUser()` try-catch `RuntimeException` từ `tenantConnection()`, nếu tenant không còn active → clear session + return null.
+
+### 20.5 Tenant management UI
+
+| Route | Method | Chức năng |
+|-------|--------|-----------|
+| `/desk/tenants` | GET | List tenants |
+| `/desk/tenants/create` | GET | Form tạo tenant |
+| `/desk/tenants/store` | POST | Lưu tenant + tự động tạo DB + chạy migrations |
+| `/desk/tenants/edit/{name}` | GET | Form sửa tenant |
+| `/desk/tenants/update/{name}` | POST | Cập nhật tenant |
+| `/desk/tenants/delete/{name}` | POST | Xoá DB (`DROP DATABASE ... WITH (FORCE)`) + xoá record |
+
+Controllers: `TenantController` (`core/Tenant/Controllers/`)
+Service: `TenantService` (`core/Tenant/Services/`)
+Model: `TenantModel` (`core/Tenant/Models/` — dùng `hubConnection()`)
+
+### 20.6 CLI commands
+
+| Command | Chức năng |
+|---------|-----------|
+| `php spark volt:tenant-create <name>` | Tạo tenant + DB (manual) |
+| `php spark volt:tenant-migrate <name>` | Chạy migrations trên tenant DB |
+
+Files: `core/Commands/TenantCreate.php`, `core/Commands/TenantMigrate.php`
+
+### 20.7 Config
+
+**`app/Config/App.php`**: `__construct()` tự động set `baseURL` từ `$_SERVER['HTTP_HOST']` để `site_url()` sinh đúng host cho mọi tenant domain.
+
+### 20.8 Các file liên quan
+
+- `core/Database/VoltDatabase.php`
+- `core/Tenant/`
+- `core/Auth/Controllers/AuthController.php` — `resolveTenantFromDomain()`
+- `core/Auth/Services/AuthService.php` — `login($tenantName)`, `resolveUserModel($tenantName)`
+- `core/Auth/Filters/PageAuthFilter.php` — redirect về login qua `site_url()`
+- `app/Config/App.php` — dynamic baseURL
+- `core/Database/Migrations/2026-07-27-000002_CreateSysTenantTable.php`
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Mục tiêu kiến trúc
 
-Volt là một ERP engine `metadata-driven` xây trên `CodeIgniter 4` và `PostgreSQL`, lấy cảm hứng từ Frappe nhưng không sao chép kiến trúc của Frappe.
+Volt là một ERP engine `metadata-driven` xây trên `CodeIgniter 4` và `PostgreSQL`, với kiến trúc **Database-per-Tenant**, lấy cảm hứng từ Frappe nhưng không sao chép kiến trúc của Frappe.
 
 Kiến trúc của Volt phải đạt đồng thời các mục tiêu sau:
 
@@ -115,11 +115,16 @@ Ràng buộc:
 Gồm:
 
 - PostgreSQL
-- bảng hệ thống `sys_*`
+- Kiến trúc **Database-per-Tenant**: hub database (`volt_enterprise`) chứa `sys_tenant`; mỗi tenant có database riêng (`volt_{tenant_name}`) chứa đầy đủ bảng `sys_*` còn lại và dữ liệu nghiệp vụ
+- bảng hệ thống `sys_*` (nhân bản cho mỗi tenant DB)
 - bảng nghiệp vụ được sinh từ metadata
 - cache backend nếu bổ sung sau
 
-### 4.1 Bảng hệ thống hiện có
+### 4.1 Bảng hệ thống hiện có (Hub DB)
+
+1. `sys_tenant` — danh sách tenant, thông tin kết nối, domain mapping
+
+### 4.2 Bảng hệ thống (mỗi Tenant DB)
 
 1. `sys_entity`
 2. `sys_entity_field`
@@ -135,8 +140,12 @@ Gồm:
 12. `sys_setting`
 13. `sys_error_log`
 
-### 4.2 Vai trò từng bảng
+### 4.3 Vai trò từng bảng
 
+Hub DB:
+- `sys_tenant`: danh sách tenant, thông tin kết nối DB, domain mapping
+
+Mỗi Tenant DB:
 - `sys_entity`: định nghĩa entity gốc
 - `sys_entity_field`: định nghĩa field và thứ tự field
 - `sys_entity_custom`: metadata tùy biến

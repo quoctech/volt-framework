@@ -22,109 +22,107 @@ $common = $lang['common'] ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Volt Desk</title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
     <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
+<body class="claro-body">
     <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
 
-    <main class="mx-auto max-w-5xl p-4 lg:p-8">
-        <div class="mb-6">
-            <h1 class="text-2xl font-semibold"><?= esc($d['title'] ?? 'Desk') ?></h1>
-            <p class="mt-1 text-sm text-slate-500"><?= esc($d['subtitle'] ?? '') ?></p>
+    <main class="claro-page">
+        <div class="claro-page-header">
+            <h1 class="claro-page-header__title"><?= esc($d['title'] ?? 'Desk') ?></h1>
+            <p class="claro-page-header__subtitle"><?= esc($d['subtitle'] ?? '') ?></p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 <?= ($isAdmin || $canViewErrorLogs) ? 'lg:grid-cols-4' : '' ?>">
-            <a href="<?= site_url('desk/entities') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['browse'] ?? 'Browse') ?></p>
-                <h2 class="mt-2 text-xl font-semibold"><?= esc($d['entity_list'] ?? 'Entity List') ?></h2>
-                <p class="mt-2 text-sm text-slate-600"><?= $d['entity_desc'] ?? '' ?></p>
-                <p class="mt-4 text-sm text-slate-500"><?= str_replace('{count}', (string) $entityCount, $d['entity_count'] ?? '') ?></p>
+        <div class="claro-card-grid" style="grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr))">
+            <a href="<?= site_url('desk/entities') ?>" class="claro-link-card">
+                <p class="claro-link-card__badge"><?= esc($d['browse'] ?? 'Browse') ?></p>
+                <h2 class="claro-link-card__title"><?= esc($d['entity_list'] ?? 'Entity List') ?></h2>
+                <p class="claro-link-card__desc"><?= $d['entity_desc'] ?? '' ?></p>
+                <p class="claro-link-card__meta"><?= str_replace('{count}', (string) $entityCount, $d['entity_count'] ?? '') ?></p>
             </a>
 
             <?php if ($isAdmin): ?>
-                <a href="<?= site_url('desk/users') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['users'] ?? 'User List') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['users_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['users_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/users') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['users'] ?? 'User List') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['users_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['users_hint'] ?? '' ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/roles') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['roles'] ?? 'Role List') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['roles_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['roles_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/roles') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['roles'] ?? 'Role List') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['roles_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['roles_hint'] ?? '' ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/tenants') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['tenants'] ?? 'Tenants') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['tenants_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['tenants_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/tenants') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['tenants'] ?? 'Tenants') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['tenants_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['tenants_hint'] ?? '' ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/system-status') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['system_status'] ?? 'System Status') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['system_status_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['system_status_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/system-status') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['system_status'] ?? 'System Status') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['system_status_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['system_status_hint'] ?? '' ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/system-settings') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($lang['nav']['system_settings'] ?? 'System Settings') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $lang['system']['description'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500">Language / Timezone</p>
+                <a href="<?= site_url('desk/system-settings') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($lang['nav']['system_settings'] ?? 'System Settings') ?></h2>
+                    <p class="claro-link-card__desc"><?= $lang['system']['description'] ?? '' ?></p>
+                    <p class="claro-link-card__meta">Language / Timezone</p>
                 </a>
 
-                <a href="<?= site_url('desk/create-module') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['create_module'] ?? 'Create Module') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['create_module_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= str_replace('{count}', (string) $moduleCount, $d['create_module_hint'] ?? '') ?></p>
+                <a href="<?= site_url('desk/create-module') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['create_module'] ?? 'Create Module') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['create_module_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= str_replace('{count}', (string) $moduleCount, $d['create_module_hint'] ?? '') ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/entity-builder') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['entity_builder'] ?? 'Entity Builder') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['entity_builder_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['entity_builder_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/entity-builder') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['entity_builder'] ?? 'Entity Builder') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['entity_builder_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['entity_builder_hint'] ?? '' ?></p>
                 </a>
 
-                <a href="<?= site_url('desk/pages') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold">Pages</h2>
-                    <p class="mt-2 text-sm text-slate-600">Create and manage custom pages with HTML, CSS, JS.</p>
-                    <p class="mt-4 text-sm text-slate-500">Custom routes at /pagename</p>
+                <a href="<?= site_url('desk/pages') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title">Pages</h2>
+                    <p class="claro-link-card__desc">Create and manage custom pages with HTML, CSS, JS.</p>
+                    <p class="claro-link-card__meta">Custom routes at /pagename</p>
                 </a>
 
-                <a href="<?= site_url('desk/reports') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold">Reports</h2>
-                    <p class="mt-2 text-sm text-slate-600">Build custom reports, pivot tables, and charts.</p>
-                    <p class="mt-4 text-sm text-slate-500">Query, Pivot &amp; SQL</p>
+                <a href="<?= site_url('desk/reports') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['admin'] ?? 'Admin') ?></p>
+                    <h2 class="claro-link-card__title">Reports</h2>
+                    <p class="claro-link-card__desc">Build custom reports, pivot tables, and charts.</p>
+                    <p class="claro-link-card__meta">Query, Pivot &amp; SQL</p>
                 </a>
 
-                <a href="<?= site_url('desk/dashboard') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['admin'] ?? 'Admin') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold">Dashboard</h2>
-                    <p class="mt-2 text-sm text-slate-600">Visualize report data with charts.</p>
-                    <p class="mt-4 text-sm text-slate-500">Bar &amp; Line charts</p>
-                </a>
             <?php else: ?>
-                <div class="border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 sm:col-span-1">
-                    <p class="font-semibold"><?= esc($d['restricted'] ?? 'Restricted Access') ?></p>
-                    <p class="mt-2"><?= $d['restricted_desc'] ?? '' ?></p>
+                <div class="claro-message claro-message--warning">
+                    <div class="claro-message__content">
+                        <p class="claro-message__title"><?= esc($d['restricted'] ?? 'Restricted Access') ?></p>
+                        <p><?= $d['restricted_desc'] ?? '' ?></p>
+                    </div>
                 </div>
             <?php endif; ?>
 
             <?php if ($canViewErrorLogs): ?>
-                <a href="<?= site_url('desk/error-logs') ?>" class="border border-slate-300 bg-white p-5 transition hover:border-slate-500">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"><?= esc($d['system'] ?? 'System') ?></p>
-                    <h2 class="mt-2 text-xl font-semibold"><?= esc($d['error_logs'] ?? 'Error Logs') ?></h2>
-                    <p class="mt-2 text-sm text-slate-600"><?= $d['error_logs_desc'] ?? '' ?></p>
-                    <p class="mt-4 text-sm text-slate-500"><?= $d['error_logs_hint'] ?? '' ?></p>
+                <a href="<?= site_url('desk/error-logs') ?>" class="claro-link-card">
+                    <p class="claro-link-card__badge"><?= esc($d['system'] ?? 'System') ?></p>
+                    <h2 class="claro-link-card__title"><?= esc($d['error_logs'] ?? 'Error Logs') ?></h2>
+                    <p class="claro-link-card__desc"><?= $d['error_logs_desc'] ?? '' ?></p>
+                    <p class="claro-link-card__meta"><?= $d['error_logs_hint'] ?? '' ?></p>
                 </a>
             <?php endif; ?>
         </div>

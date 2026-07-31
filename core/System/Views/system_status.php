@@ -29,85 +29,82 @@ foreach ($resources as $item) {
     }
 }
 ?>
-<div class="space-y-3">
-    <div class="rounded border border-slate-200 bg-white px-5 py-4">
-        <div class="flex items-center justify-between gap-4">
-            <h1 class="text-xl font-semibold text-slate-900"><?= esc($ss['title'] ?? 'System Status') ?></h1>
-            <span class="text-xs text-slate-500"><?= esc($generatedAt) ?></span>
+<div>
+    <div class="claro-table-toolbar">
+        <div class="claro-table-toolbar__left">
+            <div class="claro-page-header" style="margin-bottom:0">
+                <h1 class="claro-page-header__title"><?= esc($ss['title'] ?? 'System Status') ?></h1>
+                <p class="claro-page-header__subtitle">PHP <?= esc($phpVersion) ?> &middot; <?= esc($generatedAt) ?></p>
+            </div>
         </div>
-        <div class="mt-1 text-sm text-slate-500">PHP <?= esc($phpVersion) ?></div>
     </div>
 
-    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
-        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
-            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
-            CPU Load
-        </summary>
-        <div class="border-t border-slate-100 px-5 py-3">
-            <?php foreach ($cpuItems as $item): ?>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
-                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
+    <div class="claro-card" style="margin-bottom:var(--claro-space-m)">
+        <details style="padding:var(--claro-space-m) var(--claro-space-l)">
+            <summary style="cursor:pointer;font-size:var(--claro-font-size-s);font-weight:700;color:var(--claro-color-text);user-select:none">CPU Load</summary>
+            <div style="margin-top:var(--claro-space-m);border-top:1px solid var(--claro-gray-100);padding-top:var(--claro-space-m)">
+                <?php foreach ($cpuItems as $item): ?>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)"><?= esc($item['label'] ?? '') ?></span>
+                    <span style="font-weight:500"><?= esc($item['value'] ?? '') ?></span>
+                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-        </div>
-    </details>
+        </details>
+    </div>
 
-    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
-        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
-            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
-            Memory (RAM)
-        </summary>
-        <div class="border-t border-slate-100 px-5 py-3">
-            <?php foreach ($ramItems as $item): ?>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
-                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
+    <div class="claro-card" style="margin-bottom:var(--claro-space-m)">
+        <details style="padding:var(--claro-space-m) var(--claro-space-l)">
+            <summary style="cursor:pointer;font-size:var(--claro-font-size-s);font-weight:700;color:var(--claro-color-text);user-select:none">Memory (RAM)</summary>
+            <div style="margin-top:var(--claro-space-m);border-top:1px solid var(--claro-gray-100);padding-top:var(--claro-space-m)">
+                <?php foreach ($ramItems as $item): ?>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)"><?= esc($item['label'] ?? '') ?></span>
+                    <span style="font-weight:500"><?= esc($item['value'] ?? '') ?></span>
+                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-        </div>
-    </details>
+        </details>
+    </div>
 
-    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
-        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
-            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
-            PHP
-        </summary>
-        <div class="border-t border-slate-100 px-5 py-3">
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600">Version</span>
-                <span class="font-medium text-slate-900"><?= esc($phpVersion) ?></span>
+    <div class="claro-card" style="margin-bottom:var(--claro-space-m)">
+        <details style="padding:var(--claro-space-m) var(--claro-space-l)">
+            <summary style="cursor:pointer;font-size:var(--claro-font-size-s);font-weight:700;color:var(--claro-color-text);user-select:none">PHP</summary>
+            <div style="margin-top:var(--claro-space-m);border-top:1px solid var(--claro-gray-100);padding-top:var(--claro-space-m)">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)">Version</span>
+                    <span style="font-weight:500"><?= esc($phpVersion) ?></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)">Memory Limit</span>
+                    <span style="font-weight:500"><?= esc(ini_get('memory_limit') ?: 'n/a') ?></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)">Max Execution</span>
+                    <span style="font-weight:500"><?= esc(ini_get('max_execution_time') ?: 'n/a') ?>s</span>
+                </div>
+                <?php foreach ($phpResourceItems as $item): ?>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)"><?= esc($item['label'] ?? '') ?></span>
+                    <span style="font-weight:500"><?= esc($item['value'] ?? '') ?></span>
+                </div>
+                <?php endforeach; ?>
             </div>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600">Memory Limit</span>
-                <span class="font-medium text-slate-900"><?= esc(ini_get('memory_limit') ?: 'n/a') ?></span>
-            </div>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600">Max Execution</span>
-                <span class="font-medium text-slate-900"><?= esc(ini_get('max_execution_time') ?: 'n/a') ?>s</span>
-            </div>
-            <?php foreach ($phpResourceItems as $item): ?>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600"><?= esc($item['label'] ?? '') ?></span>
-                <span class="font-medium text-slate-900"><?= esc($item['value'] ?? '') ?></span>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </details>
+        </details>
+    </div>
 
-    <details class="group rounded border border-slate-200 bg-white open:border-slate-300">
-        <summary class="flex cursor-pointer items-center gap-2 px-5 py-3 text-sm font-semibold text-slate-900 select-none">
-            <svg class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>
-            Required Extensions
-        </summary>
-        <div class="border-t border-slate-100 px-5 py-3">
-            <?php foreach ($extensions as $ext): ?>
-            <?php $ok = ($ext['value'] ?? '') === ($ss['loaded'] ?? 'Loaded'); ?>
-            <div class="flex justify-between py-1 text-sm">
-                <span class="text-slate-600"><?= esc($ext['label'] ?? '') ?></span>
-                <span class="font-medium <?= $ok ? 'text-emerald-600' : 'text-rose-600' ?>"><?= esc($ext['value'] ?? '') ?></span>
+    <div class="claro-card" style="margin-bottom:var(--claro-space-m)">
+        <details style="padding:var(--claro-space-m) var(--claro-space-l)">
+            <summary style="cursor:pointer;font-size:var(--claro-font-size-s);font-weight:700;color:var(--claro-color-text);user-select:none">Required Extensions</summary>
+            <div style="margin-top:var(--claro-space-m);border-top:1px solid var(--claro-gray-100);padding-top:var(--claro-space-m)">
+                <?php foreach ($extensions as $ext): ?>
+                <?php $ok = ($ext['value'] ?? '') === ($ss['loaded'] ?? 'Loaded'); ?>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--claro-font-size-s)">
+                    <span style="color:var(--claro-gray-600)"><?= esc($ext['label'] ?? '') ?></span>
+                    <span style="font-weight:500;color:<?= $ok ? 'var(--claro-color-success)' : 'var(--claro-color-error)' ?>"><?= esc($ext['value'] ?? '') ?></span>
+                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-        </div>
-    </details>
+        </details>
+    </div>
 </div>

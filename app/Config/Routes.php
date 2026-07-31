@@ -120,11 +120,6 @@ $routes->group('api/reports', ['namespace' => 'Volt\Core\Report\Controllers', 'f
     $routes->post('export/(:segment)/(:segment)', 'ReportController::export/$1/$2');
 });
 
-// Dashboard (auth)
-$routes->group('', ['namespace' => 'Volt\Core\Report\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
-    $routes->get('desk/dashboard', 'ReportController::dashboard');
-});
-
 $routes->group('api/file', ['namespace' => 'Volt\Core\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->post('upload', 'FileController::upload');
     $routes->get('download/(:segment)', 'FileController::download/$1');

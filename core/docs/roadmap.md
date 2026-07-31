@@ -295,7 +295,7 @@ Tiêu chí hoàn thành:
 ## Backlog kỹ thuật
 
 - ~~custom page management (Page List)~~ ✅ `core/Metadata/` — PageModel, PageService, PageController, page_list + page_form views, route gen, scaffold, AwesomeBar integration
-- multi-tenant strategy
+- ~~multi-tenant strategy~~ ✅ Database-per-Tenant (hub DB `volt_enterprise` + per-tenant DB `volt_{name}`), domain-based resolution, auto DB create/drop with migrations, CLI commands, `VoltDatabase` connection routing
 - soft delete chuẩn hóa
 - ~~event bus nội bộ~~ ✅ `core/Events/` — EventBus + Event class + 7 dispatch points in VoltModel
 - import/export engine

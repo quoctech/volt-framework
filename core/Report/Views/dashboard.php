@@ -4,35 +4,35 @@ $reports = $reports ?? [];
 $lang = \Volt\Core\Config\Lang\LangService::load();
 $d = $lang['desk'] ?? [];
 ?>
-<div x-data="dashboardApp()" class="space-y-4">
-    <div class="rounded border border-slate-200 bg-white px-5 py-4">
-        <h1 class="text-xl font-semibold text-slate-900">Dashboard</h1>
-        <p class="mt-1 text-sm text-slate-500">Visualize your reports with charts.</p>
+<div x-data="dashboardApp()">
+    <div class="claro-page-header">
+        <h1 class="claro-page-header__title">Dashboard</h1>
+        <p class="claro-page-header__subtitle">Visualize your reports with charts.</p>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="claro-card-grid" style="grid-template-columns:repeat(auto-fill,minmax(24rem,1fr))">
         <?php foreach ($reports as $report): ?>
         <?php if (! (int) ($report['is_active'] ?? 0)) continue; ?>
-        <div class="rounded border border-slate-200 bg-white p-4">
-            <div class="mb-3 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-900"><?= esc($report['label'] ?? '') ?></h3>
-                <span class="text-xs text-slate-400"><?= esc($report['report_type'] ?? '') ?></span>
-            </div>
-            <div class="relative" style="height: 220px;">
-                <canvas x-init="initChart($el, '<?= esc($report['name'], 'js') ?>')"></canvas>
-            </div>
-            <div class="mt-2 text-right">
-                <button @click="refreshChart('<?= esc($report['name'], 'js') ?>')" class="text-xs text-slate-500 hover:text-slate-900">Refresh</button>
-                <a href="<?= site_url('desk/reports/edit/' . urlencode($report['name'] ?? '')) ?>" class="ml-2 text-xs text-slate-500 hover:text-slate-900">Edit</a>
+        <div class="claro-card">
+            <div class="claro-card__content">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--claro-space-m)">
+                    <h3 style="font-size:var(--claro-font-size-s);font-weight:700;margin:0"><?= esc($report['label'] ?? '') ?></h3>
+                    <span class="claro-badge"><?= esc($report['report_type'] ?? '') ?></span>
+                </div>
+                <div style="height:220px;position:relative">
+                    <canvas x-init="initChart($el, '<?= esc($report['name'], 'js') ?>')"></canvas>
+                </div>
+                <div style="margin-top:var(--claro-space-s);text-align:right">
+                    <button @click="refreshChart('<?= esc($report['name'], 'js') ?>')" class="claro-button claro-button--link" style="font-size:var(--claro-font-size-xs);display:inline">Refresh</button>
+                    <a href="<?= site_url('desk/reports/edit/' . urlencode($report['name'] ?? '')) ?>" class="claro-button claro-button--link" style="font-size:var(--claro-font-size-xs);display:inline;margin-left:var(--claro-space-xs)">Edit</a>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
 
     <?php if (count(array_filter($reports, fn($r) => (int)($r['is_active'] ?? 0))) === 0): ?>
-    <div class="rounded border border-slate-200 bg-white px-5 py-12 text-center text-sm text-slate-500">
-        No active reports found. <a href="<?= site_url('desk/reports/create') ?>" class="text-slate-900 underline">Create a report</a> first.
-    </div>
+    <div class="claro-empty">No active reports found. <a href="<?= site_url('desk/reports/create') ?>" style="font-weight:700">Create a report</a> first.</div>
     <?php endif; ?>
 </div>
 

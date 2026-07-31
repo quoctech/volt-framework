@@ -34,57 +34,51 @@ $timezones = [
 $currentLanguage = $settings['language'] ?? 'en';
 $currentTimezone = $settings['timezone'] ?? 'UTC';
 ?>
-<div class="space-y-6">
-    <div>
-        <h1 class="text-2xl font-bold text-slate-900"><?= esc($sys['title'] ?? 'System Settings') ?></h1>
-        <p class="mt-1 text-sm text-slate-600"><?= esc($sys['description'] ?? '') ?></p>
+<div>
+    <div class="claro-page-header">
+        <h1 class="claro-page-header__title"><?= esc($sys['title'] ?? 'System Settings') ?></h1>
+        <p class="claro-page-header__subtitle"><?= esc($sys['description'] ?? '') ?></p>
     </div>
 
     <?php if ($saved): ?>
-        <div class="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <?= esc($sys['saved'] ?? 'Settings saved successfully.') ?>
-        </div>
+        <div class="claro-message claro-message--status"><?= esc($sys['saved'] ?? 'Settings saved successfully.') ?></div>
     <?php endif; ?>
 
-    <form action="<?= site_url('desk/system-settings/save') ?>" method="post" class="space-y-6">
+    <form action="<?= site_url('desk/system-settings/save') ?>" method="post">
         <?= csrf_field() ?>
 
-        <section class="rounded border border-slate-200 bg-white p-5">
-            <h2 class="text-lg font-semibold text-slate-900"><?= esc($sys['language'] ?? 'Language') ?></h2>
-            <p class="mt-1 text-sm text-slate-600"><?= esc($sys['language_hint'] ?? '') ?></p>
-
-            <div class="mt-4">
-                <label for="language" class="block text-sm font-medium text-slate-700"><?= esc($sys['language_label'] ?? 'Interface Language') ?></label>
-                <select name="language" id="language" class="mt-1 block w-full max-w-sm rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
-                    <?php foreach ($supportedLangs as $l): ?>
-                        <option value="<?= esc($l['code']) ?>" <?= $l['code'] === $currentLanguage ? 'selected' : '' ?>>
-                            <?= esc($l['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <div class="claro-card" style="margin-bottom:var(--claro-space-l)">
+            <div class="claro-card__content">
+                <h2 style="font-size:var(--claro-font-size-h5);font-weight:700;margin:0 0 var(--claro-space-xs)"><?= esc($sys['language'] ?? 'Language') ?></h2>
+                <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0 0 var(--claro-space-m)"><?= esc($sys['language_hint'] ?? '') ?></p>
+                <div class="claro-form-item" style="margin-bottom:0">
+                    <label class="claro-form-item__label" for="language"><?= esc($sys['language_label'] ?? 'Interface Language') ?></label>
+                    <select name="language" id="language" class="claro-select" style="max-width:24rem">
+                        <?php foreach ($supportedLangs as $l): ?>
+                            <option value="<?= esc($l['code']) ?>" <?= $l['code'] === $currentLanguage ? 'selected' : '' ?>><?= esc($l['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <section class="rounded border border-slate-200 bg-white p-5">
-            <h2 class="text-lg font-semibold text-slate-900"><?= esc($sys['timezone'] ?? 'Timezone') ?></h2>
-            <p class="mt-1 text-sm text-slate-600"><?= esc($sys['timezone_hint'] ?? '') ?></p>
-
-            <div class="mt-4">
-                <label for="timezone" class="block text-sm font-medium text-slate-700"><?= esc($sys['timezone_label'] ?? 'System Timezone') ?></label>
-                <select name="timezone" id="timezone" class="mt-1 block w-full max-w-sm rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
-                    <?php foreach ($timezones as $tz => $label): ?>
-                        <option value="<?= esc($tz) ?>" <?= $tz === $currentTimezone ? 'selected' : '' ?>>
-                            <?= esc($label) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <div class="claro-card" style="margin-bottom:var(--claro-space-l)">
+            <div class="claro-card__content">
+                <h2 style="font-size:var(--claro-font-size-h5);font-weight:700;margin:0 0 var(--claro-space-xs)"><?= esc($sys['timezone'] ?? 'Timezone') ?></h2>
+                <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0 0 var(--claro-space-m)"><?= esc($sys['timezone_hint'] ?? '') ?></p>
+                <div class="claro-form-item" style="margin-bottom:0">
+                    <label class="claro-form-item__label" for="timezone"><?= esc($sys['timezone_label'] ?? 'System Timezone') ?></label>
+                    <select name="timezone" id="timezone" class="claro-select" style="max-width:24rem">
+                        <?php foreach ($timezones as $tz => $label): ?>
+                            <option value="<?= esc($tz) ?>" <?= $tz === $currentTimezone ? 'selected' : '' ?>><?= esc($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <div class="flex items-center gap-3">
-            <button type="submit" class="rounded border border-slate-900 bg-slate-900 px-6 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
-                <?= esc($sys['save'] ?? 'Save Settings') ?>
-            </button>
+        <div class="claro-form-actions">
+            <button type="submit" class="claro-button claro-button--primary"><?= esc($sys['save'] ?? 'Save Settings') ?></button>
         </div>
     </form>
 </div>

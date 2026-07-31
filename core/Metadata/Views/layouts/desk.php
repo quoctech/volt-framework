@@ -26,13 +26,15 @@ $htmlLang = $lang['code'] ?? 'en';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($pageTitle) ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
     <style>[x-cloak]{display:none!important}<?= $extraStyles ?></style>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900">
+<body class="claro-body">
     <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
 
-    <main class="mx-auto max-w-5xl p-4 lg:p-8">
+    <main class="claro-page">
         <?= $content ?>
     </main>
     <?= $extraScripts ?>

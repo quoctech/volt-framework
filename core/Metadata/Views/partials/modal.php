@@ -22,18 +22,22 @@ $panelClass = $panelClass ?? '';
 <div
     x-show="<?= esc($modalState, 'attr') ?>"
     x-cloak
-    class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+    class="claro-dialog"
     @keydown.escape.window="<?= esc($closeAction, 'attr') ?>"
 >
-    <div class="w-full <?= esc($maxWidthClass, 'attr') ?> border border-zinc-300 bg-white shadow-xl <?= esc($panelClass, 'attr') ?>" @click.stop>
-        <div class="border-b border-zinc-300 px-4 py-3">
-            <h2 class="text-lg font-semibold text-zinc-900"><?= esc($title) ?></h2>
+    <div class="claro-dialog__overlay" @click="<?= esc($closeAction, 'attr') ?>"></div>
+    <div class="claro-dialog__panel <?= esc($maxWidthClass, 'attr') ?> <?= esc($panelClass, 'attr') ?>" @click.stop>
+        <div class="claro-dialog__title">
+            <?= esc($title) ?>
+            <button type="button" class="claro-dialog__close" @click="<?= esc($closeAction, 'attr') ?>">&times;</button>
         </div>
-        <div class="space-y-4 px-4 py-4">
+        <div class="claro-dialog__body">
             <?= $bodyHtml ?>
         </div>
-        <div class="flex justify-end gap-2 border-t border-zinc-300 px-4 py-3">
-            <?= $footerHtml ?>
-        </div>
+        <?php if ($footerHtml !== ''): ?>
+            <div class="claro-dialog__actions">
+                <?= $footerHtml ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
