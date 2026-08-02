@@ -31,6 +31,19 @@ final class WorkflowCommentRequirementTest extends CIUnitTestCase
 
         $db = VoltDatabase::connection();
 
+        // Đảm bảo entity test_wf tồn tại (FK sys_workflow.entity) rồi tự dọn ở tearDown.
+        $exists = $db->table('sys_entity')->where('name', 'test_wf')->get()->getRowArray();
+        if (! is_array($exists)) {
+            $db->table('sys_entity')->insert([
+                'name'              => 'test_wf',
+                'module'            => 'core',
+                'autoname'          => 'HASH',
+                'issingle'          => 0,
+                'istable'           => 0,
+                'custom_attributes' => json_encode(['is_submittable' => true, 'label' => 'Test WF']),
+            ]);
+        }
+
         // Tạo workflow riêng có transition reject.
         $db->table('sys_workflow')->insert([
             'name'          => self::WORKFLOW,
@@ -88,6 +101,7 @@ final class WorkflowCommentRequirementTest extends CIUnitTestCase
         $db->table('sys_workflow_transition')->where('workflow', self::WORKFLOW)->delete();
         $db->table('sys_workflow_state')->where('workflow', self::WORKFLOW)->delete();
         $db->table('sys_workflow')->where('name', self::WORKFLOW)->delete();
+        $db->table('sys_entity')->where('name', 'test_wf')->delete();
 
         parent::tearDown();
     }

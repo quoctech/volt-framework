@@ -76,6 +76,7 @@ final class WorkflowAuditTrailTest extends CIUnitTestCase
     {
         $db = VoltDatabase::connection();
         $db->query('DROP TABLE IF EXISTS tab_test_wf');
+        $db->table('sys_entity')->where('name', 'test_wf')->delete();
         parent::tearDown();
     }
 

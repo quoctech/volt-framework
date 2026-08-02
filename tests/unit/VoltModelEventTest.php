@@ -74,7 +74,9 @@ final class VoltModelEventTest extends CIUnitTestCase
 
     protected function tearDown(): void
     {
-        VoltDatabase::connection()->query('DROP TABLE IF EXISTS tab_test_evt');
+        $db = VoltDatabase::connection();
+        $db->query('DROP TABLE IF EXISTS tab_test_evt');
+        $db->table('sys_entity')->where('name', 'test_evt')->delete();
 
         parent::tearDown();
     }
