@@ -46,6 +46,7 @@ class VoltSync extends BaseCommand
         '--allow-type-change' => 'Cho phép đổi kiểu dữ liệu cột khi metadata khác schema vật lý (phá vỡ)',
         '--allow-rename'      => 'Cho phép đổi tên cột theo bản đồ --renames',
         '--renames'           => 'Bản đồ đổi tên cột dạng "old:new,old2:new2" (yêu cầu --allow-rename)',
+        '--data-check'        => 'Chỉ kiểm tra dữ liệu thực tế (đếm dòng, duplicate name, child mồ côi), không sửa schema',
     ];
 
     /**
@@ -68,6 +69,33 @@ class VoltSync extends BaseCommand
     public function run(array $params): void
     {
         $opts = $this->buildOptions();
+
+        // Kịch bản 0: Kiểm tra dữ liệu thực tế (--data-check)
+        if (CLI::getOption('data-check')) {
+            if (CLI::getOption('all')) {
+                $entities = $this->db()->table(self::T_ENTITY)->select('name')->get()->getResultArray();
+
+                if (empty($entities)) {
+                    CLI::error('❌ Không tìm thấy bất kỳ Metadata Entity nào trong bảng ' . self::T_ENTITY . '!');
+                    return;
+                }
+
+                foreach ($entities as $entity) {
+                    $this->runDataCheck((string) $entity['name']);
+                }
+            } else {
+                $entityName = $params[0] ?? CLI::getSegment(2);
+
+                if (empty($entityName)) {
+                    CLI::error('❌ Lỗi cú pháp! Vui lòng chỉ định rõ tên Entity. Ví dụ: php spark volt:sync Product --data-check');
+                    return;
+                }
+
+                $this->runDataCheck((string) $entityName);
+            }
+
+            return;
+        }
 
         // Kịch bản 1: Đồng bộ tất cả thực thể (--all)
         if (CLI::getOption('all')) {
@@ -145,6 +173,42 @@ class VoltSync extends BaseCommand
         }
 
         return $result;
+    }
+
+    /**
+     * Chạy báo cáo kiểm tra dữ liệu cho một entity.
+     */
+    private function runDataCheck(string $entityName): void
+    {
+        CLI::write("🔍 Đang kiểm tra dữ liệu thực tế: {$entityName}...", 'cyan');
+        $result = $this->engine()->checkData($entityName);
+
+        if (($result['status'] ?? '') !== 'success') {
+            CLI::write("   ❌ Thất bại: " . ($result['message'] ?? 'Lỗi không xác định'), 'red');
+            return;
+        }
+
+        CLI::write("   📄 Tổng số dòng: " . (int) $result['rows'], 'white');
+
+        $duplicates = $result['duplicates'] ?? [];
+        if ($duplicates === []) {
+            CLI::write("   ✅ Không có tên trùng lặp.", 'green');
+        } else {
+            CLI::write("   ⚠️  Phát hiện " . count($duplicates) . " tên trùng lặp:", 'yellow');
+            foreach ($duplicates as $d) {
+                CLI::write("      - " . $d['name'] . " (x" . (int) $d['count'] . ")", 'yellow');
+            }
+        }
+
+        $orphans = $result['orphan_children'] ?? [];
+        if ($orphans === []) {
+            CLI::write("   ✅ Không có child row mồ côi.", 'green');
+        } else {
+            CLI::write("   ⚠️  Child row mồ côi:", 'yellow');
+            foreach ($orphans as $o) {
+                CLI::write("      - " . $o['entity'] . " (" . $o['table'] . "): " . (int) $o['count'] . " dòng không có parent hợp lệ", 'yellow');
+            }
+        }
     }
 
     /**

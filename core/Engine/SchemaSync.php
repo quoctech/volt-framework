@@ -13,8 +13,7 @@ use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Validation\MetadataValidator;
 
 /**
- * Đồng bộ schema vật lý từ metadata.
- *
+ * Đồng bộ schema vật lý từ metadata. *
  * - Không phá hủy: thay đổi "phá vỡ" (đổi kiểu, xóa cột) chỉ nằm trong plan khi được bật flag.
  * - Dùng CI4 Forge cho mọi DDL; raw SQL chỉ dùng khi Forge không hỗ trợ
  *   (CREATE INDEX trên bảng đã tồn tại, RENAME COLUMN).
@@ -26,13 +25,16 @@ class SchemaSync
 
     private readonly BaseConnection $db;
     private readonly MetadataValidator $validator;
+    private ?QueueDispatcher $queue;
 
     public function __construct(
         ?BaseConnection $db = null,
         ?MetadataValidator $validator = null,
+        ?QueueDispatcher $queue = null,
     ) {
         $this->db = $db ?? VoltDatabase::connection();
         $this->validator = $validator ?? new MetadataValidator();
+        $this->queue = $queue;
     }
 
     /**
@@ -52,9 +54,89 @@ class SchemaSync
 
         if (! ($opts['dry_run'] ?? false)) {
             $this->applyPlan($plan, $opts);
+
+            // Schema thay đổi thực sự -> warm lại metadata cache qua queue.
+            if (($plan['plan'] ?? []) !== []) {
+                $this->queue()?->dispatch('rebuild_metadata_cache');
+            }
         }
 
         return $plan;
+    }
+
+    /**
+     * Kiểm tra dữ liệu thực tế của entity mà không sửa schema.
+     *
+     * Báo cáo: tổng số dòng, các `name` trùng lặp, và child rows mồ côi
+     * (child table có `parent` trỏ đến parent không còn tồn tại).
+     *
+     * @param array<string, mixed> $opts
+     *
+     * @return array{status: string, message: ?string, rows: int, duplicates: list<array{name: string, count: int}>, orphan_children: list<array{entity: string, table: string, count: int}>}
+     */
+    public function checkData(string $entityName, array $opts = []): array
+    {
+        $entityName = $this->validator->assertEntityName($entityName);
+        $normalizedName = TableNameResolver::normalizeIdentifier($entityName);
+        $tableName = TableNameResolver::entity($entityName);
+        $meta = $this->getEntityMeta($entityName);
+
+        $result = [
+            'status'          => 'success',
+            'message'         => null,
+            'rows'            => 0,
+            'duplicates'      => [],
+            'orphan_children' => [],
+        ];
+
+        $metaFields = $this->db->table('sys_entity_field')
+            ->where('parent', $normalizedName)
+            ->orderBy('idx', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $metaFields = array_map(fn (array $field): array => $this->validator->normalizeFieldRow($field), $metaFields);
+
+        if ($metaFields === []) {
+            $result['status']  = 'error';
+            $result['message'] = "Metadata trống cho Entity: {$entityName}";
+
+            return $result;
+        }
+
+        $row = $this->db->query("SELECT COUNT(*) AS cnt FROM {$tableName}")->getRow();
+        $result['rows'] = (int) ($row->cnt ?? 0);
+
+        $dup = $this->db->query(
+            "SELECT name, COUNT(*) AS cnt FROM {$tableName} WHERE name <> '' GROUP BY name HAVING COUNT(*) > 1",
+        );
+        foreach ($dup->getResultArray() as $d) {
+            $result['duplicates'][] = [
+                'name'  => (string) ($d['name'] ?? ''),
+                'count' => (int) ($d['cnt'] ?? 0),
+            ];
+        }
+
+        if ((int) ($meta['istable'] ?? 0) !== 1) {
+            foreach ($this->childEntityNames($metaFields) as $childName) {
+                $childTable = TableNameResolver::entity($childName);
+                $orphan = $this->db->query(
+                    "SELECT COUNT(*) AS cnt FROM {$childTable} c "
+                    . "WHERE c.parent <> '' AND c.parent NOT IN (SELECT name FROM {$tableName})",
+                )->getRow();
+
+                $count = (int) ($orphan->cnt ?? 0);
+                if ($count > 0) {
+                    $result['orphan_children'][] = [
+                        'entity' => $childName,
+                        'table'  => $childTable,
+                        'count'  => $count,
+                    ];
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -715,6 +797,11 @@ class SchemaSync
         }
 
         return $names;
+    }
+
+    private function queue(): ?QueueDispatcher
+    {
+        return $this->queue ??= service('voltQueue');
     }
 
     private function withLockTimeout(callable $fn): void

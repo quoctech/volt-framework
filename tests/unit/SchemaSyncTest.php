@@ -7,7 +7,9 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\BaseResult;
 use CodeIgniter\Test\CIUnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Volt\Core\Engine\QueueDispatcher;
 use Volt\Core\Engine\SchemaSync;
+use Volt\Core\Models\QueueJobModel;
 use Volt\Core\Validation\MetadataValidator;
 
 /**
@@ -29,6 +31,12 @@ final class SchemaSyncTest extends CIUnitTestCase
 
     private int $entityCalls = 0;
 
+    /** @var array<string, list<array<string, mixed>>> */
+    private array $queryResults = [];
+
+    /** @var list<string> Captured queue job types dispatched via syncEntity */
+    private array $dispatchedJobs = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -37,6 +45,17 @@ final class SchemaSyncTest extends CIUnitTestCase
         $this->schemaResults = [];
         $this->indexData = [];
         $this->entityCalls = 0;
+        $this->queryResults = [];
+        $this->dispatchedJobs = [];
+
+        $queueModel = $this->createMock(QueueJobModel::class);
+        $queueModel->method('dispatch')->willReturnCallback(
+            function (string $jobType, array $payload = [], array $opts = []): int {
+                $this->dispatchedJobs[] = $jobType;
+                return 1;
+            },
+        );
+        $queue = new QueueDispatcher($queueModel);
         $this->dbc = $this->createMock(BaseConnection::class);
 
         // Forge escapes identifiers internally; stub as identity so SQL building works.
@@ -60,6 +79,15 @@ final class SchemaSyncTest extends CIUnitTestCase
                     return $result;
                 }
 
+                foreach ($self->queryResults as $needle => $rows) {
+                    if (stripos($sql, $needle) !== false) {
+                        $result = $self->createMock(BaseResult::class);
+                        $result->method('getResultArray')->willReturn($rows);
+                        $result->method('getRow')->willReturn((object) ($rows[0] ?? []));
+                        return $result;
+                    }
+                }
+
                 $self->queries[] = $sql;
                 return null;
             },
@@ -68,7 +96,7 @@ final class SchemaSyncTest extends CIUnitTestCase
         $this->dbc->method('getIndexData')->willReturnCallback(fn (): array => $this->indexData);
         $this->dbc->method('getForeignKeyData')->willReturn([]);
 
-        $this->sync = new SchemaSync($this->dbc, new MetadataValidator());
+        $this->sync = new SchemaSync($this->dbc, new MetadataValidator(), $queue);
     }
 
     public function testSyncEntityReturnsErrorWhenMetadataEmpty(): void
@@ -460,6 +488,152 @@ final class SchemaSyncTest extends CIUnitTestCase
         $this->assertSame([], $indexOps, 'Existing index must not be re-planned.');
     }
 
+    public function testSyncDispatchesRebuildCacheJobWhenChangesApplied(): void
+    {
+        $this->givenExistingTable('tab_test_entity', [
+            'name', 'docstatus', 'owner', 'creation', 'modified', 'workflow_state', 'amended_from',
+        ]);
+
+        $this->setupTableMocks(['istable' => 0], [
+            [
+                'parent' => 'test_entity',
+                'fieldname' => 'email',
+                'fieldtype' => 'Data',
+                'label' => 'Email',
+                'length' => 255,
+                'reqd' => 0,
+                'idx' => 1,
+                'options' => '',
+            ],
+        ]);
+
+        $result = $this->sync->syncEntity('TestEntity');
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(['rebuild_metadata_cache'], $this->dispatchedJobs);
+    }
+
+    public function testSyncDoesNotDispatchRebuildCacheJobInDryRun(): void
+    {
+        $this->givenExistingTable('tab_test_entity', [
+            'name', 'docstatus', 'owner', 'creation', 'modified', 'workflow_state', 'amended_from',
+        ]);
+
+        $this->setupTableMocks(['istable' => 0], [
+            [
+                'parent' => 'test_entity',
+                'fieldname' => 'email',
+                'fieldtype' => 'Data',
+                'label' => 'Email',
+                'length' => 255,
+                'reqd' => 0,
+                'idx' => 1,
+                'options' => '',
+            ],
+        ]);
+
+        $this->sync->syncEntity('TestEntity', ['dry_run' => true]);
+
+        $this->assertSame([], $this->dispatchedJobs);
+    }
+
+    public function testSyncDoesNotDispatchWhenNoChanges(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'email' => ['type' => 'character varying', 'length' => 255],
+        ]);
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'email',
+            'fieldtype' => 'Data',
+            'label' => 'Email',
+            'length' => 255,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks(['istable' => 0, 'custom_attributes' => []], [$fieldRow]);
+
+        $this->sync->syncEntity('TestEntity');
+
+        $this->assertSame([], $this->dispatchedJobs, 'No changes must not dispatch a rebuild job.');
+    }
+
+    public function testCheckDataReportsRowCountDuplicatesAndOrphans(): void
+    {
+        $childField = [
+            'parent' => 'test_entity',
+            'fieldname' => 'details',
+            'fieldtype' => 'Table',
+            'label' => 'Details',
+            'length' => 0,
+            'reqd' => 0,
+            'idx' => 2,
+            'options' => 'TestChild:separate',
+        ];
+
+        $this->setupTableMocks(['istable' => 0, 'custom_attributes' => []], [$childField]);
+
+        $this->queryResults = [
+            'GROUP BY name HAVING' => [
+                ['name' => 'dup-1', 'cnt' => '2'],
+                ['name' => 'dup-2', 'cnt' => '3'],
+            ],
+            'NOT IN (SELECT name FROM tab_test_entity)' => [['cnt' => '2']],
+            'FROM tab_test_entity' => [['cnt' => '5']],
+        ];
+
+        $result = $this->sync->checkData('TestEntity');
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(5, $result['rows']);
+        $this->assertCount(2, $result['duplicates']);
+        $this->assertSame('dup-1', $result['duplicates'][0]['name']);
+        $this->assertSame(3, $result['duplicates'][1]['count']);
+        $this->assertCount(1, $result['orphan_children']);
+        $this->assertSame('testchild', $result['orphan_children'][0]['entity']);
+        $this->assertSame('tab_testchild', $result['orphan_children'][0]['table']);
+        $this->assertSame(2, $result['orphan_children'][0]['count']);
+    }
+
+    public function testCheckDataSkipsChildTableWhenEntityIsChild(): void
+    {
+        $this->setupTableMocks(['istable' => 1, 'custom_attributes' => []], [
+            [
+                'parent' => 'test_child',
+                'fieldname' => 'school_name',
+                'fieldtype' => 'Data',
+                'label' => 'School',
+                'length' => 255,
+                'reqd' => 0,
+                'idx' => 1,
+                'options' => '',
+            ],
+        ]);
+
+        $this->queryResults = [
+            'FROM tab_test_child' => [['cnt' => '0']],
+        ];
+
+        $result = $this->sync->checkData('TestChild');
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(0, $result['rows']);
+        $this->assertSame([], $result['orphan_children']);
+    }
+
+    public function testCheckDataReturnsErrorWhenMetadataEmpty(): void
+    {
+        $this->setupTableMocks(['istable' => 0], []);
+
+        $result = $this->sync->checkData('TestEntity');
+
+        $this->assertSame('error', $result['status']);
+        $this->assertStringContainsString('Metadata trống', $result['message']);
+    }
+
     /** Configure sys_entity and sys_entity_field table mocks. */
     private function setupTableMocks(array $entityRow, array $fieldRows): void
     {
@@ -472,6 +646,7 @@ final class SchemaSyncTest extends CIUnitTestCase
         $rowBuilder->method('select')->willReturnSelf();
         $rowBuilder->method('where')->willReturnSelf();
         $rowBuilder->method('get')->willReturn($rowResult);
+        $rowBuilder->method('countAllResults')->willReturn(1);
 
         $countBuilder = $this->createMock(BaseBuilder::class);
         $countBuilder->method('where')->willReturnSelf();

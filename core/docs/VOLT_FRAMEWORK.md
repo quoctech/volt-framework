@@ -775,9 +775,14 @@ php spark volt:sync --all        # Dry-run: quét tất cả entities
 php spark volt:sync Employee --prune               # Thêm: xóa cột dư (breaking)
 php spark volt:sync Employee --allow-type-change   # Thêm: cho phép đổi kiểu cột (breaking)
 php spark volt:sync Employee --allow-rename --renames=old_col:new_col  # Đổi tên cột
+
+# Kiểm tra dữ liệu thực tế (không sửa schema):
+php spark volt:sync Employee --data-check          # Đếm dòng, phát hiện duplicate name + child mồ côi
+php spark volt:sync --all --data-check             # Kiểm tra toàn bộ entities
 ```
 - Không có cờ phá hủy nào → chỉ tạo bảng / thêm cột an toàn.
 - Mỗi thao tác được apply sẽ ghi log vào `sys_schema_migration`.
+- Khi có thay đổi schema thực sự được apply, `volt:sync` tự dispatch job `rebuild_metadata_cache` vào queue để warm lại cache Redis (chạy `volt:queue-work` để xử lý).
 
 ### volt:queue-work
 

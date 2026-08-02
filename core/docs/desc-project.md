@@ -15,25 +15,28 @@ Volt Framework là một ERP engine `metadata-driven` xây trên:
 Các phần đã có trong code:
 
 - Namespace `Volt\Core` map vào thư mục [`core`](../).
-- Migration tạo 10 bảng hệ thống `sys_*` (`sys_entity`, `sys_entity_field`, `sys_entity_custom`, `sys_user`, `sys_permission`, `sys_sequence`, `sys_audit_trail`, `sys_queue_job`, `sys_module`, `sys_error_log`).
-- `SchemaSync` — đồng bộ metadata → bảng vật lý Postgres (CREATE/ALTER TABLE).
+- Migration tạo 10 bảng hệ thống `sys_*` (`sys_entity`, `sys_entity_field`, `sys_entity_custom`, `sys_user`, `sys_permission`, `sys_sequence`, `sys_audit_trail`, `sys_queue_job`, `sys_module`, `sys_error_log`) + 2 migration nâng cấp (`sys_queue_job` mở rộng, `sys_schema_migration`).
+- `SchemaSync` — đồng bộ metadata → bảng vật lý Postgres theo model plan/apply (CREATE/ALTER/DROP/RENAME/INDEX), hỗ trợ dry-run, prune, đổi tên, đổi kiểu.
 - `VoltMetadataCompiler` — compile metadata từ 3 bảng `sys_*`, cache vào Redis.
 - `MetadataValidator` — validate entity name, field name, field type, module.
-- `VoltModel` — abstract model lõi với permission check, audit trail, system fields.
+- `VoltModel` — abstract model lõi với permission check, audit trail, system fields, workflow state machine (Draft→Submitted→Cancelled, amend).
 - `PermissionResolver` — role-based permission matrix từ `sys_permission` + Redis cache.
 - `AuditTrailWriter` — ghi delta `{before, after, changes}` vào `sys_audit_trail`.
 - `ErrorLogService` — ghi lỗi runtime vào `sys_error_log` để phục vụ truy vết vận hành.
 - `AuthService` + 4 Filters (`auth`, `guest`, `apiauth`, `admin`) — login/logout/setup/admin/API token.
 - `EntityBuilderService` + `EntityBuilderController` — tạo module, entity, sync schema, sinh artifact.
 - `ArtifactScaffolder` — sinh Controller/Model/View/JS Alpine vào `app/Modules/...`.
-- CLI `php spark volt:sync [EntityName]` hoặc `--all`.
+- `VoltResourceController` — API trung tâm CRUD cho entity (list/form view, REST CRUD, workflow actions, child table).
+- `NamingSeriesGenerator` — sinh tài liệu theo pattern `PREFIX.YYYY.####` từ `sys_sequence`.
+- Queue worker cho `sys_queue_job` (`QueueDispatcher`, `QueueWorker`, `QueueJobModel`, handler `rebuild_metadata_cache`).
+- `EventBus` — event bus nội bộ (create/update/delete/submit/approve/cancel/amend đều dispatch).
+- `WorkflowEngine` — state machine chuyển tiếp giữa các state.
+- Child table mode `separate` — tách bảng con riêng (`tab_<child>`) kèm hệ thống cột chuẩn.
+- CLI `php spark volt:sync [EntityName]` hoặc `--all`, `volt:queue-work`, `volt:core-migrate`.
 
 Các phần chưa có hoặc mới ở mức định hướng:
 
-- Queue worker cho `sys_queue_job`.
-- `VoltResourceController` — API trung tâm cho entity CRUD.
-- `NamingSeriesGenerator` — sinh tài liệu theo pattern.
-- Child table mode `separate` — tách bảng con riêng.
+- (không có mục nào đang chặn) — xem mục "Hướng phát triển tiếp theo" bên dưới.
 
 ## Cấu trúc dự án
 
@@ -111,10 +114,17 @@ Các bảng này tạo nền cho metadata, phân quyền, đánh số chứng t�
 
 ### 4. Schema sync engine
 
-[`../Engine/SchemaSync.php`](../Engine/SchemaSync.php) hiện xử lý hai kịch bản chính:
+[`../Engine/SchemaSync.php`](../Engine/SchemaSync.php) hiện xử lý theo mô hình **plan → apply**:
 
-- Nếu bảng vật lý chưa tồn tại: tự sinh `CREATE TABLE`.
-- Nếu bảng đã tồn tại: kiểm tra metadata trong `sys_entity_field` và `ALTER TABLE ADD COLUMN` cho các cột còn thiếu.
+1. `planEntity($entityName, $opts)` — đọc metadata từ `sys_entity`/`sys_entity_field` và schema vật lý từ Postgres, tính toán danh sách thao tác (`CREATE TABLE`, `ALTER TABLE ADD/DROP/RENAME COLUMN`, `CREATE INDEX`) kèm log giải thích.
+2. `syncEntity($entityName, $opts)` — gọi plan, nếu `dry_run=false` thì `applyPlan()` thực thi.
+3. Sau khi apply thay đổi schema thành công, dispatch job `rebuild_metadata_cache` vào queue để warm lại cache Redis.
+
+Các thao tác phá vỡ đều được gate bằng option:
+
+- `--prune` → cho phép `DROP COLUMN` các cột dư thừa không còn trong metadata.
+- `--allow-type-change` → cho phép `ALTER COLUMN TYPE` khi metadata khác schema.
+- `--allow-rename` + `--renames` → bản đồ đổi tên cột `old:new`.
 
 Một số ánh xạ kiểu dữ liệu hiện có:
 
@@ -124,7 +134,7 @@ Một số ánh xạ kiểu dữ liệu hiện có:
 - `Text` -> `TEXT`
 - `Check` -> `SMALLINT`
 - `Link` -> `VARCHAR(100)`
-- `Table` -> `JSONB`
+- `Table` -> `JSONB` (nhúng) hoặc bảng con riêng (`istable=1`)
 
 Ngoài metadata field, engine còn tự thêm các cột hệ thống:
 
@@ -147,6 +157,33 @@ Chức năng:
 
 - Đồng bộ một entity cụ thể từ metadata.
 - Hoặc quét toàn bộ entity trong `sys_entity`.
+
+Options hỗ trợ:
+
+```bash
+php spark volt:sync employee --dry-run
+php spark volt:sync employee --prune --allow-type-change
+php spark volt:sync employee --allow-rename --renames "old_col:new_col"
+php spark volt:sync employee --data-check   # kiểm tra dữ liệu, không sửa schema
+```
+
+Lệnh queue worker:
+
+```bash
+php spark volt:queue-work [--queue default] [--sleep 3] [--max-jobs 10] [--max-time 300]
+php spark volt:queue-work --status
+php spark volt:queue-work --retry <jobId>
+php spark volt:queue-work --purge-dead --days 30
+php spark volt:queue-work --stale-requeue
+```
+
+Chức năng:
+
+- `volt:queue-work`: xử lý job trong `sys_queue_job` theo round-robin nhiều queue, tự requeue job hết hạn, dừng khi hết job hoặc quá `--max-time`/`maxRunSeconds` config.
+- `--status`: thống kê số job theo trạng thái.
+- `--retry`: reset job (failed/dead) về `queued`.
+- `--purge-dead`: xóa job dead cũ hơn `--days` (mặc định 30).
+- `--stale-requeue`: requeue job đang `processing` nhưng quá hạn timeout.
 
 Lệnh cleanup hiện có thêm:
 
@@ -184,32 +221,29 @@ Chức năng:
 ## Điểm lệch giữa ý tưởng và code hiện tại
 
 - Không có file `app/Config/Commands.php` trong repo hiện tại (CI4 dùng autodiscovery, chưa cần).
-- `SchemaSync` hiện mới hỗ trợ tạo bảng và thêm cột thiếu, chưa xử lý:
-  - đổi kiểu cột
-  - đổi tên cột
-  - xóa cột
-  - tạo index nghiệp vụ
-  - rollback delta
+- `SchemaSync` chưa hỗ trợ:
+  - rollback delta (undo một lần apply)
+  - merge hai entity tên khác nhau
+- Queue chưa có handler mặc định cho job tuỳ ý — handler phải được đăng ký thủ công theo `job_type`.
 
 ## Hướng phát triển hợp lý tiếp theo
 
 ### Tầng data access
 
-- Hoàn thiện `VoltModel`: docstatus state machine (Draft→Submitted→Cancelled).
-- Xây `VoltResourceController` — API trung tâm CRUD cho entity.
-
-### Tầng child table
-
-- Quy ước rõ hai mode cho field `Table`:
-  - nhúng `JSONB`
-  - tách bảng con riêng
+- Hoàn thiện `VoltModel`: bulk submit/cancel, import/export dữ liệu.
+- Validation nghiệp vụ nâng cao (unique field config, dependent field).
 
 ### Tầng vận hành
 
-- Queue worker cho `sys_queue_job`.
-- Thêm command migration/setup cho Volt.
-- Viết test cho migration, `SchemaSync`, `VoltModel`.
+- Dashboard queue (trang web xem job đang xử lý, thời gian chạy, retry).
+- Retry tự động theo exponential backoff trong `QueueWorker`.
+- Gắn thêm handler nghiệp vụ (notification, email) qua `EventBus`/queue.
+
+### Tầng tài liệu
+
+- Viết test cho `VoltModel`, `VoltResourceController`, `VoltMetadataCompiler`.
+- Hoàn thiện `VOLT_FRAMEWORK.md` cho từng module core.
 
 ## Tóm tắt
 
-Volt là ERP engine metadata-driven trên CI4 + PostgreSQL. Phần lõi đã có đủ: schema sync, metadata compiler + cache, validation, model với permission/audit, auth, và admin UI. Các tầng còn lại cần triển khai: queue worker, resource controller, child table mode, naming series generator.
+Volt là ERP engine metadata-driven trên CI4 + PostgreSQL. Phần lõi đã có đủ: schema sync (plan/apply, prune, rename), metadata compiler + cache Redis, validation, model với permission/audit/workflow, auth, resource controller, naming series, queue worker, event bus, và admin UI.

@@ -56,13 +56,50 @@ Events::on('pre_system', static function (): void {
         }
     }
 
-    // Volt Event Bus sample listeners
+    // Volt Event Bus listeners
     $bus = service('voltEventBus');
     $bus->listen('volt.model.created', static function (Event $e): void {
         log_message('info', sprintf(
             '[EventBus] %s created: %s',
             $e->get('entity'),
             $e->get('id'),
+        ));
+    });
+    $bus->listen('volt.model.updated', static function (Event $e): void {
+        log_message('info', sprintf(
+            '[EventBus] %s updated: %s',
+            $e->get('entity'),
+            $e->get('id'),
+        ));
+    });
+    $bus->listen('volt.model.submitted', static function (Event $e): void {
+        log_message('info', sprintf(
+            '[EventBus] %s submitted: %s',
+            $e->get('entity'),
+            $e->get('id'),
+        ));
+    });
+    $bus->listen('volt.model.approved', static function (Event $e): void {
+        log_message('info', sprintf(
+            '[EventBus] %s approved: %s',
+            $e->get('entity'),
+            $e->get('id'),
+        ));
+    });
+    $bus->listen('volt.model.cancelled', static function (Event $e): void {
+        log_message('info', sprintf(
+            '[EventBus] %s cancelled: %s',
+            $e->get('entity'),
+            $e->get('id'),
+        ));
+    });
+
+    // Queue dispatched log (CI4 native event, not EventBus)
+    Events::on('volt.queue.dispatched', static function (string $jobType, array $payload, int $id): void {
+        log_message('info', sprintf(
+            '[Queue] Job #%d dispatched: %s',
+            $id,
+            $jobType,
         ));
     });
 });
