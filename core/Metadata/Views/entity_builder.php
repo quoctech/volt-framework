@@ -252,9 +252,9 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                     <input x-model="entity.istable" type="checkbox">
                                     <span>Child Table (istable)</span>
                                 </label>
-                                <label class="flex items-center gap-2 text-base" title="Tích vào: xóa thẳng (record bị xóa vĩnh viễn). Bỏ tích: xóa mềm (record giữ lại, đánh dấu deleted_at).">
+                                <label class="flex items-center gap-2 text-base" :title="t('hard_delete_tooltip')">
                                     <input x-model="entity.hard_delete" type="checkbox">
-                                    <span>Xóa thẳng</span>
+                                    <span x-text="t('hard_delete')"></span>
                                 </label>
                             </div>
                         </div>
@@ -702,6 +702,8 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                 t(key) {
                     const dict = {
                         en: {
+                            hard_delete: 'Hard delete',
+                            hard_delete_tooltip: 'When checked: records are permanently deleted. When unchecked: soft delete (records kept, marked with deleted_at).',
                             workflow_label: 'Workflow Label',
                             states: 'States',
                             transitions: 'Transitions',
@@ -732,6 +734,8 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                             confirm_delete_transition: 'Delete this transition?',
                         },
                         vi: {
+                            hard_delete: 'Xóa thẳng',
+                            hard_delete_tooltip: 'Tích vào: xóa thẳng (record bị xóa vĩnh viễn). Bỏ tích: xóa mềm (record giữ lại, đánh dấu deleted_at).',
                             workflow_label: 'Nhãn quy trình',
                             states: 'Trạng thái',
                             transitions: 'Chuyển tiếp',
