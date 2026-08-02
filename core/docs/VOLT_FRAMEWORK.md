@@ -1394,6 +1394,7 @@ Tất cả chuỗi hiển thị trong view và `quickPickPages()` đều qua `co
 
 - [VOLT_FRAMEWORK_RULES.md](VOLT_FRAMEWORK_RULES.md)
 - [architecture.md](architecture.md)
+- [claro-theme.md](claro-theme.md)
 - [desc-project.md](desc-project.md)
 - [entity-builder.md](entity-builder.md)
 - [multilingual.md](multilingual.md)
