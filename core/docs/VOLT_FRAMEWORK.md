@@ -297,23 +297,46 @@ Cấu hình options: `"EmployeeEducation:separate"` means child entity `employee
 
 Chức năng:
 - Đọc metadata từ `sys_entity_field`
+- Tính toán **plan** thay đổi schema (delta) mà không đụng tới DB trước
 - CREATE TABLE nếu bảng chưa tồn tại
 - ALTER TABLE ADD COLUMN nếu còn thiếu cột
+- Phát hiện và plan đổi kiểu cột (an toàn khi mở rộng VARCHAR/NUMERIC, phá vỡ khi thu hẹp)
+- Phát hiện cột dư (orphan) — chỉ xóa khi bật `--prune`
+- Đổi tên cột theo bản đồ `--renames` — chỉ khi bật `--allow-rename`
+- Tự động đổi tên bảng legacy (giữ dữ liệu)
+- Tạo index từ `custom_attributes.indexes` (idempotent)
 - Tự động sync child table entities (separate mode)
 - Map field types → PostgreSQL column types
-- Tự động thêm cột `workflow_state` vào CORE_COLUMNS cho entity hỗ trợ workflow
+- Ghi mỗi thao tác đã apply vào bảng `sys_schema_migration`
+- **Dry-run mặc định**: gọi `syncEntity(name, opts)` với `dry_run=true` chỉ trả về plan, không thay đổi DB
+
+API:
+```php
+// Trả về {status, message, logs, plan, dry_run}
+$result = $sync->planEntity('Employee', $opts);       // chỉ tính toán
+$result = $sync->syncEntity('Employee', $opts);        // dry_run=false → apply
+
+// $opts:
+//   dry_run          => true  (mặc định chỉ plan, không apply)
+//   allow_type_change=> true  cho phép đổi kiểu cột (phá vỡ)
+//   allow_rename     => true  cho phép đổi tên cột
+//   renames          => ['old' => 'new', ...]
+//   prune / allow_drop => true cho phép xóa cột dư
+```
 
 Flow:
 ```
-syncEntity(entityName)
+planEntity(entityName, opts)
   ├─ normalizeEntityName
   ├─ isChildEntity (check istable flag)
-  ├─ doSyncEntity(entityName, isChild)
+  ├─ doPlanEntity(entityName, isChild, ...)
   │   ├─ getPostgresSchema → information_schema.columns
-  │   ├─ If no table → CREATE TABLE with CORE_COLUMNS/CHILD_COLUMNS + field columns
-  │   ├─ If table exists → ALTER TABLE ADD COLUMN for missing base + field columns
+  │   ├─ If no table → op CREATE TABLE với base columns + field columns
+  │   ├─ If table exists → op ADD COLUMN cho cột thiếu + so sánh kiểu cột
+  │   ├─ planRenames / planOrphanDrops / planIndexes
   │   └─ If not child → scan Table:separate fields → recursive sync child entities
-  └─ return {status, logs}
+  └─ return {status, logs, plan}
+syncEntity = planEntity + applyPlan (nếu !dry_run)
 ```
 
 ### 5.2 VoltMetadataCompiler
@@ -743,11 +766,36 @@ service('voltEventBus')->dispatch(new Event('volt.model.created', [
 
 ### volt:sync
 
-Đồng bộ schema cho entity từ metadata:
+Đồng bộ schema cho entity từ metadata (mặc định **dry-run** — chỉ in plan, không đổi DB):
 ```bash
-php spark volt:sync Employee     # Sync một entity
-php spark volt:sync --all         # Sync tất cả entities
+php spark volt:sync Employee     # Dry-run: in plan thay đổi cho Employee
+php spark volt:sync --all        # Dry-run: quét tất cả entities
+
+# Apply thật (có chủ đích, phá hủy):
+php spark volt:sync Employee --prune               # Thêm: xóa cột dư (breaking)
+php spark volt:sync Employee --allow-type-change   # Thêm: cho phép đổi kiểu cột (breaking)
+php spark volt:sync Employee --allow-rename --renames=old_col:new_col  # Đổi tên cột
 ```
+- Không có cờ phá hủy nào → chỉ tạo bảng / thêm cột an toàn.
+- Mỗi thao tác được apply sẽ ghi log vào `sys_schema_migration`.
+
+### volt:queue-work
+
+Xử lý job trong hàng đợi `sys_queue_job`:
+```bash
+php spark volt:queue-work                 # Chạy liên tục, sleep 3s khi rảnh
+php spark volt:queue-work --once          # Chỉ xử lý 1 job rồi thoát
+php spark volt:queue-work --queue high    # Chỉ xử lý queue "high"
+php spark volt:queue-work --max-jobs 50   # Xử lý tối đa 50 job rồi thoát
+php spark volt:queue-work --max-time 300  # Chạy tối đa 300 giây
+php spark volt:queue-work --status        # In số job theo trạng thái
+php spark volt:queue-work --retry 42      # Reset job 42 (failed/dead) về queued
+php spark volt:queue-work --purge-dead --days 30  # Xóa job dead quá 30 ngày
+php spark volt:queue-work --stale-requeue # Đưa job running bị treo về lại hàng đợi
+```
+- Dispatch: `service('voltQueue')->dispatch('job_type', $payload, ['queue' => ..., 'priority' => ...])`.
+- Handler: class implement `Volt\Core\Queue\JobHandlerInterface` trong `app/QueueHandlers/` (tự discovery qua `is_subclass_of`).
+- Retry backoff: `base * 2^(attempts-1)`; quá `maxAttempts` → dead-letter. Cấu hình ở `app/Config/Queue.php`.
 
 ### volt:scaffold
 

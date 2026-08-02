@@ -522,13 +522,34 @@ class SchemaSync
      */
     private function isSafeWiden(array $desired, array $actual): bool
     {
-        if (($desired['type'] ?? '') !== 'VARCHAR' || ($actual['type'] ?? '') !== 'character varying') {
-            return false;
+        $desiredType = (string) ($desired['type'] ?? '');
+        $actualType  = strtolower((string) ($actual['type'] ?? ''));
+
+        if ($desiredType === 'VARCHAR' && $actualType === 'character varying') {
+            $desiredLen = (int) ($desired['constraint'] ?? 255);
+
+            return $desiredLen > (int) ($actual['length'] ?? 0);
         }
 
-        $desiredLen = (int) ($desired['constraint'] ?? 255);
+        if ($desiredType === 'NUMERIC' && $actualType === 'numeric') {
+            $desiredPrecision = (int) $this->numericPart($desired['constraint'] ?? '0', 0);
+            $desiredScale     = (int) $this->numericPart($desired['constraint'] ?? '0', 1);
+            $actualPrecision  = (int) ($actual['precision'] ?? 0);
+            $actualScale      = (int) ($actual['scale'] ?? 0);
 
-        return $desiredLen > (int) ($actual['length'] ?? 0);
+            return $desiredPrecision >= $actualPrecision && $desiredScale >= $actualScale;
+        }
+
+        return false;
+    }
+
+    /** Lấy phần precision (pos=0) hoặc scale (pos=1) từ constraint NUMERIC "18, 4". */
+    private function numericPart(mixed $constraint, int $pos): int
+    {
+        $normalized = preg_replace('/[^0-9]/', ':', (string) $constraint);
+        $parts = array_values(array_filter(explode(':', $normalized), static fn (string $p): bool => $p !== ''));
+
+        return (int) ($parts[$pos] ?? 0);
     }
 
     /** @param array<string, mixed> $actual */
@@ -550,11 +571,23 @@ class SchemaSync
         return match (strtoupper((string) ($forgeDef['type'] ?? ''))) {
             'VARCHAR'  => 'varchar:' . (int) ($forgeDef['constraint'] ?? 0),
             'CHAR'     => 'char:' . (int) ($forgeDef['constraint'] ?? 0),
-            'NUMERIC'  => 'numeric:' . preg_replace('/\s+/', '', (string) ($forgeDef['constraint'] ?? '0:0')),
+            'NUMERIC'  => $this->canonicalNumericConstraint($forgeDef['constraint'] ?? '0:0'),
             'TIMESTAMP' => 'timestamp',
             'TIME'     => 'time',
             default    => strtolower((string) ($forgeDef['type'] ?? '')),
         };
+    }
+
+    /** Chuẩn hóa constraint NUMERIC (VD "18, 4") về dạng "precision:scale" giống canonicalActual. */
+    private function canonicalNumericConstraint(mixed $constraint): string
+    {
+        $constraint = preg_replace('/[^0-9]/', ':', (string) $constraint);
+        $parts = array_values(array_filter(explode(':', $constraint), static fn (string $p): bool => $p !== ''));
+
+        $precision = (int) ($parts[0] ?? 0);
+        $scale     = (int) ($parts[1] ?? 0);
+
+        return 'numeric:' . $precision . ':' . $scale;
     }
 
     /** @param array<string, mixed> $field */

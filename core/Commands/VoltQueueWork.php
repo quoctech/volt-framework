@@ -6,11 +6,14 @@ namespace Volt\Core\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
+use Config\Queue;
 use Volt\Core\Engine\QueueWorker;
 use Volt\Core\Queue\JobHandlerInterface;
 
 final class VoltQueueWork extends BaseCommand
 {
+    private ?Queue $config = null;
+
     protected $group       = 'Volt Core';
     protected $name        = 'volt:queue-work';
     protected $description = 'Process pending queue jobs';
@@ -64,7 +67,7 @@ final class VoltQueueWork extends BaseCommand
         $queue     = is_string($queue) ? $queue : null;
         $sleep     = max(0, (int) (CLI::getOption('sleep') ?? 3));
         $maxJobs   = CLI::getOption('max-jobs') !== null && CLI::getOption('max-jobs') !== true ? (int) CLI::getOption('max-jobs') : null;
-        $maxTime   = (int) (CLI::getOption('max-time') ?? 0);
+        $maxTime   = (int) (CLI::getOption('max-time') ?? $this->queueConfig()->maxRunSeconds);
         $timeout   = CLI::getOption('timeout') !== null && CLI::getOption('timeout') !== true ? (int) CLI::getOption('timeout') : null;
         $startedAt = time();
 
@@ -169,5 +172,10 @@ final class VoltQueueWork extends BaseCommand
         }
 
         return null;
+    }
+
+    private function queueConfig(): Queue
+    {
+        return $this->config ??= config('Queue');
     }
 }
