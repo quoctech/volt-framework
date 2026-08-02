@@ -81,7 +81,8 @@ final class WorkflowCommentRequirementTest extends CIUnitTestCase
                 owner VARCHAR(100) DEFAULT 'test',
                 amended_from VARCHAR(100) DEFAULT NULL,
                 creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TIMESTAMP DEFAULT NULL
             )
         ");
 

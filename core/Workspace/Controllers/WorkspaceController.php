@@ -318,7 +318,9 @@ class WorkspaceController extends Controller
         $table = TableNameResolver::entity($entityName);
 
         try {
-            $row = VoltDatabase::connection()->table($table)->selectCount('*', 'total')->get()->getRowArray();
+            $builder = VoltDatabase::connection()->table($table);
+            $this->applyDeletedFilter($builder, $table);
+            $row = $builder->selectCount('*', 'total')->get()->getRowArray();
 
             return ['ok' => true, 'value' => (int) ($row['total'] ?? 0)];
         } catch (\Throwable $throwable) {
@@ -343,7 +345,10 @@ class WorkspaceController extends Controller
             $fields = $this->pickListFields($entityName);
             $fieldNames = array_column($fields, 'name');
 
-            $rows = VoltDatabase::connection()->table($table)
+            $builder = VoltDatabase::connection()->table($table);
+            $this->applyDeletedFilter($builder, $table);
+
+            $rows = $builder
                 ->select(implode(', ', array_map(static fn (string $f): string => '"' . $f . '"', $fieldNames)))
                 ->orderBy('modified', 'DESC')
                 ->limit($limit)
@@ -492,5 +497,19 @@ class WorkspaceController extends Controller
         }
 
         return $this->fieldCatalogCache;
+    }
+
+    /**
+     * Loại bản ghi đã xóa mềm (nếu bảng có cột deleted_at).
+     *
+     * @param \CodeIgniter\Database\BaseBuilder $builder
+     */
+    private function applyDeletedFilter($builder, string $table): void
+    {
+        if (! VoltDatabase::connection()->fieldExists('deleted_at', $table)) {
+            return;
+        }
+
+        $builder->where($table . '.deleted_at', null);
     }
 }

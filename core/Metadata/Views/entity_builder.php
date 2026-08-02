@@ -252,6 +252,10 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                     <input x-model="entity.istable" type="checkbox">
                                     <span>Child Table (istable)</span>
                                 </label>
+                                <label class="flex items-center gap-2 text-base" title="Tích vào: xóa thẳng (record bị xóa vĩnh viễn). Bỏ tích: xóa mềm (record giữ lại, đánh dấu deleted_at).">
+                                    <input x-model="entity.hard_delete" type="checkbox">
+                                    <span>Xóa thẳng</span>
+                                </label>
                             </div>
                         </div>
 
@@ -631,6 +635,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                     module: '',
                     label: '',
                     is_submittable: false,
+                    hard_delete: false,
                     istable: false,
                     autoname: 'HASH',
                 },
@@ -1363,6 +1368,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                             module: payload.entity.module || '',
                             label: payload.entity.label || this.titleize(payload.entity.name || ''),
                             is_submittable: !!payload.entity.is_submittable,
+                            hard_delete: !!payload.entity.hard_delete,
                             istable: !!payload.entity.istable,
                             autoname: payload.entity.autoname || 'HASH',
                         };
@@ -1625,6 +1631,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                             module: moduleName,
                             label: this.entity.label,
                             is_submittable: !!this.entity.is_submittable,
+                            hard_delete: !!this.entity.hard_delete,
                             istable: !!this.entity.istable,
                             autoname: this.entity.autoname || 'HASH',
                             s_custom_jsonb: entityCustom,

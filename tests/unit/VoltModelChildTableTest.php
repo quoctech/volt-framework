@@ -211,23 +211,30 @@ final class VoltModelChildTableTest extends CIUnitTestCase
 
         $model->delete($this->parentName);
 
-        // Verify parent deleted
+        // Soft delete: parent stays but is excluded from find(), children are
+        // marked deleted_at alongside the parent
+        $this->assertNull($model->find($this->parentName));
+
         $parent = VoltDatabase::connection()
             ->table('tab_employee')
             ->where('name', $this->parentName)
             ->get()
             ->getRowArray();
 
-        $this->assertNull($parent);
+        $this->assertIsArray($parent);
+        $this->assertNotNull($parent['deleted_at']);
 
-        // Verify children cascade-deleted
+        // Verify children soft-deleted (not physically removed)
         $children = VoltDatabase::connection()
             ->table('tab_employeeeducation')
             ->where('parent', $this->parentName)
             ->get()
             ->getResultArray();
 
-        $this->assertCount(0, $children);
+        $this->assertCount(2, $children);
+        foreach ($children as $child) {
+            $this->assertNotNull($child['deleted_at']);
+        }
     }
 
     public function testInsertWithoutChildRecords(): void

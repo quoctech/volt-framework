@@ -726,6 +726,7 @@ class SchemaSync
             'owner'      => ['type' => 'VARCHAR', 'constraint' => 100, 'null' => false],
             'creation'   => ['type' => 'TIMESTAMP', 'default' => 'CURRENT_TIMESTAMP'],
             'modified'   => ['type' => 'TIMESTAMP', 'default' => 'CURRENT_TIMESTAMP'],
+            'deleted_at' => ['type' => 'TIMESTAMP', 'null' => true],
         ];
 
         if ($isChild) {

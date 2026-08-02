@@ -502,11 +502,24 @@ beforeUpdate → voltBeforeUpdate (permission, snapshot before)
   → afterUpdate → voltAfterUpdate (audit delta)
 
 beforeDelete → voltBeforeDelete (permission, snapshot)
-  → delete (cascade child records)
+  → delete (soft delete hoặc cascade theo mode)
   → afterDelete → voltAfterDelete (audit)
 
 beforeFind → voltBeforeFind (permission check)
 ```
+
+**Soft delete (7.1a):**
+
+Mọi bảng entity có cột `deleted_at TIMESTAMP NULL` (do `SchemaSync.baseColumns()` thêm, kể cả bảng cũ khi chạy `php spark volt:sync --all`).
+
+- Mặc định: **xóa mềm** — `delete()` set `deleted_at`, `find()/findAll()` tự loại bỏ (CI4 `useSoftDeletes`).
+- Entity Settings có checkbox **"Xóa thẳng"** (`custom_attributes.hard_delete = true`): khi bật, `delete()` xóa vật lý như trước. Setting lưu trong `sys_entity.custom_attributes` (JSONB), có hiệu lực ngay nhờ cache invalidation sẵn có.
+- Child rows (mode separate table) xóa/khôi phục cùng parent khi bảng child có cột `deleted_at`.
+- `restore(string $id): bool` — reset `deleted_at` (parent + children); trả `false` nếu entity đang ở chế độ xóa thẳng.
+- CI4 built-in: `delete($id, true)` / `purgeDeleted()` xóa vật lý; `withDeleted()`/`onlyDeleted()` bao gồm bản ghi đã xóa mềm.
+- Query Builder không tự filter `deleted_at` → đã thêm filter thủ công tại: `QueryParser::applySoftDeleteFilter()` (REST list), `VoltResourceController::applyDeletedFilter()` (`data()` + `linkOptions()`), `WorkspaceController::applyDeletedFilter()` (count/list).
+- API: `POST api/{entity}/restore/{id}`, `POST api/{entity}/delete/{id}?purge=1`.
+- Lưu ý: CI4 không filter `deleted_at` khi `update()` — update bản ghi đã xóa mềm vẫn thành công.
 
 **Child table handling:**
 
@@ -515,7 +528,7 @@ beforeFind → voltBeforeFind (permission check)
 - `stripChildData()` — loại bỏ child arrays trước khi ghi parent
 - `saveChildRecords()` — delete cũ → batch insert mới (trong transaction)
 - `attachChildRecords()` — load child rows khi `find()`
-- `deleteChildRecords()` — cascade delete khi xóa parent
+- `deleteChildRecords()` / `softDeleteChildRecords()` — cascade theo chế độ xóa của entity
 
 **Usage example trong module:**
 ```php

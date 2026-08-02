@@ -236,7 +236,7 @@ Chức năng:
 ### Tầng vận hành
 
 - Dashboard queue (trang web xem job đang xử lý, thời gian chạy, retry).
-- Retry tự động theo exponential backoff trong `QueueWorker`.
+- ~~Retry tự động theo exponential backoff trong `QueueWorker`.~~ ✅ `QueueWorker.php` — `backoffBaseSeconds * (2 ** (attempts - 1))`
 - Gắn thêm handler nghiệp vụ (notification, email) qua `EventBus`/queue.
 
 ### Tầng tài liệu

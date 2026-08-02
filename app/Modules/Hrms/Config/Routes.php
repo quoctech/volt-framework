@@ -14,6 +14,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/employee/load/(:segment)', 'VoltResourceController::show/employee/$1');
     $routes->post('api/employee/save', 'VoltResourceController::store/employee');
     $routes->post('api/employee/delete/(:segment)', 'VoltResourceController::destroy/employee/$1');
+    $routes->post('api/employee/restore/(:segment)', 'VoltResourceController::restore/employee/$1');
     $routes->post('api/employee/submit/(:segment)', 'VoltResourceController::restSubmit/employee/$1');
     $routes->post('api/employee/approve/(:segment)', 'VoltResourceController::restApprove/employee/$1');
     $routes->post('api/employee/cancel/(:segment)', 'VoltResourceController::restCancel/employee/$1');
@@ -31,6 +32,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/employeeeducation/load/(:segment)', 'VoltResourceController::show/employeeeducation/$1');
     $routes->post('api/employeeeducation/save', 'VoltResourceController::store/employeeeducation');
     $routes->post('api/employeeeducation/delete/(:segment)', 'VoltResourceController::destroy/employeeeducation/$1');
+    $routes->post('api/employeeeducation/restore/(:segment)', 'VoltResourceController::restore/employeeeducation/$1');
     $routes->post('api/employeeeducation/submit/(:segment)', 'VoltResourceController::restSubmit/employeeeducation/$1');
     $routes->post('api/employeeeducation/approve/(:segment)', 'VoltResourceController::restApprove/employeeeducation/$1');
     $routes->post('api/employeeeducation/cancel/(:segment)', 'VoltResourceController::restCancel/employeeeducation/$1');
@@ -48,6 +50,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/leave/load/(:segment)', 'VoltResourceController::show/leave/$1');
     $routes->post('api/leave/save', 'VoltResourceController::store/leave');
     $routes->post('api/leave/delete/(:segment)', 'VoltResourceController::destroy/leave/$1');
+    $routes->post('api/leave/restore/(:segment)', 'VoltResourceController::restore/leave/$1');
     $routes->post('api/leave/submit/(:segment)', 'VoltResourceController::restSubmit/leave/$1');
     $routes->post('api/leave/approve/(:segment)', 'VoltResourceController::restApprove/leave/$1');
     $routes->post('api/leave/cancel/(:segment)', 'VoltResourceController::restCancel/leave/$1');

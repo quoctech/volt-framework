@@ -50,6 +50,14 @@ Entity Builder là giao diện metadata trong Volt để tạo module, entity v�
 12. Với entity có sẵn, mở từ `Entity List` để vào builder sửa trực tiếp.
 13. Bấm `Save` hoặc `Ctrl+S`.
 
+## Xóa dữ liệu (soft delete)
+
+- Mọi bảng entity có cột `deleted_at` (SchemaSync tự thêm, kể cả bảng cũ khi chạy `php spark volt:sync --all`).
+- Mặc định xóa mềm: `delete()` chỉ đánh dấu `deleted_at`, bản ghi biến mất khỏi list nhưng vẫn còn trong DB, có thể khôi phục qua `POST api/{entity}/restore/{id}`.
+- Tick **"Xóa thẳng"** trong Entity Settings để entity dùng xóa vật lý (bản ghi bị xóa hẳn, không khôi phục được).
+- Xóa vật lý tức thời qua API: `POST api/{entity}/delete/{id}?purge=1`.
+- Chi tiết kỹ thuật: [VOLT_FRAMEWORK.md §7.1](VOLT_FRAMEWORK.md).
+
 ## Artifact được sinh
 
 Sau khi lưu entity, core sẽ sinh lại các file sau trong app:

@@ -194,6 +194,7 @@ final class SchemaSyncTest extends CIUnitTestCase
             'modified'       => ['type' => 'timestamp without time zone'],
             'workflow_state' => ['type' => 'character varying', 'length' => 100],
             'amended_from'   => ['type' => 'character varying', 'length' => 100],
+            'deleted_at'     => ['type' => 'timestamp without time zone'],
         ];
 
         $rows = [];

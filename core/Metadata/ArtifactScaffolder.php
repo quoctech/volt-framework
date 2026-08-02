@@ -1400,6 +1400,7 @@ JS;
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', 'VoltResourceController::show/{$entity['snake']}/\$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', 'VoltResourceController::store/{$entity['snake']}');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', 'VoltResourceController::destroy/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->post('api/{$entity['snake']}/restore/(:segment)', 'VoltResourceController::restore/{$entity['snake']}/\$1');";
 
             // Workflow routes
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/submit/(:segment)', 'VoltResourceController::restSubmit/{$entity['snake']}/\$1');";

@@ -125,6 +125,7 @@ final class VoltResourceController extends Controller
         $query = mb_trim((string) ($this->request->getGet('q') ?? ''));
         $fields = $this->getFormFields($entityName);
         $builder = $model->builder();
+        $this->applyDeletedFilter($builder, $entityName);
 
         if ($query !== '') {
             $builder->groupStart();
@@ -187,6 +188,7 @@ final class VoltResourceController extends Controller
         $builder = $model->builder()
             ->select('name')
             ->limit(20);
+        $this->applyDeletedFilter($builder, $entityName);
 
         if ($query !== '') {
             $builder->like('name', "%{$query}%");
@@ -277,9 +279,10 @@ final class VoltResourceController extends Controller
     public function destroy(string $entityName, string $id): ResponseInterface
     {
         $model = $this->resolveModel($entityName);
+        $purge = (bool) $this->request->getGet('purge');
 
         try {
-            $model->delete($id);
+            $model->delete($id, $purge);
 
             return $this->response->setJSON([
                 'status' => 'ok',
@@ -288,6 +291,43 @@ final class VoltResourceController extends Controller
         } catch (Throwable $throwable) {
             return $this->respondException($throwable);
         }
+    }
+
+    /**
+     * Khôi phục bản ghi đã xóa mềm (entity ở chế độ xóa mềm).
+     */
+    public function restore(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        if (! $model->canWrite('delete')) {
+            return $this->respondError('Forbidden', 403);
+        }
+
+        $restored = $model->restore($id);
+
+        return $this->response
+            ->setStatusCode($restored ? 200 : 422)
+            ->setJSON([
+                'status' => $restored ? 'ok' : 'error',
+                'message' => $restored ? 'Record restored.' : 'Restore failed: entity uses hard delete.',
+            ]);
+    }
+
+    /**
+     * Loại bản ghi đã xóa mềm khỏi builder (nếu bảng có cột deleted_at).
+     *
+     * @param \CodeIgniter\Database\BaseBuilder $builder
+     */
+    private function applyDeletedFilter($builder, string $entityName): void
+    {
+        $table = TableNameResolver::entity($entityName);
+        $db = VoltDatabase::connection();
+
+        if (! $db->fieldExists('deleted_at', $table)) {
+            return;
+        }
+
+        $builder->where($table . '.deleted_at', null);
     }
 
     // ========================================================================

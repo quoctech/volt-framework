@@ -70,6 +70,7 @@ final class QueryParser
      */
     public function apply(array $params): array
     {
+        $this->applySoftDeleteFilter();
         $this->parseFields($params);
         $this->parseFreeTextSearch($params);
         $this->parseFilters($params);
@@ -87,6 +88,29 @@ final class QueryParser
             'page'    => $this->page,
             'perPage' => $this->perPage,
         ];
+    }
+
+    /**
+     * Loại bản ghi đã xóa mềm khỏi kết quả truy vấn.
+     * An toàn với entity chế độ xóa thẳng: cột deleted_at luôn NULL.
+     */
+    private function applySoftDeleteFilter(): void
+    {
+        $db = $this->builder->db();
+        if (! $db instanceof \CodeIgniter\Database\BaseConnection) {
+            return;
+        }
+
+        $table = $db->prefixTable($this->builder->getTable() ?? '');
+        if ($table === '') {
+            return;
+        }
+
+        if (! $db->fieldExists('deleted_at', $table)) {
+            return;
+        }
+
+        $this->builder->where($table . '.deleted_at', null);
     }
 
     /** @return list<string> Fields selected (or readable fields if none specified) */

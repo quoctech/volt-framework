@@ -49,6 +49,10 @@ final class QueryParserTest extends CIUnitTestCase
         foreach ($rows as $row) {
             $db->table(self::TABLE)->insert($row);
         }
+
+        // CI4 caches table field lists on the (shared) connection; drop stale
+        // entries so column checks reflect the freshly recreated table.
+        $db->resetDataCache();
     }
 
     protected function tearDown(): void
@@ -353,6 +357,31 @@ final class QueryParserTest extends CIUnitTestCase
      * @param array<string, mixed> $params
      * @return array{builder: \CodeIgniter\Database\BaseBuilder, total: int, page: int, perPage: int}
      */
+    public function testSoftDeletedRowsFilteredOutWhenTableHasDeletedAt(): void
+    {
+        $db = VoltDatabase::connection();
+        $db->query('ALTER TABLE ' . self::TABLE . ' ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL');
+        $db->resetDataCache();
+        $db->table(self::TABLE)
+            ->where('name', 'A-001')
+            ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+
+        $result = $this->parse([]);
+
+        $this->assertSame(4, $result['total']);
+
+        $names = array_column($result['builder']->get()->getResultArray(), 'name');
+        $this->assertNotContains('A-001', $names);
+        $this->assertCount(4, $names);
+    }
+
+    public function testSoftDeletedFilterNotAppliedWhenColumnMissing(): void
+    {
+        $result = $this->parse([]);
+
+        $this->assertSame(5, $result['total']);
+    }
+
     private function parse(array $params): array
     {
         $db = VoltDatabase::connection();

@@ -563,6 +563,7 @@ final class EntityBuilderService
             'module'         => (string) ($entity['module'] ?? ''),
             'label'          => (string) ($custom['label'] ?? $this->titleize((string) ($entity['name'] ?? ''))),
             'is_submittable' => (bool) ($custom['is_submittable'] ?? false),
+            'hard_delete'    => (bool) ($custom['hard_delete'] ?? false),
             'issingle'       => (bool) ($entity['issingle'] ?? false),
             'istable'        => (bool) ($entity['istable'] ?? false),
             'autoname'       => (string) ($entity['autoname'] ?? 'HASH'),
@@ -609,6 +610,7 @@ final class EntityBuilderService
             'module'         => $this->normalizeIdentifier((string) ($payload['module'] ?? 'core')),
             'label'          => $label !== '' ? $label : $this->titleize($name),
             'is_submittable' => $this->toBool($payload['is_submittable'] ?? false),
+            'hard_delete'    => $this->toBool($payload['hard_delete'] ?? false),
             'issingle'       => $this->toBool($payload['issingle'] ?? false),
             'istable'        => $this->toBool($payload['istable'] ?? false),
             'autoname'       => mb_trim((string) ($payload['autoname'] ?? 'HASH')) ?: 'HASH',
@@ -685,6 +687,7 @@ final class EntityBuilderService
             'custom_attributes' => json_encode(array_merge($entity['s_custom_jsonb'], [
                 'label'          => $entity['label'],
                 'is_submittable' => $entity['is_submittable'],
+                'hard_delete'    => $entity['hard_delete'],
             ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
     }

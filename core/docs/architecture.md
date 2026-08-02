@@ -498,13 +498,15 @@ core/
 - `AuthService` + Filters (`auth`, `guest`, `apiauth`, `admin`)
 - `EntityBuilderController` + Desk UI (CI4 Views + Alpine.js + Tailwind CSS)
 - `ArtifactScaffolder` sinh Controller/Model/View/JS tự động
+- `VoltResourceController` (API trung tâm cho entity: data/load/save/delete/restore/submit/approve/cancel/amend, filter soft delete, purge qua `?purge=1`)
+- `NamingSeriesGenerator` (đặt tên tự động `{entity}-{series}` theo `sys_entity.autoname`)
+- Child table mode `separate` hoàn chỉnh (bảng `tab_<child>` riêng, cascade xóa/khôi phục cùng parent)
+- Soft delete chuẩn hóa: cột `deleted_at` trên mọi bảng entity, mặc định xóa mềm, tùy chọn "Xóa thẳng" (`custom_attributes.hard_delete`) trong Entity Settings
+- Queue worker (`volt:queue-work`/queue worker background) cho `sys_queue_job` + retry với exponential backoff
 
 Chưa có:
 
-- queue worker cho `sys_queue_job`
-- `VoltResourceController` (API trung tâm cho entity)
-- `NamingSeriesGenerator`
-- Child table mode `separate` hoàn chỉnh
+- Import engine (Excel) — xem `core/Report` cho export đã có
 
 ## Tài liệu liên quan
 

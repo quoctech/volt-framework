@@ -5,6 +5,7 @@ declare(strict_types=1);
 use CodeIgniter\Test\ControllerTestTrait;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\ReflectionHelper;
+use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Metadata\Controllers\VoltResourceController;
 
 /**
@@ -19,6 +20,32 @@ final class VoltResourceControllerTest extends CIUnitTestCase
 {
     use ControllerTestTrait;
     use ReflectionHelper;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Ensure the fallback-entity fixture exists regardless of test order
+        // (VoltModelEventTest deletes its sys_entity row in tearDown).
+        $db = VoltDatabase::connection();
+        $exists = $db->table('sys_entity')->where('name', 'test_evt')->get()->getRowArray();
+        if (! is_array($exists)) {
+            $db->table('sys_entity')->insert([
+                'name'              => 'test_evt',
+                'module'            => 'core',
+                'autoname'          => 'HASH',
+                'issingle'          => 0,
+                'istable'           => 0,
+                'custom_attributes' => json_encode(['is_submittable' => true, 'label' => 'Test Evt']),
+            ]);
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        VoltDatabase::connection()->table('sys_entity')->where('name', 'test_evt')->delete();
+        parent::tearDown();
+    }
 
     public function testRenderListViewFallsBackToGenericTemplate(): void
     {

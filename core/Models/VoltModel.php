@@ -39,6 +39,12 @@ abstract class VoltModel extends Model
     private const COL_PARENTFIELD = 'parentfield';
     private const COL_PARENTTYPE = 'parenttype';
     private const COL_IDX = 'idx';
+    private const COL_DELETED_AT = 'deleted_at';
+
+    protected $useSoftDeletes = true;
+    protected $deletedField = self::COL_DELETED_AT;
+
+    private bool $deleteModeResolved = false;
 
     private const META_CHILD_TABLES = 'child_tables';
     private const META_CHILD_ENTITY = 'child_entity';
@@ -124,6 +130,8 @@ abstract class VoltModel extends Model
      */
     public function find($id = null): array|object|null
     {
+        $this->resolveDeleteMode();
+
         $result = parent::find($id);
 
         if (is_array($result)) {
@@ -141,14 +149,100 @@ abstract class VoltModel extends Model
 
     public function delete($id = null, bool $purge = false): bool
     {
+        $this->resolveDeleteMode();
+
         $this->db->table($this->table)
             ->where('amended_from', $id)
             ->set(['amended_from' => null])
             ->update();
 
-        $this->deleteChildRecords((string) $id);
+        if ($this->useSoftDeletes && ! $purge) {
+            $this->softDeleteChildRecords((string) $id);
+        } else {
+            $this->deleteChildRecords((string) $id);
+        }
 
         return parent::delete($id, $purge);
+    }
+
+    /**
+     * Khôi phục bản ghi đã xóa mềm (kèm child rows của entity chế độ soft delete).
+     */
+    public function restore(string $id): bool
+    {
+        $this->resolveDeleteMode();
+
+        if (! $this->useSoftDeletes) {
+            return false;
+        }
+
+        $this->db->transStart();
+
+        $this->db->table($this->table)
+            ->where($this->primaryKey, $id)
+            ->set(self::COL_DELETED_AT, null)
+            ->update();
+
+        $childMap = $this->resolveChildTableMap();
+        foreach ($childMap as $childEntity) {
+            $childTable = TableNameResolver::entity($childEntity);
+            if (! $this->hasColumn(self::COL_DELETED_AT, $childTable)) {
+                continue;
+            }
+            $this->db->table($childTable)
+                ->where(self::COL_PARENT, $id)
+                ->set(self::COL_DELETED_AT, null)
+                ->update();
+        }
+
+        $this->db->transComplete();
+
+        return true;
+    }
+
+    /**
+     * Đánh dấu xóa mềm cho child rows của entity (mode separate table).
+     */
+    private function softDeleteChildRecords(string $parentName): void
+    {
+        $childMap = $this->resolveChildTableMap();
+        if ($childMap === [] || $parentName === '') {
+            return;
+        }
+
+        $timestamp = date('Y-m-d H:i:s');
+
+        $this->db->transStart();
+        foreach ($childMap as $childEntity) {
+            $childTable = TableNameResolver::entity($childEntity);
+            if (! $this->hasColumn(self::COL_DELETED_AT, $childTable)) {
+                continue;
+            }
+            $this->db->table($childTable)
+                ->where(self::COL_PARENT, $parentName)
+                ->set(self::COL_DELETED_AT, $timestamp)
+                ->update();
+        }
+        $this->db->transComplete();
+    }
+
+    /**
+     * Xác định chế độ xóa theo cài đặt entity (custom_attributes.hard_delete).
+     * Mặc định: xóa mềm (deleted_at). Bật "Xóa thẳng" trong Entity Settings -> xóa cứng.
+     */
+    private function resolveDeleteMode(): void
+    {
+        if ($this->deleteModeResolved) {
+            return;
+        }
+
+        $this->deleteModeResolved = true;
+
+        $meta = $this->loadCompiledMetadata();
+        $custom = $meta['entity']['custom_attributes'] ?? [];
+        $hardDelete = is_array($custom) && (bool) ($custom['hard_delete'] ?? false);
+
+        $this->useSoftDeletes = ! $hardDelete;
     }
 
     /**
@@ -991,13 +1085,15 @@ abstract class VoltModel extends Model
         return null;
     }
 
-    private function hasColumn(string $column): bool
+    private function hasColumn(string $column, ?string $table = null): bool
     {
-        if (! isset($this->tableColumns[$this->table])) {
-            $columns = $this->db->getFieldNames($this->table) ?: [];
-            $this->tableColumns[$this->table] = array_fill_keys($columns, true);
+        $table = $table ?? $this->table;
+
+        if (! isset($this->tableColumns[$table])) {
+            $columns = $this->db->getFieldNames($table) ?: [];
+            $this->tableColumns[$table] = array_fill_keys($columns, true);
         }
 
-        return isset($this->tableColumns[$this->table][$column]);
+        return isset($this->tableColumns[$table][$column]);
     }
 }

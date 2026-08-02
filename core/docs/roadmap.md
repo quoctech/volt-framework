@@ -260,7 +260,7 @@ Hạng mục:
 - backend biên dịch layout thành ma trận 2D
 - Alpine.js renderer cho form/list
 - hỗ trợ grid child table
-- chuẩn hóa `volt-ui.js`
+- ~~chuẩn hóa `volt-ui.js`~~ → ✅ đã thay bằng Claro theme (`core/docs/claro-theme.md`): design tokens + 27 CSS components + 4 Alpine components
 - dùng `Tailwind CSS` cho layout và utility styling
 
 Nguyên tắc frontend:
@@ -296,9 +296,12 @@ Tiêu chí hoàn thành:
 
 - ~~custom page management (Page List)~~ ✅ `core/Metadata/` — PageModel, PageService, PageController, page_list + page_form views, route gen, scaffold, AwesomeBar integration
 - ~~multi-tenant strategy~~ ✅ Database-per-Tenant (hub DB `volt_enterprise` + per-tenant DB `volt_{name}`), domain-based resolution, auto DB create/drop with migrations, CLI commands, `VoltDatabase` connection routing
-- soft delete chuẩn hóa
+- ~~soft delete chuẩn hóa~~ ✅ cột `deleted_at` mọi bảng entity + "Xóa thẳng" (`custom_attributes.hard_delete`) trong Entity Settings; filter mọi query path (REST/workspace); API `restore` + `?purge=1`; `VoltModel::restore()`
 - ~~event bus nội bộ~~ ✅ `core/Events/` — EventBus + Event class + 7 dispatch points in VoltModel
-- import/export engine
+- ~~report/export engine~~ ✅ `core/Report/` — CsvExporter, XlsxExporter, ReportQueryBuilder, ReportService, PivotEngine + admin UI + `api/reports/*`
+- ~~Role UI~~ ✅ `core/Role/` — Role management desk
+- ~~queue retry exponential backoff~~ ✅ `QueueWorker.php` — `backoffBaseSeconds * (2 ** (attempts - 1))`
+- import engine (Excel)
 - attachment subsystem
 - full-text search strategy
 - cache invalidation strategy chi tiết

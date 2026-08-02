@@ -171,13 +171,17 @@ final class VoltModelBaseCrudTest extends CIUnitTestCase
 
         $this->assertTrue($model->delete($this->parentName));
 
+        // Soft delete: row stays but is excluded from find() and marked deleted_at
+        $this->assertNull($model->find($this->parentName));
+
         $row = VoltDatabase::connection()
             ->table('tab_employee')
             ->where('name', $this->parentName)
             ->get()
             ->getRowArray();
 
-        $this->assertNull($row);
+        $this->assertIsArray($row);
+        $this->assertNotNull($row['deleted_at']);
     }
 
     public function testFindReturnsNullForMissingRecord(): void
