@@ -535,7 +535,7 @@ PHP;
             approveUrl: <?= esc(json_encode(\$approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode(\$cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrl: <?= esc(json_encode(\$amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
-        })" x-init="init()" class="claro-page">
+        })" x-init="init()" class="claro-page claro-page--wide">
         <div class="claro-table-toolbar">
             <div class="claro-table-toolbar__left">
                 <div class="claro-page-header" style="margin-bottom:0">
@@ -572,7 +572,7 @@ PHP;
                             <template x-for="columnNumber in sessionColumnNumbers(session)" :key="session.uid + '_' + columnNumber">
                                 <div style="display:grid;gap:var(--claro-space-m);align-content:start">
                                     <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.fieldname">
-                                        <label style="display:block">
+                                        <div style="display:block">
                                             <span style="display:flex;align-items:center;gap:var(--claro-space-xs);margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">
                                                 <span x-text="field.label"></span>
                                                 <span x-show="field.is_required" x-cloak style="color:var(--claro-color-error)">*</span>
@@ -623,8 +623,15 @@ PHP;
                                                 </div>
                                             </template>
                                             <template x-if="field.fieldtype === 'Table' || field.fieldtype === 'Child Table (JSONB)'">
-                                                <div :class="field.read_only ? 'claro-card claro-card--readonly' : 'claro-card'">
-                                                    <table class="claro-table" style="margin:0">
+                                                <div class="claro-card">
+                                                    <div class="claro-child-table__header">
+                                                        <span class="claro-child-table__title">
+                                                            <span x-text="field.label"></span>
+                                                            <span class="claro-badge" x-text="(form[field.fieldname] || []).length + ' rows'"></span>
+                                                        </span>
+                                                        <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="claro-button claro-button--small">+ Add Row</button>
+                                                    </div>
+                                                    <table class="claro-table claro-child-table">
                                                         <thead>
                                                             <tr>
                                                                 <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
@@ -634,14 +641,22 @@ PHP;
                                                             </tr>
                                                         </thead>
                                                         <tbody>
+                                                            <template x-if="(form[field.fieldname] || []).length === 0">
+                                                                <tr class="claro-child-table__empty">
+                                                                    <td :colspan="(field.child_columns || []).length + 1">No rows yet.</td>
+                                                                </tr>
+                                                            </template>
                                                             <template x-for="(row, rowIdx) in (form[field.fieldname] || [])" :key="rowIdx">
                                                                 <tr>
                                                                     <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
-                                                                        <td>
-                                                                            <template x-if="col.fieldtype === 'Check'">
+                                                                        <td :class="col.fieldtype === 'Check' ? 'claro-child-table__cell-check' : ''">
+                                                                            <template x-if="field.read_only">
+                                                                                <span class="claro-child-table__cell-text" x-text="col.fieldtype === 'Check' ? (row[col.fieldname] ? 'Yes' : '—') : (row[col.fieldname] ?? '')"></span>
+                                                                            </template>
+                                                                            <template x-if="!field.read_only && col.fieldtype === 'Check'">
                                                                                 <input type="checkbox" x-model="form[field.fieldname][rowIdx][col.fieldname]">
                                                                             </template>
-                                                                            <template x-if="col.fieldtype === 'Select'">
+                                                                            <template x-if="!field.read_only && col.fieldtype === 'Select'">
                                                                                 <select x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-select">
                                                                                     <option value="">Select</option>
                                                                                     <template x-for="opt in parseOptions(col.options || '')" :key="opt">
@@ -649,25 +664,26 @@ PHP;
                                                                                     </template>
                                                                                 </select>
                                                                             </template>
-                                                                            <template x-if="col.fieldtype === 'Int'">
+                                                                            <template x-if="!field.read_only && col.fieldtype === 'Int'">
                                                                                 <input type="number" step="1" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
                                                                             </template>
-                                                                            <template x-if="col.fieldtype === 'Float'">
+                                                                            <template x-if="!field.read_only && col.fieldtype === 'Float'">
                                                                                 <input type="number" step="any" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
                                                                             </template>
-                                                                            <template x-if="!['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
+                                                                            <template x-if="!field.read_only && !['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
                                                                                 <input type="text" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
                                                                             </template>
                                                                         </td>
                                                                     </template>
                                                                     <td x-show="!field.read_only" style="text-align:center">
-                                                                        <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" style="color:var(--claro-color-error);font-size:var(--claro-font-size-s);font-weight:700;background:none;border:0;cursor:pointer" title="Remove row">&times;</button>
+                                                                        <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" class="claro-child-table__remove" title="Remove row" aria-label="Remove row">
+                                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                                                        </button>
                                                                     </td>
                                                                 </tr>
                                                             </template>
                                                         </tbody>
                                                     </table>
-                                                    <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="claro-button claro-button--small">+ Add Row</button>
                                                 </div>
                                             </template>
                                             <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
@@ -685,7 +701,7 @@ PHP;
                                             <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)', 'Attach', 'Attach Image'].includes(field.fieldtype)">
                                                 <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="claro-input" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
                                             </template>
-                                        </label>
+                                        </div>
                                     </template>
                                 </div>
                             </template>

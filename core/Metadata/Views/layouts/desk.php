@@ -34,7 +34,7 @@ $htmlLang = $lang['code'] ?? 'en';
 <body class="claro-body">
     <?= view('Volt\\Core\\Metadata\\Views\\partials\\desk_topbar', compact('currentUserName', 'isAdmin', 'deskActive')) ?>
 
-    <main class="claro-page">
+    <main class="claro-page claro-page--wide">
         <?= $content ?>
     </main>
     <?= $extraScripts ?>

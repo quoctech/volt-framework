@@ -38,7 +38,7 @@ $htmlLang = $lang['code'] ?? 'en';
                 'created' => $cm['success_created'] ?? 'Created module {name}.',
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
-        class="claro-page"
+        class="claro-page claro-page--wide"
     >
         <div class="claro-page-header">
             <h1 class="claro-page-header__title"><?= esc($cm['heading'] ?? 'Create Module') ?></h1>

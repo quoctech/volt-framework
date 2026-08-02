@@ -47,7 +47,7 @@ final class VoltResourceController extends Controller
         parent::initController($request, $response, $logger);
         helper(['url']);
         $this->compiler = service('voltMetadataCompiler') ?? new VoltMetadataCompiler();
-        $this->db = VoltDatabase::connection();
+        $this->db = VoltDatabase::hubConnection();
     }
 
     // ========================================================================
