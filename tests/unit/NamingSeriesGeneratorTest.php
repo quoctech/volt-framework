@@ -67,6 +67,24 @@ final class NamingSeriesGeneratorTest extends CIUnitTestCase
         $this->assertSame('FIXED-NAME', $this->generator->generate('FIXED-NAME', 'product'));
     }
 
+    public function testGenerateStripsStrayDotBeforeHashToken(): void
+    {
+        $year = gmdate('Y');
+
+        $name = $this->generator->generate('EMP-.YYYY.-.#####', 'employee');
+
+        $this->assertSame("EMP-{$year}-00042", $name);
+    }
+
+    public function testGenerateStripsStrayDotBeforeLiteralDigits(): void
+    {
+        $year = gmdate('Y');
+
+        $name = $this->generator->generate('EMP-.YYYY.-.00001', 'employee');
+
+        $this->assertSame("EMP-{$year}-00001", $name);
+    }
+
     public function testGenerateResolvesDateAndPadsSequence(): void
     {
         $year = gmdate('Y');

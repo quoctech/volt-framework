@@ -68,15 +68,7 @@ final class VoltResourceController extends Controller
 
         $meta = $this->getCompiledMeta($entityName);
 
-        return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_list", [
-            'title'        => $this->titleize($entityName) . ' List',
-            'dataUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}"),
-            'createUrl'    => site_url("{$moduleSnake}/{$entitySnake}/create"),
-            'editUrlBase'  => site_url("{$moduleSnake}/{$entitySnake}/edit"),
-            'builderUrl'   => site_url("desk/entity-builder?entity={$entitySnake}"),
-            'linkTargets'  => $this->getLinkTargets($entityName),
-            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
-        ]);
+        return $this->renderListView($entityName, $moduleStudly, $entitySnake, $moduleSnake, $meta);
     }
 
     public function createView(string $entityName): string|ResponseInterface
@@ -93,21 +85,7 @@ final class VoltResourceController extends Controller
 
         $meta = $this->getCompiledMeta($entityName);
 
-        return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_form", [
-            'title'        => 'New ' . $this->titleize($entityName),
-            'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
-            'saveUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
-            'loadUrlBase'  => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
-            'fields'       => $this->getFormFields($entityName),
-            'sessions'     => $this->getFormSessions($entityName),
-            'linkTargets'  => $this->getLinkTargets($entityName),
-            'recordName'   => '',
-            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
-            'submitUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/submit"),
-            'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
-            'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
-            'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
-        ]);
+        return $this->renderFormView($entityName, $moduleStudly, $entitySnake, $moduleSnake, $meta, 'New ' . $this->titleize($entityName), '');
     }
 
     public function editView(string $entityName, string $id): string|ResponseInterface
@@ -124,21 +102,7 @@ final class VoltResourceController extends Controller
 
         $meta = $this->getCompiledMeta($entityName);
 
-        return view("App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_form", [
-            'title'        => 'Edit ' . $this->titleize($entityName),
-            'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
-            'saveUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
-            'loadUrlBase'  => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
-            'fields'       => $this->getFormFields($entityName),
-            'sessions'     => $this->getFormSessions($entityName),
-            'linkTargets'  => $this->getLinkTargets($entityName),
-            'recordName'   => $id,
-            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
-            'submitUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/submit"),
-            'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
-            'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
-            'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
-        ]);
+        return $this->renderFormView($entityName, $moduleStudly, $entitySnake, $moduleSnake, $meta, 'Edit ' . $this->titleize($entityName), $id);
     }
 
     // ========================================================================
@@ -643,6 +607,112 @@ final class VoltResourceController extends Controller
         }
 
         return new $modelClass();
+    }
+
+    // ========================================================================
+    //  VIEW RENDERING (module view -> generic fallback)
+    // ========================================================================
+
+    /**
+     * Render danh sách entity. Ưu tiên view module đã scaffold, fallback về
+     * template generic nếu module view chưa tồn tại.
+     *
+     * @param array<string, mixed> $meta
+     */
+    private function renderListView(string $entityName, string $moduleStudly, string $entitySnake, string $moduleSnake, array $meta): string
+    {
+        $data = [
+            'title'        => $this->titleize($entityName) . ' List',
+            'dataUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}"),
+            'createUrl'    => site_url("{$moduleSnake}/{$entitySnake}/create"),
+            'editUrlBase'  => site_url("{$moduleSnake}/{$entitySnake}/edit"),
+            'builderUrl'   => site_url("desk/entity-builder?entity={$entitySnake}"),
+            'linkTargets'  => $this->getLinkTargets($entityName),
+            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
+        ];
+
+        return $this->renderWithFallback(
+            "App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_list",
+            'Volt\Core\Metadata\Views\templates\entity_list',
+            array_merge($data, [
+                'columns'      => $this->listColumns($entityName),
+                'entityStudly' => $this->studly($entityName),
+                'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
+                'moduleSnake'  => $moduleSnake,
+                'entitySnake'  => $entitySnake,
+            ]),
+        );
+    }
+
+    /**
+     * Render form entity. Ưu tiên view module đã scaffold, fallback về
+     * template generic nếu module view chưa tồn tại.
+     *
+     * @param array<string, mixed> $meta
+     */
+    private function renderFormView(string $entityName, string $moduleStudly, string $entitySnake, string $moduleSnake, array $meta, string $title, string $recordName): string
+    {
+        $data = [
+            'title'        => $title,
+            'listUrl'      => site_url("{$moduleSnake}/{$entitySnake}"),
+            'saveUrl'      => site_url("{$moduleSnake}/api/{$entitySnake}/save"),
+            'loadUrlBase'  => site_url("{$moduleSnake}/api/{$entitySnake}/load"),
+            'fields'       => $this->getFormFields($entityName),
+            'sessions'     => $this->getFormSessions($entityName),
+            'linkTargets'  => $this->getLinkTargets($entityName),
+            'recordName'   => $recordName,
+            'isSubmittable' => (bool) ($meta['entity']['custom_attributes']['is_submittable'] ?? $meta['workflow']['is_submittable'] ?? false),
+            'submitUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/submit"),
+            'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
+            'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
+            'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
+        ];
+
+        return $this->renderWithFallback(
+            "App\\Modules\\{$moduleStudly}\\Views\\{$entitySnake}_form",
+            'Volt\Core\Metadata\Views\templates\entity_form',
+            $data,
+        );
+    }
+
+    /**
+     * Render view ưu tiên, fallback về template generic khi module view thiếu.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function renderWithFallback(string $preferred, string $fallback, array $data): string
+    {
+        try {
+            return view($preferred, $data);
+        } catch (\CodeIgniter\View\Exceptions\ViewException) {
+            return view($fallback, $data);
+        }
+    }
+
+    /** @return array<int, array{fieldname:string,label:string,fieldtype:string}> */
+    private function listColumns(string $entityName): array
+    {
+        $columns = [];
+
+        foreach ($this->getFormFields($entityName) as $field) {
+            $fieldname = (string) ($field['fieldname'] ?? '');
+            if ($fieldname === '') {
+                continue;
+            }
+
+            $fieldtype = (string) ($field['fieldtype'] ?? 'Data');
+            if (in_array($fieldtype, ['Table', 'Child Table (JSONB)'], true)) {
+                continue;
+            }
+
+            $columns[] = [
+                'fieldname' => $fieldname,
+                'label'     => (string) ($field['label'] ?? $fieldname),
+                'fieldtype' => $fieldtype,
+            ];
+        }
+
+        return $columns;
     }
 
     // ========================================================================

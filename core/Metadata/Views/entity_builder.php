@@ -218,7 +218,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                         </template>
                                     </select>
                                     <div x-show="namingPreset === 'CUSTOM'" x-cloak>
-                                <input x-model="entity.autoname" type="text" class="w-full border border-zinc-300 px-3 py-2 font-mono text-base outline-none focus:border-zinc-500" placeholder="SI-.YYYY.-.#####">
+                                <input x-model="entity.autoname" type="text" class="w-full border border-zinc-300 px-3 py-2 font-mono text-base outline-none focus:border-zinc-500" placeholder="SI-.YYYY.-#####">
                                     </div>
                                 </div>
                             </div>

@@ -66,7 +66,10 @@ final class NamingSeriesGenerator
             '.MM.'   => gmdate('m'),
             '.DD.'   => gmdate('d'),
         ]);
-        $resolved = preg_replace('/([\-\/])\.(#+)/', '$1$2', $resolved) ?? $resolved;
+
+        // Chuẩn hóa placeholder lỗi: "E-.YYYY.-.00001" -> "E-2026-00001" (bỏ dấu chấm thừa
+        // đứng sau dấu phân cách khi liền trước placeholder số thứ tự '#...' hoặc chuỗi số).
+        $resolved = preg_replace('/([\-\/])\.(?=[#\d])/', '$1', $resolved) ?? $resolved;
 
         if (! preg_match('/#+/', $resolved, $matches)) {
             return $resolved;

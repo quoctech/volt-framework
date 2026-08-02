@@ -7,6 +7,7 @@ namespace Volt\Core\Engine;
 use CodeIgniter\Database\BaseConnection;
 use InvalidArgumentException;
 use RuntimeException;
+use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
 final class WorkflowEngine
@@ -135,8 +136,8 @@ final class WorkflowEngine
         $targetDocstatus = $this->resolveDocstatus($workflow, $targetState);
 
         $comment = match (true) {
+            mb_trim($comment ?? '') === '' && $this->requiresComment($action) => throw new InvalidArgumentException("Action '{$action}' requires a comment."),
             $comment === null || mb_trim($comment) === '' => null,
-            $this->requiresComment($action) && mb_trim($comment) === '' => throw new InvalidArgumentException("Action '{$action}' requires a comment."),
             default => mb_trim($comment),
         };
 
@@ -291,10 +292,7 @@ final class WorkflowEngine
 
     private function resolveTableName(string $entityName): string
     {
-        $prefix = env('database.default.DB_PREFIX', '');
-        $snake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $entityName));
-
-        return $prefix . 'tab_' . $snake;
+        return TableNameResolver::entity($entityName);
     }
 
     private function decodeJsonArray(mixed $value): array
