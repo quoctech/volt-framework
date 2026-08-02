@@ -92,7 +92,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
 
                     <div style="display:flex;flex-direction:column;gap:var(--claro-space-m)">
                         <template x-for="session in sessions" :key="session.uid">
-                            <section class="claro-card">
+                            <section class="claro-card" style="overflow:visible">
                                 <div class="flex items-start gap-3" style="padding:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-200)">
                                     <div class="min-w-0 flex-1">
                                         <input x-model="session.title" @focus="selectedSessionUid = session.uid" type="text" class="w-full bg-transparent text-base font-medium outline-none" placeholder="Session title">
