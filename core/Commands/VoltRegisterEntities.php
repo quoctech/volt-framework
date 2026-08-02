@@ -6,6 +6,7 @@ namespace Volt\Core\Commands;
 
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
+use CodeIgniter\Database\RawSql;
 use Volt\Core\Database\VoltDatabase;
 
 class VoltRegisterEntities extends BaseCommand
@@ -16,6 +17,55 @@ class VoltRegisterEntities extends BaseCommand
 
     public function run(array $params): void
     {
+        CLI::write('Scanning module definition files...', 'yellow');
+
+        $db = VoltDatabase::connection();
+        $moduleFiles = glob(ROOTPATH . 'app/Modules/*/module.json');
+        $modulesRegistered = 0;
+        $modulesSkipped = 0;
+
+        if ($moduleFiles !== false) {
+            foreach ($moduleFiles as $moduleFile) {
+                $moduleStudly = basename(dirname($moduleFile));
+                $modulePath = 'app/Modules/' . $moduleStudly;
+                $content = file_get_contents($moduleFile);
+                $data = $content !== false ? json_decode($content, true) : null;
+
+                $moduleName = is_array($data) ? (string) ($data['name'] ?? '') : '';
+                if ($moduleName === '') {
+                    $moduleName = strtolower($moduleStudly);
+                }
+                $label = is_array($data) ? (string) ($data['label'] ?? '') : '';
+                $label = $label !== '' ? $label : ucfirst($moduleName);
+                $namespace = is_array($data) ? (string) ($data['namespace'] ?? '') : '';
+
+                $exists = $db->table('sys_module')->where('name', $moduleName)->countAllResults() > 0;
+                if ($exists) {
+                    $db->table('sys_module')->where('name', $moduleName)->update([
+                        'label'       => $label,
+                        'namespace'   => $namespace,
+                        'module_path' => $modulePath,
+                        'is_active'   => 1,
+                        'updated_at'  => new RawSql('CURRENT_TIMESTAMP'),
+                    ]);
+                    $modulesSkipped++;
+                    continue;
+                }
+
+                $db->table('sys_module')->insert([
+                    'name'        => $moduleName,
+                    'label'       => $label,
+                    'namespace'   => $namespace,
+                    'module_path' => $modulePath,
+                    'is_active'   => 1,
+                    'created_at'  => new RawSql('CURRENT_TIMESTAMP'),
+                    'updated_at'  => new RawSql('CURRENT_TIMESTAMP'),
+                ]);
+                CLI::write("  MODULE: {$moduleName}", 'green');
+                $modulesRegistered++;
+            }
+        }
+
         CLI::write('Scanning entity definition files...', 'yellow');
 
         $files = glob(ROOTPATH . 'app/Modules/*/Entities/*/*.json');
@@ -145,7 +195,7 @@ class VoltRegisterEntities extends BaseCommand
             }
         }
 
-        CLI::write("Done. Registered: {$success}, Skipped: {$skipped}, Failed: {$failed}", 'yellow');
+        CLI::write("Done. Modules: {$modulesRegistered} registered, {$modulesSkipped} already present. Entities: {$success} registered, {$skipped} skipped, {$failed} failed", 'yellow');
     }
 
     private function registerWorkflow($db, string $entityName, array $workflow): void
