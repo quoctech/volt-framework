@@ -7,13 +7,13 @@
 $deleteModalBody = static function (): string {
     ob_start();
     ?>
-    <p class="text-sm text-zinc-700">
-        Bạn có chắc muốn xóa entity <span class="font-semibold" x-text="entity.name || 'this entity'"></span> không?
+    <p style="font-size:var(--claro-font-size-s);margin:0 0 var(--claro-space-s)">
+        Bạn có chắc muốn xóa entity <span style="font-weight:700" x-text="entity.name || 'this entity'"></span> không?
     </p>
-    <p class="text-sm text-zinc-600">Nhập mật khẩu hiện tại để xác nhận thao tác xóa.</p>
-    <label class="block">
-        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Password</span>
-        <input x-model="deletePassword" @keydown.enter.prevent="destroyEntity()" type="password" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+    <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-subtle);margin:0 0 var(--claro-space-s)">Nhập mật khẩu hiện tại để xác nhận thao tác xóa.</p>
+    <label style="display:block">
+        <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Password</span>
+        <input x-model="deletePassword" @keydown.enter.prevent="destroyEntity()" type="password" class="claro-input" style="width:100%">
     </label>
     <?php
     return (string) ob_get_clean();
@@ -22,8 +22,8 @@ $deleteModalBody = static function (): string {
 $deleteModalFooter = static function (): string {
     ob_start();
     ?>
-    <button @click="closeDeleteModal()" type="button" class="border border-zinc-300 px-4 py-2 text-base text-zinc-700 hover:bg-zinc-50">Cancel</button>
-    <button @click="destroyEntity()" type="button" class="border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-800 hover:bg-red-100">
+    <button @click="closeDeleteModal()" type="button" class="claro-button claro-button--small">Cancel</button>
+    <button @click="destroyEntity()" type="button" class="claro-button claro-button--small claro-button--danger">
         Confirm Delete
     </button>
     <?php
@@ -39,12 +39,14 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Volt Entity Builder</title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
     <style>
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
+<body class="claro-body">
     <div
         x-data="entityBuilderApp(<?= esc(json_encode([
             'modules' => $modules,
@@ -61,67 +63,69 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
         @keydown.window.meta.s.prevent="save()"
         class="mx-auto max-w-[1720px] p-4 lg:p-6"
     >
-        <div class="border border-zinc-300 bg-white">
-            <header class="border-b border-zinc-300 p-4">
+        <div class="claro-card" style="overflow:visible">
+            <header style="padding:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-200)">
                 <div class="flex items-center justify-between gap-2">
-                    <a :href="deskUrl" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">Back to Desk</a>
+                    <a :href="deskUrl" class="claro-button claro-button--small">Back to Desk</a>
                     <div class="flex items-center gap-2">
-                    <button x-show="canOpenEntityList()" x-cloak @click="goToEntityList()" type="button" class="border border-zinc-300 px-4 py-2 text-base hover:bg-zinc-50">
+                    <button x-show="canOpenEntityList()" x-cloak @click="goToEntityList()" type="button" class="claro-button claro-button--small">
                         <span x-text="`Go to ${entity.label || titleize(entity.name || 'Entity')}`"></span>
                     </button>
-                    <button @click="save()" type="button" class="border border-zinc-900 bg-zinc-900 px-4 py-2 text-base text-white hover:bg-zinc-700">Save</button>
+                    <button @click="save()" type="button" class="claro-button claro-button--small claro-button--primary">Save</button>
                     </div>
                 </div>
 
-                <div class="mt-4 flex gap-2">
-                    <button @click="activeTab = 'settings'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'settings' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity Settings</button>
-                    <button @click="activeTab = 'entity'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'entity' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Entity</button>
-                    <button @click="activeTab = 'workflow'" type="button" class="border px-3 py-2 text-base" :class="activeTab === 'workflow' ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 bg-white text-zinc-700'">Workflow</button>
+                <div class="claro-tabs" style="margin-top:var(--claro-space-m);margin-bottom:0">
+                    <button @click="activeTab = 'settings'" type="button" class="claro-tabs__tab" :class="activeTab === 'settings' ? 'claro-tabs__tab--active' : ''">Entity Settings</button>
+                    <button @click="activeTab = 'entity'" type="button" class="claro-tabs__tab" :class="activeTab === 'entity' ? 'claro-tabs__tab--active' : ''">Entity</button>
+                    <button @click="activeTab = 'workflow'" type="button" class="claro-tabs__tab" :class="activeTab === 'workflow' ? 'claro-tabs__tab--active' : ''">Workflow</button>
                 </div>
             </header>
 
-            <main class="grid gap-px bg-zinc-300 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <section x-show="activeTab === 'entity'" class="bg-zinc-100 p-4">
-                    <div x-show="modules.length === 0" x-cloak class="mb-4 border border-zinc-300 bg-white px-4 py-3 text-base text-zinc-600">
-                        Chưa có module nào. Tạo module trước tại <a href="<?= site_url('desk/create-module') ?>" class="underline">/desk/create-module</a>.
+            <main class="grid gap-px xl:grid-cols-[minmax(0,1fr)_320px]" style="background:var(--claro-gray-200)">
+                <section x-show="activeTab === 'entity'" class="p-4" style="background:var(--claro-color-bg-page)">
+                    <div x-show="modules.length === 0" x-cloak class="claro-message claro-message--warning" style="margin-bottom:var(--claro-space-m)">
+                        <div class="claro-message__content">
+                            Chưa có module nào. Tạo module trước tại <a href="<?= site_url('desk/create-module') ?>" style="text-decoration:underline">/desk/create-module</a>.
+                        </div>
                     </div>
 
-                    <div class="space-y-4">
+                    <div style="display:flex;flex-direction:column;gap:var(--claro-space-m)">
                         <template x-for="session in sessions" :key="session.uid">
-                            <section class="border border-zinc-300 bg-white">
-                                <div class="flex items-start gap-3 border-b border-zinc-300 px-4 py-3">
+                            <section class="claro-card">
+                                <div class="flex items-start gap-3" style="padding:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-200)">
                                     <div class="min-w-0 flex-1">
                                         <input x-model="session.title" @focus="selectedSessionUid = session.uid" type="text" class="w-full bg-transparent text-base font-medium outline-none" placeholder="Session title">
-                                        <input x-model="session.description" @focus="selectedSessionUid = session.uid" type="text" class="mt-1 w-full bg-transparent text-base text-zinc-500 outline-none" placeholder="Short description">
+                                        <input x-model="session.description" @focus="selectedSessionUid = session.uid" type="text" class="mt-1 w-full bg-transparent text-base outline-none" style="color:var(--claro-color-text-light)" placeholder="Short description">
                                     </div>
 
                                     <div class="relative">
-                                        <button @click="toggleSessionMenu(session.uid)" type="button" class="border border-zinc-300 px-3 py-2 text-base hover:bg-zinc-50">...</button>
-                                        <div x-show="sessionMenuUid === session.uid" x-cloak class="absolute right-0 top-11 z-20 min-w-[180px] border border-zinc-300 bg-white shadow-sm">
-                                            <button @click="insertSession(session.uid, 'above')" type="button" class="block w-full border-b border-zinc-200 px-3 py-2 text-left text-base hover:bg-zinc-50">Add session above</button>
-                                            <button @click="insertSession(session.uid, 'below')" type="button" class="block w-full border-b border-zinc-200 px-3 py-2 text-left text-base hover:bg-zinc-50">Add session below</button>
-                                            <button @click="addColumn(session.uid)" type="button" class="block w-full border-b border-zinc-200 px-3 py-2 text-left text-base hover:bg-zinc-50">Add column</button>
-                                            <button @click="removeSession(session.uid)" type="button" class="block w-full px-3 py-2 text-left text-base text-zinc-700 hover:bg-zinc-50">Remove session</button>
+                                        <button @click="toggleSessionMenu(session.uid)" type="button" class="claro-button claro-button--small" style="margin:0">...</button>
+                                        <div x-show="sessionMenuUid === session.uid" x-cloak class="absolute right-0 top-11 z-20 min-w-[180px] rounded" style="background:var(--claro-color-bg);border:1px solid var(--claro-gray-200);box-shadow:var(--claro-shadow-dialog);padding:var(--claro-space-xs) 0">
+                                            <button @click="insertSession(session.uid, 'above')" type="button" class="claro-dropdown__item" style="border-bottom:1px solid var(--claro-gray-100)">Add session above</button>
+                                            <button @click="insertSession(session.uid, 'below')" type="button" class="claro-dropdown__item" style="border-bottom:1px solid var(--claro-gray-100)">Add session below</button>
+                                            <button @click="addColumn(session.uid)" type="button" class="claro-dropdown__item" style="border-bottom:1px solid var(--claro-gray-100)">Add column</button>
+                                            <button @click="removeSession(session.uid)" type="button" class="claro-dropdown__item claro-dropdown__item--danger">Remove session</button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div @dragover.prevent="selectedSessionUid = session.uid" @drop.prevent="handleSessionDrop(session.uid)" class="space-y-2 p-3" :class="selectedSessionUid === session.uid ? 'bg-zinc-50' : ''">
+                                <div @dragover.prevent="selectedSessionUid = session.uid" @drop.prevent="handleSessionDrop(session.uid)" class="p-3" :style="`padding:var(--claro-space-s);${selectedSessionUid === session.uid ? 'background:var(--claro-color-bg-hover)' : ''}`">
                                     <template x-if="sessionFields(session.uid).length === 0">
-                                        <div class="border border-dashed border-zinc-300 px-4 py-8 text-center text-base text-zinc-500">
-                                            <p>No field in this session.</p>
-                                            <div class="mt-4">
+                                        <div class="claro-empty" style="border:1px dashed var(--claro-gray-300);padding:var(--claro-space-l);text-align:center;color:var(--claro-color-text-light);margin:0">
+                                            <p style="margin:0 0 var(--claro-space-m)">No field in this session.</p>
+                                            <div>
                                                 <div class="relative inline-block text-left" @click.outside="closeFieldTypeDropdown()">
-                                                    <button @click="toggleFieldTypeDropdown(`session:${session.uid}`)" type="button" class="border border-zinc-300 bg-white px-3 py-2 text-base hover:bg-zinc-50">Add Field</button>
-                                                    <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `session:${session.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 border border-zinc-300 bg-white shadow-sm">
-                                                        <div class="border-b border-zinc-200 p-2">
-                                                            <input x-model="fieldTypeFilter" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Filter type">
+                                                    <button @click="toggleFieldTypeDropdown(`session:${session.uid}`)" type="button" class="claro-button claro-button--small" style="margin:0">Add Field</button>
+                                                    <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `session:${session.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 rounded" style="background:var(--claro-color-bg);border:1px solid var(--claro-gray-200);box-shadow:var(--claro-shadow-dialog)">
+                                                        <div style="padding:var(--claro-space-xs);border-bottom:1px solid var(--claro-gray-100)">
+                                                            <input x-model="fieldTypeFilter" type="text" class="claro-input" style="width:100%" placeholder="Filter type">
                                                         </div>
-                                                        <div class="max-h-64 overflow-auto p-1">
+                                                        <div class="max-h-64 overflow-auto" style="padding:var(--claro-space-xs)">
                                                             <template x-for="type in filteredFieldTypes()" :key="type">
-                                                                <button @click="addFieldFromAnchor(type, `session:${session.uid}`)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50" x-text="type"></button>
+                                                                <button @click="addFieldFromAnchor(type, `session:${session.uid}`)" type="button" class="claro-dropdown__item" x-text="type"></button>
                                                             </template>
-                                                            <div x-show="filteredFieldTypes().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No type found.</div>
+                                                            <div x-show="filteredFieldTypes().length === 0" x-cloak style="padding:var(--claro-space-xs) var(--claro-space-m);color:var(--claro-color-text-light);font-size:var(--claro-font-size-s)">No type found.</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -130,7 +134,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                     </template>
 
                                     <template x-if="sessionFields(session.uid).length > 0">
-                                        <div class="grid gap-3" :style="`grid-template-columns: repeat(${session.column_count || 1}, minmax(0, 1fr));`">
+                                        <div :style="`display:grid;gap:var(--claro-space-s);grid-template-columns: repeat(${session.column_count || 1}, minmax(0, 1fr));`">
                                             <template x-for="columnNumber in sessionColumnNumbers(session)" :key="`${session.uid}_${columnNumber}`">
                                                 <div class="space-y-2" @dragover.prevent @drop.prevent="handleColumnDrop(session.uid, columnNumber)">
                                                     <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.uid">
@@ -142,8 +146,8 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                                 @dragover.prevent="setFieldDropTarget(field.uid)"
                                                                 @drop.prevent="dropOnField(field.uid)"
                                                                 @click="selectField(field.uid)"
-                                                                class="border px-3 py-3 cursor-pointer"
-                                                                :class="selectedFieldUid === field.uid ? 'border-zinc-900 bg-zinc-50' : (dragState.targetFieldUid === field.uid ? 'border-zinc-600 bg-zinc-50' : 'border-zinc-300 bg-white')"
+                                                                class="rounded cursor-pointer"
+                                                                :style="selectedFieldUid === field.uid ? 'border:1px solid var(--claro-color-primary);background:var(--claro-color-bg-hover);padding:var(--claro-space-s)' : (dragState.targetFieldUid === field.uid ? 'border:1px solid var(--claro-gray-600);background:var(--claro-color-bg-hover);padding:var(--claro-space-s)' : 'border:1px solid var(--claro-gray-300);background:var(--claro-color-bg);padding:var(--claro-space-s)')"
                                                             >
                                                                 <div class="flex items-center justify-between gap-3">
                                                                     <div class="min-w-0">
@@ -155,18 +159,18 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                                             class="w-full bg-transparent font-medium outline-none"
                                                                             placeholder="Field label"
                                                                         >
-                                                                        <div class="mt-2 flex flex-wrap gap-1 text-[11px] text-zinc-600">
-                                                                            <span class="border border-zinc-300 px-2 py-0.5 font-mono" x-text="field.fieldname || 'fieldname'"></span>
-                                                                            <span x-show="field.in_list_view" x-cloak class="border border-zinc-300 px-2 py-0.5">List</span>
-                                                                            <span x-show="field.is_required" x-cloak class="border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">Required</span>
-                                                                            <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-2 py-0.5 text-sky-800">Read only</span>
-                                                                            <span x-show="field.hidden" x-cloak class="border border-zinc-400 bg-zinc-100 px-2 py-0.5 text-zinc-700">Hidden</span>
-                                                                            <span x-show="hasCustomJson(field.f_custom_jsonb_text)" x-cloak class="border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-800">JSON</span>
+                                                                        <div style="display:flex;flex-wrap:wrap;gap:var(--claro-space-xs);margin-top:var(--claro-space-xs)">
+                                                                            <span class="claro-badge" style="font-family:monospace" x-text="field.fieldname || 'fieldname'"></span>
+                                                                            <span x-show="field.in_list_view" x-cloak class="claro-badge claro-badge--info">List</span>
+                                                                            <span x-show="field.is_required" x-cloak class="claro-badge claro-badge--warning">Required</span>
+                                                                            <span x-show="field.read_only" x-cloak class="claro-badge claro-badge--info">Read only</span>
+                                                                            <span x-show="field.hidden" x-cloak class="claro-badge">Hidden</span>
+                                                                            <span x-show="hasCustomJson(field.f_custom_jsonb_text)" x-cloak class="claro-badge claro-badge--success">JSON</span>
                                                                         </div>
                                                                     </div>
                                                                     <div class="flex items-center gap-2">
-                                                                        <span class="border border-zinc-300 px-2 py-1 text-base text-zinc-600" x-text="field.fieldtype"></span>
-                                                                        <button @click.stop="removeField(field.uid)" type="button" class="border border-zinc-300 px-2 py-1 text-base text-zinc-700 hover:bg-zinc-50">Delete</button>
+                                                                        <span class="claro-badge" x-text="field.fieldtype"></span>
+                                                                        <button @click.stop="removeField(field.uid)" type="button" class="claro-button claro-button--small claro-button--danger" style="margin:0">Delete</button>
                                                                     </div>
                                                                 </div>
                                                             </article>
@@ -174,16 +178,16 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                             <template x-if="selectedFieldUid === field.uid">
                                                                 <div class="flex justify-center">
                                                                     <div class="relative inline-block text-left" @click.outside="closeFieldTypeDropdown()">
-                                                                        <button @click="toggleFieldTypeDropdown(`field:${field.uid}`)" type="button" class="border border-zinc-300 bg-white px-3 py-2 text-base hover:bg-zinc-50">Add Field</button>
-                                                                        <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `field:${field.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 border border-zinc-300 bg-white shadow-sm">
-                                                                            <div class="border-b border-zinc-200 p-2">
-                                                                                <input x-model="fieldTypeFilter" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Filter type">
+                                                                        <button @click="toggleFieldTypeDropdown(`field:${field.uid}`)" type="button" class="claro-button claro-button--small" style="margin:0">Add Field</button>
+                                                                        <div x-show="fieldTypeDropdownOpen && fieldTypeAnchor === `field:${field.uid}`" x-cloak class="absolute left-1/2 top-12 z-20 w-56 -translate-x-1/2 rounded" style="background:var(--claro-color-bg);border:1px solid var(--claro-gray-200);box-shadow:var(--claro-shadow-dialog)">
+                                                                            <div style="padding:var(--claro-space-xs);border-bottom:1px solid var(--claro-gray-100)">
+                                                                                <input x-model="fieldTypeFilter" type="text" class="claro-input" style="width:100%" placeholder="Filter type">
                                                                             </div>
-                                                                            <div class="max-h-64 overflow-auto p-1">
+                                                                            <div class="max-h-64 overflow-auto" style="padding:var(--claro-space-xs)">
                                                                                 <template x-for="type in filteredFieldTypes()" :key="type">
-                                                                                    <button @click="addFieldFromAnchor(type, `field:${field.uid}`)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50" x-text="type"></button>
+                                                                                    <button @click="addFieldFromAnchor(type, `field:${field.uid}`)" type="button" class="claro-dropdown__item" x-text="type"></button>
                                                                                 </template>
-                                                                                <div x-show="filteredFieldTypes().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No type found.</div>
+                                                                                <div x-show="filteredFieldTypes().length === 0" x-cloak style="padding:var(--claro-space-xs) var(--claro-space-m);color:var(--claro-color-text-light);font-size:var(--claro-font-size-s)">No type found.</div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -201,36 +205,37 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                     </div>
                 </section>
 
-                <section x-show="activeTab === 'settings'" x-cloak class="bg-zinc-100 p-4">
-                    <div class="border border-zinc-300 bg-white p-4">
+                <section x-show="activeTab === 'settings'" x-cloak class="p-4" style="background:var(--claro-color-bg-page)">
+                    <div class="claro-card">
+                        <div class="claro-card__content">
                         <div class="grid gap-4 lg:grid-cols-2">
                             <label class="block">
-                                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Entity Name</span>
-                                <input x-model="entity.name" @blur="normalizeEntityName()" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Entity Name</span>
+                                <input x-model="entity.name" @blur="normalizeEntityName()" type="text" class="claro-input" style="width:100%">
                             </label>
 
                             <div class="block">
-                                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Naming Rule ID</span>
+                                <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Naming Rule ID</span>
                                 <div class="space-y-2">
-                                    <select x-model="namingPreset" @change="applyNamingPreset()" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <select x-model="namingPreset" @change="applyNamingPreset()" class="claro-select" style="width:100%">
                                         <template x-for="preset in namingPresets" :key="preset.value">
                                             <option :value="preset.value" x-text="preset.label"></option>
                                         </template>
                                     </select>
                                     <div x-show="namingPreset === 'CUSTOM'" x-cloak>
-                                <input x-model="entity.autoname" type="text" class="w-full border border-zinc-300 px-3 py-2 font-mono text-base outline-none focus:border-zinc-500" placeholder="SI-.YYYY.-#####">
+                                <input x-model="entity.autoname" type="text" class="claro-input" style="width:100%;font-family:monospace" placeholder="SI-.YYYY.-#####">
                                     </div>
                                 </div>
                             </div>
 
                             <label class="block">
-                                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Label</span>
-                                <input x-model="entity.label" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Label</span>
+                                <input x-model="entity.label" type="text" class="claro-input" style="width:100%">
                             </label>
 
                             <label class="block">
-                                <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Module</span>
-                                <select x-model="entity.module" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Module</span>
+                                <select x-model="entity.module" class="claro-select" style="width:100%">
                                     <option value="">Select module</option>
                                     <template x-for="module in modules" :key="module">
                                         <option :value="module" x-text="module"></option>
@@ -240,56 +245,58 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
 
                             <div class="flex items-end gap-4">
                                 <label class="flex items-center gap-2 text-base">
-                                    <input x-model="entity.is_submittable" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                    <input x-model="entity.is_submittable" type="checkbox">
                                     <span>Submittable</span>
                                 </label>
                                 <label class="flex items-center gap-2 text-base">
-                                    <input x-model="entity.istable" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                    <input x-model="entity.istable" type="checkbox">
                                     <span>Child Table (istable)</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div x-show="canDeleteEntity()" x-cloak class="mt-6 border-t border-zinc-200 pt-4">
+                        <div x-show="canDeleteEntity()" x-cloak style="margin-top:var(--claro-space-l);border-top:1px solid var(--claro-gray-100);padding-top:var(--claro-space-m)">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
-                                    <p class="mt-1 text-sm text-zinc-600">Xóa entity sẽ xóa metadata, bảng dữ liệu và artifact đã sinh trong module.</p>
+                                    <p style="font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-error)">Danger Zone</p>
+                                    <p style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-s);color:var(--claro-color-text-subtle)">Xóa entity sẽ xóa metadata, bảng dữ liệu và artifact đã sinh trong module.</p>
                                 </div>
-                                <button @click="openDeleteModal()" type="button" class="border border-red-300 bg-red-50 px-4 py-2 text-base font-medium text-red-800 hover:bg-red-100">
+                                <button @click="openDeleteModal()" type="button" class="claro-button claro-button--small claro-button--danger">
                                     Delete Entity
                                 </button>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </section>
 
-                <section x-show="activeTab === 'workflow'" x-cloak class="bg-zinc-100 p-4">
-                    <div x-show="!entity.is_submittable" class="border border-zinc-300 bg-white p-8 text-center text-zinc-500">
+                <section x-show="activeTab === 'workflow'" x-cloak class="p-4" style="background:var(--claro-color-bg-page)">
+                    <div x-show="!entity.is_submittable" class="claro-message" style="padding:var(--claro-space-xl) var(--claro-space-l);text-align:center;color:var(--claro-color-text-light);background:var(--claro-color-bg);border-left-color:var(--claro-gray-300)">
                         Enable <strong>Submittable</strong> in Entity Settings to configure workflow.
                     </div>
                     <template x-if="entity.is_submittable">
                         <div class="space-y-4">
-                            <div class="flex items-center gap-3 border border-zinc-300 bg-white p-4">
-                                <div class="flex-1">
+                            <div class="claro-card">
+                                <div class="claro-card__content">
                                     <label class="block">
-                                        <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('workflow_label')"></span>
-                                        <input x-model="workflow.label" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="t('workflow_label')">
+                                        <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)" x-text="t('workflow_label')"></span>
+                                        <input x-model="workflow.label" type="text" class="claro-input" style="width:100%" :placeholder="t('workflow_label')">
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="border border-zinc-300 bg-white p-4">
+                            <div class="claro-card">
+                                <div class="claro-card__content">
                                 <div class="mb-3 flex items-center justify-between">
-                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('states')"></p>
+                                    <p style="margin:0;font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)" x-text="t('states')"></p>
                                     <div class="flex gap-2">
-                                        <button @click="addDefaultWorkflowStates()" type="button" class="border border-zinc-300 px-3 py-1 text-xs hover:bg-zinc-50" x-text="t('add_default')"></button>
-                                        <button @click="addWorkflowState()" type="button" class="border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50" x-text="t('add_state')"></button>
+                                        <button @click="addDefaultWorkflowStates()" type="button" class="claro-button claro-button--extrasmall" x-text="t('add_default')"></button>
+                                        <button @click="addWorkflowState()" type="button" class="claro-button claro-button--extrasmall" x-text="t('add_state')"></button>
                                     </div>
                                 </div>
 
                                 <template x-if="workflow.states.length === 0">
-                                    <p class="py-4 text-center text-sm text-zinc-500" x-text="t('no_states')"></p>
+                                    <p style="padding:var(--claro-space-m) 0;text-align:center;font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0" x-text="t('no_states')"></p>
                                 </template>
 
                                 <template x-if="workflow.states.length > 0">
@@ -297,33 +304,33 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                         <template x-for="(state, idx) in workflow.states" :key="state.uid">
                                             <div>
                                                 <div class="flex items-center gap-2">
-                                                    <div @click="editedState = (editedState?.uid === state.uid) ? null : state; editedTransition = null" class="relative flex flex-1 cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-shadow hover:shadow-md" :class="editedState?.uid === state.uid ? 'border-zinc-600 shadow-md' : 'border-zinc-200'" :style="{ borderLeftColor: state.color || '#6b7280', borderLeftWidth: '4px' }">
+                                                    <div @click="editedState = (editedState?.uid === state.uid) ? null : state; editedTransition = null" class="relative flex flex-1 cursor-pointer items-center gap-3 rounded-lg p-3 transition-shadow hover:shadow-md" :class="editedState?.uid === state.uid ? 'border-2 shadow-md' : 'border-2'" :style="editedState?.uid === state.uid ? { borderColor: 'var(--claro-gray-600)', borderLeftColor: state.color || '#6b7280', borderLeftWidth: '4px' } : { borderColor: 'var(--claro-gray-200)', borderLeftColor: state.color || '#6b7280', borderLeftWidth: '4px' }">
                                                         <div class="flex-1">
                                                             <div class="flex items-center gap-2">
-                                                                <input x-model="state.name" type="text" class="min-w-0 flex-1 border-0 border-b border-transparent bg-transparent px-0 py-0.5 text-sm font-medium outline-none hover:border-zinc-300 focus:border-zinc-500" :placeholder="t('state_name')" @click.stop>
-                                                                <span class="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-zinc-600" x-text="'doc:' + state.docstatus"></span>
-                                                                <span x-show="state.allow_edit" class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700" x-text="t('allow_edit')"></span>
-                                                                <span x-show="state.is_final" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700" x-text="t('is_final')"></span>
+                                                                <input x-model="state.name" type="text" class="min-w-0 flex-1 border-0 border-b border-transparent bg-transparent px-0 py-0.5 text-sm font-medium outline-none" :placeholder="t('state_name')" @click.stop>
+                                                                <span class="claro-badge" style="font-family:monospace" x-text="'doc:' + state.docstatus"></span>
+                                                                <span x-show="state.allow_edit" class="claro-badge claro-badge--info" x-text="t('allow_edit')"></span>
+                                                                <span x-show="state.is_final" class="claro-badge claro-badge--warning" x-text="t('is_final')"></span>
                                                             </div>
                                                         </div>
-                                                        <button @click.stop="removeWorkflowState(state.uid)" type="button" class="shrink-0 rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600" :title="t('delete_state')">
+                                                        <button @click.stop="removeWorkflowState(state.uid)" type="button" class="shrink-0 rounded p-1" style="color:var(--claro-gray-500)" :title="t('delete_state')">
                                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                <div x-show="editedState?.uid === state.uid" x-cloak class="mb-2 mt-1 ml-2 grid grid-cols-6 gap-3 rounded border border-zinc-200 bg-zinc-50 p-3 text-xs">
+                                                <div x-show="editedState?.uid === state.uid" x-cloak style="margin:var(--claro-space-xs) 0 var(--claro-space-xs) var(--claro-space-s);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--claro-space-s);border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);background:var(--claro-color-bg-subtle);padding:var(--claro-space-s);font-size:var(--claro-font-size-xs)">
                                                     <div>
-                                                        <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('docstatus')"></span>
-                                                        <select x-model="state.docstatus" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                        <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('docstatus')"></span>
+                                                        <select x-model="state.docstatus" class="claro-select" style="width:100%;padding:var(--claro-space-xs)">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
                                                             <option value="2">2</option>
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('color')"></span>
-                                                        <select x-model="state.color" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                        <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('color')"></span>
+                                                        <select x-model="state.color" class="claro-select" style="width:100%;padding:var(--claro-space-xs)">
                                                             <option value="#6b7280">Gray</option>
                                                             <option value="#3b82f6">Blue</option>
                                                             <option value="#22c55e">Green</option>
@@ -334,37 +341,38 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                     </div>
                                                     <div class="flex items-end gap-3">
                                                         <label class="flex items-center gap-1">
-                                                            <input x-model="state.allow_edit" type="checkbox" class="h-3.5 w-3.5 border-zinc-400">
+                                                            <input x-model="state.allow_edit" type="checkbox">
                                                             <span x-text="t('allow_edit')"></span>
                                                         </label>
                                                         <label class="flex items-center gap-1">
-                                                            <input x-model="state.is_final" type="checkbox" class="h-3.5 w-3.5 border-zinc-400">
+                                                            <input x-model="state.is_final" type="checkbox">
                                                             <span x-text="t('is_final')"></span>
                                                         </label>
                                                     </div>
                                                 </div>
 
-                                                <div x-show="!editedState || editedState?.uid !== state.uid" class="ml-2 mt-1 space-y-1">
+                                                <div x-show="!editedState || editedState?.uid !== state.uid" style="margin:var(--claro-space-xs) 0 0 var(--claro-space-s);display:flex;flex-direction:column;gap:var(--claro-space-xs)">
                                                     <template x-for="(trans, tidx) in workflow.transitions.filter(t => t.from_state === state.name)" :key="trans.uid || tidx">
-                                                        <div @click="editedTransition = (editedTransition?.uid === trans.uid) ? null : trans; editedState = null" class="flex cursor-pointer items-center gap-2 rounded border border-dashed border-zinc-300 px-3 py-1.5 text-xs transition-colors hover:border-zinc-500" :class="editedTransition?.uid === trans.uid ? 'border-zinc-600 bg-zinc-100' : ''">
-                                                            <span class="text-zinc-400">↳</span>
-                                                            <span class="font-medium text-amber-700" x-text="trans.action || '?'"></span>
-                                                            <span class="text-zinc-400">→</span>
-                                                            <span class="font-medium text-zinc-700" x-text="trans.to_state"></span>
-                                                            <span x-show="trans.label" class="text-zinc-400" x-text="'(' + trans.label + ')'"></span>
-                                                            <button @click.stop="removeWorkflowTransition(trans.uid, tidx)" type="button" class="ml-auto rounded p-0.5 text-zinc-400 hover:text-red-600" :title="t('delete_transition')">
+                                                        <div @click="editedTransition = (editedTransition?.uid === trans.uid) ? null : trans; editedState = null" class="flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 text-xs" :class="editedTransition?.uid === trans.uid ? 'border' : ''" :style="editedTransition?.uid === trans.uid ? { border: '1px solid var(--claro-gray-600)', background: 'var(--claro-color-bg-hover)' } : { border: '1px dashed var(--claro-gray-300)' }">
+                                                            <span style="color:var(--claro-gray-500)">↳</span>
+                                                            <span style="font-weight:600;color:var(--claro-color-warning)" x-text="trans.action || '?'"></span>
+                                                            <span style="color:var(--claro-gray-500)">→</span>
+                                                            <span style="font-weight:600;color:var(--claro-color-text)" x-text="trans.to_state"></span>
+                                                            <span x-show="trans.label" style="color:var(--claro-gray-500)" x-text="'(' + trans.label + ')'"></span>
+                                                            <button @click.stop="removeWorkflowTransition(trans.uid, tidx)" type="button" style="margin-left:auto;color:var(--claro-gray-500)" :title="t('delete_transition')">
                                                                 <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <div x-show="editedTransition" x-cloak x-transition class="ml-4 grid grid-cols-5 gap-2 rounded border border-zinc-200 bg-white p-2 text-xs">
+                                                    <template x-if="editedTransition">
+                                                    <div x-cloak x-transition style="margin-left:var(--claro-space-m);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--claro-space-xs);border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);background:var(--claro-color-bg);padding:var(--claro-space-xs);font-size:var(--claro-font-size-xs)">
                                                         <div>
-                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('from_state')"></span>
-                                                            <span class="block px-2 py-1 text-xs font-medium" x-text="editedTransition?.from_state"></span>
+                                                            <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('from_state')"></span>
+                                                            <span style="display:block;padding:var(--claro-space-xs);font-size:var(--claro-font-size-xs);font-weight:600" x-text="editedTransition?.from_state"></span>
                                                         </div>
                                                         <div>
-                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('action')"></span>
-                                                            <select x-model="editedTransition.action" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                            <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('action')"></span>
+                                                            <select x-model="editedTransition.action" class="claro-select" style="width:100%;padding:var(--claro-space-xs)">
                                                                 <option value="" x-text="t('select_action')"></option>
                                                                 <template x-for="action in availableActions" :key="action.name">
                                                                     <option :value="action.name" x-text="action.label || action.name"></option>
@@ -372,8 +380,8 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                             </select>
                                                         </div>
                                                         <div>
-                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('to_state')"></span>
-                                                            <select x-model="editedTransition.to_state" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500">
+                                                            <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('to_state')"></span>
+                                                            <select x-model="editedTransition.to_state" class="claro-select" style="width:100%;padding:var(--claro-space-xs)">
                                                                 <option value="" x-text="t('select_state')"></option>
                                                                 <template x-for="st in workflow.states" :key="st.name">
                                                                     <option :value="st.name" x-text="st.name || st.label || st.uid"></option>
@@ -381,72 +389,78 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                             </select>
                                                         </div>
                                                         <div class="sm:col-span-2">
-                                                            <span class="mb-0.5 block text-[10px] uppercase text-zinc-500" x-text="t('label_opt')"></span>
-                                                            <input x-model="editedTransition.label" type="text" class="w-full border border-zinc-300 px-2 py-1 outline-none focus:border-zinc-500" :placeholder="t('label_opt')">
+                                                            <span style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);text-transform:uppercase;color:var(--claro-color-text-light)" x-text="t('label_opt')"></span>
+                                                            <input x-model="editedTransition.label" type="text" class="claro-input" style="width:100%;padding:var(--claro-space-xs)" :placeholder="t('label_opt')">
                                                         </div>
                                                     </div>
+                                                    </template>
                                                 </div>
                                             </div>
                                         </template>
                                     </div>
                                 </template>
+                                </div>
                             </div>
 
-                            <div class="border border-zinc-300 bg-white p-4">
+                            <div class="claro-card">
+                                <div class="claro-card__content">
                                 <div class="mb-3 flex items-center justify-between">
-                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500" x-text="t('transitions')"></p>
-                                    <button @click="addWorkflowTransition()" type="button" class="border border-zinc-300 px-3 py-1 text-sm hover:bg-zinc-50" x-text="t('add_transition')"></button>
+                                    <p style="margin:0;font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)" x-text="t('transitions')"></p>
+                                    <button @click="addWorkflowTransition()" type="button" class="claro-button claro-button--extrasmall" x-text="t('add_transition')"></button>
                                 </div>
                                 <template x-if="workflow.transitions.length === 0">
-                                    <p class="py-2 text-center text-sm text-zinc-500" x-text="t('no_transitions')"></p>
+                                    <p style="padding:var(--claro-space-s) 0;text-align:center;font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0" x-text="t('no_transitions')"></p>
                                 </template>
                                 <template x-if="workflow.transitions.length > 0">
                                     <div class="flex flex-wrap gap-2">
                                         <template x-for="(trans, tidx) in workflow.transitions" :key="trans.uid || tidx">
-                                            <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs" :class="editedTransition?.uid === trans.uid ? 'border-zinc-600 bg-zinc-100' : 'border-zinc-300'">
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs" :class="editedTransition?.uid === trans.uid ? 'border' : 'border'" :style="editedTransition?.uid === trans.uid ? { border: '1px solid var(--claro-gray-600)', background: 'var(--claro-color-bg-hover)' } : { border: '1px solid var(--claro-gray-300)' }">
                                                 <span class="font-medium" x-text="trans.from_state"></span>
-                                                <span class="text-amber-600" x-text="'→'"></span>
+                                                <span style="color:var(--claro-color-warning)" x-text="'→'"></span>
                                                 <span class="font-medium" x-text="trans.action || '?'"></span>
-                                                <span class="text-amber-600" x-text="'→'"></span>
+                                                <span style="color:var(--claro-color-warning)" x-text="'→'"></span>
                                                 <span class="font-medium" x-text="trans.to_state"></span>
-                                                <button @click="removeWorkflowTransition(trans.uid, tidx)" type="button" class="ml-0.5 rounded-full p-0.5 text-zinc-400 hover:text-red-600">
+                                                <button @click="removeWorkflowTransition(trans.uid, tidx)" type="button" style="margin-left:var(--claro-space-xs);color:var(--claro-gray-500)">
                                                     <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </span>
                                         </template>
                                     </div>
                                 </template>
+                                </div>
                             </div>
 
-                            <div class="flex items-center gap-2 border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-600">
-                                <span class="h-2 w-2 rounded-full" :class="workflow.states.length > 0 ? 'bg-green-500' : 'bg-zinc-300'"></span>
-                                <span x-text="workflow.states.length > 0 ? (t('workflow_active') + ': ' + (workflow.label || t('states'))) : t('no_states')"></span>
+                            <div class="claro-card">
+                                <div class="claro-card__content" style="display:flex;align-items:center;gap:var(--claro-space-xs);font-size:var(--claro-font-size-s);color:var(--claro-color-text-subtle);padding:var(--claro-space-s) var(--claro-space-m)">
+                                    <span class="h-2 w-2 rounded-full" :style="workflow.states.length > 0 ? 'background:var(--claro-color-success)' : 'background:var(--claro-gray-300)'"></span>
+                                    <span x-text="workflow.states.length > 0 ? (t('workflow_active') + ': ' + (workflow.label || t('states'))) : t('no_states')"></span>
+                                </div>
                             </div>
                         </div>
                     </template>
                 </section>
 
-                <aside class="space-y-4 bg-zinc-50 p-4">
-                    <section x-show="activeTab === 'entity'" class="border border-zinc-300 bg-white">
-                        <div class="border-b border-zinc-300 px-3 py-2">
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Field Inspector</p>
+                <aside style="display:flex;flex-direction:column;gap:var(--claro-space-m);background:var(--claro-color-bg-subtle);padding:var(--claro-space-m)">
+                    <section x-show="activeTab === 'entity'" class="claro-card">
+                        <div style="padding:var(--claro-space-s) var(--claro-space-m);border-bottom:1px solid var(--claro-gray-200)">
+                            <p style="margin:0;font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Field Inspector</p>
                         </div>
 
                         <template x-if="selectedField">
-                            <div class="space-y-4 p-3">
+                            <div style="display:flex;flex-direction:column;gap:var(--claro-space-m);padding:var(--claro-space-m)">
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Label</label>
-                                    <input x-model="selectedField.label" @input="syncFieldname(selectedField)" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Label</label>
+                                    <input x-model="selectedField.label" @input="syncFieldname(selectedField)" type="text" class="claro-input" style="width:100%">
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Fieldname</label>
-                                    <input x-model="selectedField.fieldname" @input="selectedField.fieldnameTouched = true" type="text" class="w-full border border-zinc-300 px-3 py-2 font-mono text-base outline-none focus:border-zinc-500">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Fieldname</label>
+                                    <input x-model="selectedField.fieldname" @input="selectedField.fieldnameTouched = true" type="text" class="claro-input" style="width:100%;font-family:monospace">
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Field Type</label>
-                                    <select x-model="selectedField.fieldtype" @change="selectedField.fieldtype = normalizeFieldType(selectedField.fieldtype); applyFieldDefaults(selectedField)" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Field Type</label>
+                                    <select x-model="selectedField.fieldtype" @change="selectedField.fieldtype = normalizeFieldType(selectedField.fieldtype); applyFieldDefaults(selectedField)" class="claro-select" style="width:100%">
                                         <template x-for="type in fieldTypes" :key="type">
                                             <option :value="type" x-text="type"></option>
                                         </template>
@@ -454,12 +468,12 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Length</label>
-                                    <input x-model="selectedField.length" type="number" min="1" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Length</label>
+                                    <input x-model="selectedField.length" type="number" min="1" class="claro-input" style="width:100%">
                                 </div>
 
                                 <div x-show="requiresOptions(selectedField.fieldtype)" x-cloak>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Options</label>
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Options</label>
                                     <template x-if="selectedField.fieldtype === 'Link' || selectedField.fieldtype === 'Table' || selectedField.fieldtype === 'Child Table (JSONB)'">
                                         <div class="relative" @click.outside="closeLinkEntityPicker()">
                                             <input
@@ -468,82 +482,83 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                                 @click="openLinkEntityPicker()"
                                                 @input="syncLinkEntityFilter(); handleEntityInput($event)"
                                                 type="text"
-                                                class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500"
+                                                class="claro-input"
+                                                style="width:100%"
                                                 :placeholder="selectedField.fieldtype === 'Table' || selectedField.fieldtype === 'Child Table (JSONB)' ? 'Select child entity' : 'Select linked entity'"
                                             >
-                                            <div x-show="linkEntityDropdownOpen" x-cloak class="absolute left-0 right-0 top-12 z-20 border border-zinc-300 bg-white shadow-sm">
-                                                <div class="max-h-64 overflow-auto p-1">
+                                            <div x-show="linkEntityDropdownOpen" x-cloak class="absolute left-0 right-0 top-12 z-20 rounded" style="background:var(--claro-color-bg);border:1px solid var(--claro-gray-200);box-shadow:var(--claro-shadow-dialog)">
+                                                <div class="max-h-64 overflow-auto" style="padding:var(--claro-space-xs)">
                                                     <template x-for="entityOption in filteredLinkEntityOptions()" :key="entityOption.name">
-                                                        <button @click.prevent="selectLinkEntity(entityOption.name)" type="button" class="block w-full px-3 py-2 text-left text-base hover:bg-zinc-50">
+                                                        <button @click.prevent="selectLinkEntity(entityOption.name)" type="button" class="claro-dropdown__item">
                                                             <span x-text="entityOption.label || titleize(entityOption.name)"></span>
-                                                            <span class="ml-2 text-xs text-zinc-500" x-text="entityOption.name"></span>
+                                                            <span style="margin-left:var(--claro-space-xs);font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light)" x-text="entityOption.name"></span>
                                                         </button>
                                                     </template>
-                                                    <div x-show="filteredLinkEntityOptions().length === 0" x-cloak class="px-3 py-2 text-base text-zinc-500">No entity found.</div>
+                                                    <div x-show="filteredLinkEntityOptions().length === 0" x-cloak style="padding:var(--claro-space-xs) var(--claro-space-m);color:var(--claro-color-text-light);font-size:var(--claro-font-size-s)">No entity found.</div>
                                                 </div>
                                             </div>
                                         </div>
                                     </template>
                                     <template x-if="selectedField.fieldtype !== 'Link' && selectedField.fieldtype !== 'Table' && selectedField.fieldtype !== 'Child Table (JSONB)'">
-                                        <textarea x-model="selectedField.options" rows="5" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
+                                        <textarea x-model="selectedField.options" rows="5" class="claro-textarea" style="width:100%" :placeholder="optionsPlaceholder(selectedField.fieldtype)"></textarea>
                                     </template>
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Fetch From</label>
-                                    <input x-model="selectedField.fetch_from" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="employee.age">
-                                    <div x-show="fetchFromSuggestions(selectedField).length > 0" x-cloak class="mt-2 flex flex-wrap gap-2">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Fetch From</label>
+                                    <input x-model="selectedField.fetch_from" type="text" class="claro-input" style="width:100%" placeholder="employee.age">
+                                    <div x-show="fetchFromSuggestions(selectedField).length > 0" x-cloak style="display:flex;flex-wrap:wrap;gap:var(--claro-space-xs);margin-top:var(--claro-space-xs)">
                                         <template x-for="suggestion in fetchFromSuggestions(selectedField)" :key="suggestion.value">
-                                            <button @click="selectedField.fetch_from = suggestion.value" type="button" class="border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">
+                                            <button @click="selectedField.fetch_from = suggestion.value" type="button" class="claro-button claro-button--extrasmall" style="margin:0">
                                                 <span x-text="suggestion.value"></span>
-                                                <span class="ml-1 text-zinc-500" x-text="suggestion.label"></span>
+                                                <span style="color:var(--claro-color-text-light)" x-text="suggestion.label"></span>
                                             </button>
                                         </template>
                                     </div>
                                 </div>
 
                                 <div x-show="supportsDefaultValue(selectedField.fieldtype)" x-cloak>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Default Value</label>
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Default Value</label>
                                     <template x-if="selectedField.fieldtype === 'Check'">
-                                        <select x-model="selectedField.default_value" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                        <select x-model="selectedField.default_value" class="claro-select" style="width:100%">
                                             <option value="">None</option>
                                             <option value="0">Unchecked</option>
                                             <option value="1">Checked</option>
                                         </select>
                                     </template>
                                     <template x-if="selectedField.fieldtype !== 'Check'">
-                                        <input x-model="selectedField.default_value" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" :placeholder="defaultValuePlaceholder(selectedField.fieldtype)">
+                                        <input x-model="selectedField.default_value" type="text" class="claro-input" style="width:100%" :placeholder="defaultValuePlaceholder(selectedField.fieldtype)">
                                     </template>
                                 </div>
 
                                 <div x-show="supportsPlaceholder(selectedField.fieldtype)" x-cloak>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Placeholder</label>
-                                    <input x-model="selectedField.placeholder" type="text" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500" placeholder="Enter placeholder">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Placeholder</label>
+                                    <input x-model="selectedField.placeholder" type="text" class="claro-input" style="width:100%" placeholder="Enter placeholder">
                                 </div>
 
-                                <label class="flex items-center gap-2 text-base">
-                                    <input x-model="selectedField.in_list_view" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                <label style="display:flex;align-items:center;gap:var(--claro-space-xs);font-size:var(--claro-font-size-base)">
+                                    <input x-model="selectedField.in_list_view" type="checkbox">
                                     <span>In list view</span>
                                 </label>
 
-                                <label class="flex items-center gap-2 text-base">
-                                    <input x-model="selectedField.is_required" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                <label style="display:flex;align-items:center;gap:var(--claro-space-xs);font-size:var(--claro-font-size-base)">
+                                    <input x-model="selectedField.is_required" type="checkbox">
                                     <span>Required</span>
                                 </label>
 
-                                <label class="flex items-center gap-2 text-base">
-                                    <input x-model="selectedField.read_only" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                <label style="display:flex;align-items:center;gap:var(--claro-space-xs);font-size:var(--claro-font-size-base)">
+                                    <input x-model="selectedField.read_only" type="checkbox">
                                     <span>Read only</span>
                                 </label>
 
-                                <label class="flex items-center gap-2 text-base">
-                                    <input x-model="selectedField.hidden" type="checkbox" class="h-4 w-4 border-zinc-400">
+                                <label style="display:flex;align-items:center;gap:var(--claro-space-xs);font-size:var(--claro-font-size-base)">
+                                    <input x-model="selectedField.hidden" type="checkbox">
                                     <span>Hidden</span>
                                 </label>
 
                                 <div x-show="selectedFieldSession() && (selectedFieldSession().column_count || 1) > 1" x-cloak>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Column</label>
-                                    <select x-model="selectedField.column" class="w-full border border-zinc-300 px-3 py-2 text-base outline-none focus:border-zinc-500">
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Column</label>
+                                    <select x-model="selectedField.column" class="claro-select" style="width:100%">
                                         <template x-for="columnNumber in selectedFieldColumnOptions()" :key="columnNumber">
                                             <option :value="columnNumber" x-text="`Column ${columnNumber}`"></option>
                                         </template>
@@ -551,35 +566,35 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                                 </div>
 
                                 <div>
-                                    <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">f_custom_jsonb</label>
-                                    <textarea x-model="selectedField.f_custom_jsonb_text" rows="6" class="w-full border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-500"></textarea>
+                                    <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">f_custom_jsonb</label>
+                                    <textarea x-model="selectedField.f_custom_jsonb_text" rows="6" class="claro-textarea" style="width:100%;font-family:monospace;font-size:var(--claro-font-size-s)"></textarea>
                                 </div>
 
-                                <button @click="removeField(selectedField.uid)" type="button" class="w-full border border-zinc-300 px-3 py-2 text-base text-zinc-700 hover:bg-zinc-50">Delete Field</button>
+                                <button @click="removeField(selectedField.uid)" type="button" class="claro-button claro-button--small claro-button--danger" style="width:100%;justify-content:center">Delete Field</button>
                             </div>
                         </template>
 
                         <template x-if="!selectedField">
-                            <div class="p-4 text-base text-zinc-500">
+                            <div style="padding:var(--claro-space-m);color:var(--claro-color-text-light)">
                                 Chọn một field để chỉnh thuộc tính.
                             </div>
                         </template>
                     </section>
 
-                    <section x-show="activeTab === 'entity'" class="border border-zinc-300 bg-white">
-                        <div class="border-b border-zinc-300 px-3 py-2">
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Advanced JSON</p>
+                    <section x-show="activeTab === 'entity'" class="claro-card">
+                        <div style="padding:var(--claro-space-s) var(--claro-space-m);border-bottom:1px solid var(--claro-gray-200)">
+                            <p style="margin:0;font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Advanced JSON</p>
                         </div>
-                        <div class="space-y-3 p-3">
+                        <div style="display:flex;flex-direction:column;gap:var(--claro-space-s);padding:var(--claro-space-m)">
                             <div>
-                                <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Entity.s_custom_jsonb</label>
-                                <textarea x-model="entityCustomText" rows="5" class="w-full border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-500"></textarea>
-                                <p class="mt-1 text-xs text-zinc-500" x-text="jsonSummary(entityCustomText, 'Entity JSON')"></p>
+                                <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">Entity.s_custom_jsonb</label>
+                                <textarea x-model="entityCustomText" rows="5" class="claro-textarea" style="width:100%;font-family:monospace;font-size:var(--claro-font-size-s)"></textarea>
+                                <p style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light)" x-text="jsonSummary(entityCustomText, 'Entity JSON')"></p>
                             </div>
                             <div>
-                                <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">sys_entity_custom.custom_meta</label>
-                                <textarea x-model="customPatchText" rows="5" class="w-full border border-zinc-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-zinc-500"></textarea>
-                                <p class="mt-1 text-xs text-zinc-500" x-text="jsonSummary(customPatchText, 'Custom meta')"></p>
+                                <label style="display:block;margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xxs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">sys_entity_custom.custom_meta</label>
+                                <textarea x-model="customPatchText" rows="5" class="claro-textarea" style="width:100%;font-family:monospace;font-size:var(--claro-font-size-s)"></textarea>
+                                <p style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light)" x-text="jsonSummary(customPatchText, 'Custom meta')"></p>
                             </div>
                         </div>
                     </section>
@@ -587,7 +602,7 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
             </main>
         </div>
 
-        <div x-show="flash.message" x-cloak class="fixed bottom-4 right-4 border border-zinc-300 bg-white px-4 py-3 text-base shadow-sm" :class="flash.type === 'error' ? 'text-red-700' : 'text-zinc-800'">
+        <div x-show="flash.message" x-cloak class="claro-toast" :class="flash.type === 'error' ? 'claro-toast--error' : 'claro-toast--success'">
             <span x-text="flash.message"></span>
         </div>
 

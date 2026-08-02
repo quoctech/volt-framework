@@ -21,9 +21,51 @@
         }
     },
     "fields": {
-        "school_name": [],
-        "degree": [],
-        "year": []
+        "school_name": {
+            "id": 30,
+            "parent": "employeeeducation",
+            "fieldname": "school_name",
+            "label": "School Name",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "reqd": 1,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 1,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb"
+        },
+        "degree": {
+            "id": 31,
+            "parent": "employeeeducation",
+            "fieldname": "degree",
+            "label": "Degree",
+            "fieldtype": "Data",
+            "length": 255,
+            "options": "",
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 2,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb"
+        },
+        "year": {
+            "id": 32,
+            "parent": "employeeeducation",
+            "fieldname": "year",
+            "label": "Year",
+            "fieldtype": "Int",
+            "length": 255,
+            "options": "",
+            "reqd": 0,
+            "read_only": 0,
+            "hidden": 0,
+            "idx": 3,
+            "is_child_table": false,
+            "storage_mode": "embedded_jsonb"
+        }
     },
     "field_order": [
         "school_name",
@@ -48,7 +90,7 @@
     "cache": {
         "key": "volt_metadata_entity_v1_employeeeducation_global",
         "ttl": 86400,
-        "compiledAt": "2026-07-24T12:40:18+00:00",
+        "compiledAt": "2026-08-02T11:49:28+00:00",
         "role": null
     },
     "source": {
@@ -105,13 +147,7 @@
         "customRows": [
             {
                 "apply_to_role": null,
-                "custom_meta": {
-                    "fields": {
-                        "year": [],
-                        "degree": [],
-                        "school_name": []
-                    }
-                }
+                "custom_meta": []
             }
         ]
     },
@@ -123,7 +159,9 @@
             "degree",
             "year"
         ],
-        "required_fields": [],
+        "required_fields": [
+            "school_name"
+        ],
         "hidden_fields": [],
         "read_only_fields": []
     }

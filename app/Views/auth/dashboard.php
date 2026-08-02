@@ -25,32 +25,39 @@ $htmlLang = $lang['code'] ?? 'en';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($d['title'] ?? 'Volt Core Dashboard') ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-<main class="mx-auto flex min-h-screen max-w-5xl items-center px-6 py-12">
-    <div class="w-full rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl shadow-cyan-950/20 backdrop-blur">
-        <p class="text-sm uppercase tracking-[0.35em] text-cyan-300"><?= esc($d['brand'] ?? 'Volt Core') ?></p>
-        <h1 class="mt-4 text-3xl font-semibold text-white"><?= esc($d['logged_in'] ?? 'You are logged in') ?></h1>
-        <p class="mt-3 text-slate-300"><?= str_replace('{name}', esc($user->name), $d['greeting'] ?? 'Hello {name}.') ?></p>
+<body class="claro-body">
+<main class="claro-page" style="display:flex;align-items:center;min-height:100vh;max-width:48rem">
+    <div class="claro-card" style="width:100%">
+        <div class="claro-card__content">
+            <p style="font-size:var(--claro-font-size-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:var(--claro-color-text-light);margin:0 0 var(--claro-space-xs)"><?= esc($d['brand'] ?? 'Volt Core') ?></p>
+            <h1 style="font-size:var(--claro-font-size-h3);margin:0 0 var(--claro-space-xs)"><?= esc($d['logged_in'] ?? 'You are logged in') ?></h1>
+            <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0 0 var(--claro-space-l)"><?= str_replace('{name}', esc($user->name), $d['greeting'] ?? 'Hello {name}.') ?></p>
 
-        <div class="mt-6 grid gap-4 sm:grid-cols-2">
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p class="text-sm text-slate-400"><?= esc($d['roles'] ?? 'Roles') ?></p>
-                <p class="mt-2 font-medium text-white"><?= esc(implode(', ', array_map('strval', $roles))) ?></p>
+            <div style="display:grid;gap:var(--claro-space-m);grid-template-columns:repeat(auto-fit,minmax(14rem,1fr))">
+                <div class="claro-card" style="margin:0">
+                    <div class="claro-card__content">
+                        <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0 0 var(--claro-space-xs)"><?= esc($d['roles'] ?? 'Roles') ?></p>
+                        <p style="font-weight:600;margin:0"><?= esc(implode(', ', array_map('strval', $roles))) ?></p>
+                    </div>
+                </div>
+                <div class="claro-card" style="margin:0">
+                    <div class="claro-card__content">
+                        <p style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light);margin:0 0 var(--claro-space-xs)"><?= esc($d['status'] ?? 'Status') ?></p>
+                        <p style="font-weight:600;margin:0"><?= $user->isActive() ? esc($c['active'] ?? 'Active') : esc($c['inactive'] ?? 'Inactive') ?></p>
+                    </div>
+                </div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p class="text-sm text-slate-400"><?= esc($d['status'] ?? 'Status') ?></p>
-                <p class="mt-2 font-medium text-white"><?= $user->isActive() ? esc($c['active'] ?? 'Active') : esc($c['inactive'] ?? 'Inactive') ?></p>
-            </div>
-        </div>
 
-        <div class="mt-8 grid gap-3 sm:grid-cols-2">
-            <a href="<?= site_url('entities/new') ?>" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center font-semibold text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10"><?= esc($d['entity_builder'] ?? 'Entity Builder') ?></a>
-            <form action="<?= site_url('logout') ?>" method="post">
-                <?= csrf_field() ?>
-                <button type="submit" class="w-full rounded-2xl bg-slate-100 px-4 py-3 font-semibold text-slate-950 transition hover:bg-white"><?= esc($d['logout'] ?? 'Logout') ?></button>
-            </form>
+            <div style="display:grid;gap:var(--claro-space-m);grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));margin-top:var(--claro-space-l)">
+                <a href="<?= site_url('entities/new') ?>" class="claro-button" style="justify-content:center;text-align:center;margin:0"><?= esc($d['entity_builder'] ?? 'Entity Builder') ?></a>
+                <form action="<?= site_url('logout') ?>" method="post">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="claro-button claro-button--primary" style="width:100%;margin:0"><?= esc($d['logout'] ?? 'Logout') ?></button>
+                </form>
+            </div>
         </div>
     </div>
 </main>

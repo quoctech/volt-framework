@@ -120,11 +120,11 @@ function employeeeducationListApp(boot) {
         },
         workflowStateBadgeClass(state) {
             const s = (state || '').toLowerCase();
-            if (s === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-            if (s === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
-            if (s === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
-            if (s === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
-            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (s === 'draft') return 'claro-badge--draft';
+            if (s === 'submitted') return 'claro-badge--submitted';
+            if (s === 'approved') return 'claro-badge--approved';
+            if (s === 'cancelled') return 'claro-badge--cancelled';
+            return 'claro-badge--draft';
         },
         async workflowAction(name, urlBase) {
             if (!name) return;

@@ -126,7 +126,7 @@ function employeeFormApp(boot) {
         },
         sessionGridStyle(session) {
             const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
-            return 'grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
+            return 'display:grid;gap:var(--claro-space-l);grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
         },
         sessionFieldsByColumn(sessionUid, columnNumber) {
             return this.fields.filter((field) => {
@@ -351,11 +351,11 @@ function employeeFormApp(boot) {
         },
         get workflowStateBadgeClass() {
             const state = (this.workflowState || '').toLowerCase();
-            if (state === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-            if (state === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
-            if (state === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
-            if (state === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
-            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (state === 'draft') return 'claro-badge--draft';
+            if (state === 'submitted') return 'claro-badge--submitted';
+            if (state === 'approved') return 'claro-badge--approved';
+            if (state === 'cancelled') return 'claro-badge--cancelled';
+            return 'claro-badge--draft';
         },
         async submitWorkflow() {
             await this.save(true);

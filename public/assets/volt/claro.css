@@ -478,6 +478,16 @@ textarea:focus-visible,
   gap: var(--claro-space-m);
 }
 
+/* Readonly container */
+.claro-readonly {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.claro-card--readonly {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 /* =================================================================
    10. LINK CARD (desk card grid)
    ================================================================= */
@@ -1462,4 +1472,81 @@ textarea:focus-visible,
   gap: var(--claro-space-xs);
   font-size: var(--claro-font-size-xs);
   color: var(--claro-color-text-light);
+}
+
+/* =================================================================
+   25. PAGINATION (list view pager)
+   ================================================================= */
+.claro-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--claro-space-m);
+  padding: var(--claro-space-m) var(--claro-space-l);
+  border-top: 1px solid var(--claro-gray-100);
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text-light);
+}
+.claro-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--claro-space-xs);
+}
+.claro-pagination .claro-button {
+  margin: 0;
+}
+.claro-pagination .claro-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* =================================================================
+   26. WORKFLOW STATE BADGES (Draft/Submitted/Approved/Cancelled)
+   ================================================================= */
+.claro-badge--draft {
+  background: var(--claro-gray-100);
+  color: var(--claro-color-text);
+}
+.claro-badge--submitted {
+  background: var(--claro-color-warning-bg);
+  color: #7a5a00;
+}
+.claro-badge--approved {
+  background: var(--claro-color-success-bg);
+  color: #1a7a4a;
+}
+.claro-badge--cancelled {
+  background: var(--claro-color-error-bg);
+  color: var(--claro-color-error);
+}
+
+/* =================================================================
+   27. TOAST / FLASH MESSAGE (bottom-right)
+   ================================================================= */
+.claro-toast {
+  position: fixed;
+  bottom: var(--claro-space-l);
+  right: var(--claro-space-l);
+  z-index: 200;
+  min-width: 16rem;
+  max-width: 26rem;
+  padding: var(--claro-space-m) var(--claro-space-l);
+  border: 1px solid var(--claro-gray-200);
+  border-radius: var(--claro-border-radius);
+  background: var(--claro-color-bg);
+  box-shadow: var(--claro-shadow-dialog);
+  font-size: var(--claro-font-size-s);
+  color: var(--claro-color-text);
+}
+.claro-toast--success {
+  border-color: var(--claro-color-success-border);
+  background: var(--claro-color-success-bg);
+  color: #1a7a4a;
+}
+.claro-toast--error {
+  border-color: var(--claro-color-error-border);
+  background: var(--claro-color-error-bg);
+  color: var(--claro-color-error);
 }

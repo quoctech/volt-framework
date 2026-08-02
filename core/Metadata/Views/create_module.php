@@ -80,7 +80,7 @@ $htmlLang = $lang['code'] ?? 'en';
             </div>
         </div>
 
-        <div x-show="flash.message" x-cloak style="position:fixed;bottom:var(--claro-space-m);right:var(--claro-space-m);border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);background:var(--claro-color-bg);padding:var(--claro-space-s) var(--claro-space-m);font-size:var(--claro-font-size-s);box-shadow:var(--claro-shadow-dialog)" :style="flash.type === 'error' ? 'color:var(--claro-color-error)' : ''">
+        <div x-show="flash.message" x-cloak style="position:fixed;bottom:var(--claro-space-m);right:var(--claro-space-m);border:1px solid var(--claro-gray-200);border-radius:var(--claro-border-radius);background:var(--claro-color-bg);padding:var(--claro-space-s) var(--claro-space-m);font-size:var(--claro-font-size-s);box-shadow:var(--claro-shadow-dialog)" :style="flash.type === 'error' ? { color: 'var(--claro-color-error)' } : {}">
             <span x-text="flash.message"></span>
         </div>
     </main>

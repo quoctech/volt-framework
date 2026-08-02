@@ -351,9 +351,12 @@ if (\$isSubmittable) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc(\$title) ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
+    <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
+<body class="claro-body">
     <div x-data="{$entitySnake}ListApp({
             title: <?= esc(json_encode(\$title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             dataUrl: <?= esc(json_encode(\$dataUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -367,74 +370,81 @@ if (\$isSubmittable) {
             approveUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/approve'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrlBase: <?= esc(json_encode(site_url('{$moduleSnake}/api/{$entitySnake}/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
-        })" x-init="init()" class="mx-auto max-w-7xl p-6">
-        <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
-            <div>
-                <h1 class="font-semibold"><?= esc(\$title) ?></h1>
-                <p class="text-zinc-500">Generated list route: <?= esc('{$listUrl}') ?></p>
+        })" x-init="init()" class="claro-page claro-page--wide">
+        <div class="claro-table-toolbar">
+            <div class="claro-table-toolbar__left">
+                <div class="claro-page-header" style="margin-bottom:0">
+                    <h1 class="claro-page-header__title"><?= esc(\$title) ?></h1>
+                    <p class="claro-page-header__subtitle"><?= esc('{$listUrl}') ?></p>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <a href="<?= esc(\$builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc(\$createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create {$entityStudly}</a>
+            <div class="claro-table-toolbar__right">
+                <a href="<?= esc(\$builderUrl) ?>" class="claro-button claro-button--small">Open Builder</a>
+                <a href="<?= esc(\$createUrl) ?>" class="claro-button claro-button--small claro-button--primary">Create {$entityStudly}</a>
             </div>
-        </header>
+        </div>
 
-        <section class="border border-zinc-300 bg-white">
-            <div class="flex flex-wrap items-center gap-3 border-b border-zinc-300 px-4 py-3">
-                <input x-model="query" @keydown.enter.prevent="load(1)" type="text" placeholder="Filter rows" class="min-w-64 flex-1 border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500">
-                <select x-model="perPage" @change="load(1)" class="border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500">
+        <div class="claro-card">
+            <div class="claro-card__content" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--claro-space-m);padding-bottom:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                <div class="claro-search" style="flex:1;min-width:16rem">
+                    <span class="claro-search__icon">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    <input x-model="query" @keydown.enter.prevent="load(1)" type="text" placeholder="Filter rows" class="claro-input claro-search__input">
+                </div>
+                <select x-model="perPage" @change="load(1)" class="claro-select" style="width:auto">
                     <template x-for="option in perPageOptions" :key="option">
                         <option :value="option" x-text="option"></option>
                     </template>
                 </select>
-                <button @click="load(1)" type="button" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Reload</button>
+                <button @click="load(1)" type="button" class="claro-button claro-button--small">Reload</button>
             </div>
 
-            <div class="overflow-auto">
-                <table class="min-w-full border-collapse">
-                    <thead class="bg-zinc-50">
+            <div style="overflow:auto">
+                <table class="claro-table" style="margin:0">
+                    <thead>
                         <tr>
                             <template x-for="column in columns" :key="column.fieldname">
-                                <th class="border-b border-zinc-300 px-4 py-3 text-left font-medium" x-text="column.label"></th>
+                                <th x-text="column.label"></th>
                             </template>
-                            <th class="border-b border-zinc-300 px-4 py-3 text-left font-medium">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-if="loading">
                             <tr>
-                                <td :colspan="columns.length + 1" class="px-4 py-8 text-center text-zinc-500">Loading...</td>
+                                <td :colspan="columns.length + 1" style="text-align:center;padding:var(--claro-space-xl) var(--claro-space-m);color:var(--claro-color-text-light)">Loading...</td>
                             </tr>
                         </template>
                         <template x-if="!loading && rows.length === 0">
                             <tr>
-                                <td :colspan="columns.length + 1" class="px-4 py-8 text-center text-zinc-500">No rows found.</td>
+                                <td :colspan="columns.length + 1" style="text-align:center;padding:var(--claro-space-xl) var(--claro-space-m);color:var(--claro-color-text-light)">No rows found.</td>
                             </tr>
                         </template>
                         <template x-for="row in rows" :key="row.name ?? JSON.stringify(row)">
-                            <tr class="border-b border-zinc-200">
+                            <tr>
                                 <template x-for="column in columns" :key="column.fieldname">
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <template x-if="column.fieldname === 'workflow_state'">
-                                            <span class="inline-block rounded border px-2 py-0.5 text-xs font-medium" x-bind:class="workflowStateBadgeClass(String(row.workflow_state || ''))" x-text="row.workflow_state || 'Draft'"></span>
+                                            <span class="claro-badge" x-bind:class="workflowStateBadgeClass(String(row.workflow_state || ''))" x-text="row.workflow_state || 'Draft'"></span>
                                         </template>
                                         <template x-if="column.fieldname !== 'workflow_state' && isLinkColumn(column) && canOpenLinkedRecord(column, row)">
-                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
+                                            <button @click="openLinkedRecord(column, row)" type="button" style="color:var(--claro-color-primary);text-decoration:underline" x-text="linkDisplayValue(column, row)"></button>
                                         </template>
                                         <template x-if="column.fieldname !== 'workflow_state' && (!isLinkColumn(column) || !canOpenLinkedRecord(column, row))">
                                             <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
                                         </template>
                                     </td>
                                 </template>
-                                <td class="px-4 py-3">
-                                    <div class="flex flex-wrap gap-1">
-                                        <button @click="openEdit(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Edit</button>
-                                        <button @click="deleteRow(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Delete</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="border border-emerald-500 px-2 py-1 text-emerald-800 hover:bg-emerald-50">Approve</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
-                                    </div>
+                                <td class="claro-table__actions">
+                                    <button @click="openEdit(row.name)" type="button" class="claro-button claro-button--small">Edit</button>
+                                    <button @click="deleteRow(row.name)" type="button" class="claro-button claro-button--small">Delete</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="claro-button claro-button--small" style="color:#7a5a00;background:var(--claro-color-warning-bg)">Submit</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="claro-button claro-button--small" style="color:#1a7a4a;background:var(--claro-color-success-bg)">Approve</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="claro-button claro-button--small claro-button--danger">Cancel</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="claro-button claro-button--small">Amend</button>
                                 </td>
                             </tr>
                         </template>
@@ -442,14 +452,14 @@ if (\$isSubmittable) {
                 </table>
             </div>
 
-            <div class="flex items-center justify-between border-t border-zinc-300 px-4 py-3">
-                <p class="text-zinc-500" x-text="paginationText()"></p>
-                <div class="flex gap-2">
-                    <button @click="load(page - 1)" :disabled="page <= 1" type="button" class="border border-zinc-300 px-3 py-2 disabled:opacity-40">Prev</button>
-                    <button @click="load(page + 1)" :disabled="page >= totalPages" type="button" class="border border-zinc-300 px-3 py-2 disabled:opacity-40">Next</button>
+            <div class="claro-pagination">
+                <p style="margin:0" x-text="paginationText()"></p>
+                <div class="claro-pagination__controls">
+                    <button @click="load(page - 1)" :disabled="page <= 1" type="button" class="claro-button claro-button--small">Prev</button>
+                    <button @click="load(page + 1)" :disabled="page >= totalPages" type="button" class="claro-button claro-button--small">Next</button>
                 </div>
             </div>
-        </section>
+        </div>
     </div>
 
     <script><?php readfile({$scriptPath}); ?></script>
@@ -505,9 +515,12 @@ PHP;
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc(\$title) ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
+    <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
+<body class="claro-body">
     <div x-data="{$entitySnake}FormApp({
             title: <?= esc(json_encode(\$title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             listUrl: <?= esc(json_encode(\$listUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -522,165 +535,165 @@ PHP;
             approveUrl: <?= esc(json_encode(\$approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode(\$cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrl: <?= esc(json_encode(\$amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
-        })" x-init="init()" class="mx-auto max-w-4xl p-6">
-        <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
-            <div>
-                <h1 class="font-semibold"><?= esc(\$title) ?></h1>
-                <p class="text-zinc-500"><?= esc('{$listUrl}') ?></p>
+        })" x-init="init()" class="claro-page">
+        <div class="claro-table-toolbar">
+            <div class="claro-table-toolbar__left">
+                <div class="claro-page-header" style="margin-bottom:0">
+                    <h1 class="claro-page-header__title"><?= esc(\$title) ?></h1>
+                    <p class="claro-page-header__subtitle"><?= esc('{$listUrl}') ?></p>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="claro-table-toolbar__right">
                 <template x-if="isSubmittable && recordName">
-                    <span class="rounded border px-2 py-1 text-xs font-medium" x-bind:class="workflowStateBadgeClass" x-text="workflowState || 'Draft'"></span>
+                    <span class="claro-badge" x-bind:class="workflowStateBadgeClass" x-text="workflowState || 'Draft'"></span>
                 </template>
-                <a href="<?= esc(\$listUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Back to List</a>
-                <button @click="save()" type="button" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Save Item</button>
+                <a href="<?= esc(\$listUrl) ?>" class="claro-button claro-button--small">Back to List</a>
+                <button @click="save()" type="button" class="claro-button claro-button--small claro-button--primary">Save Item</button>
                 <template x-if="isSubmittable && recordName">
-                    <div class="flex gap-1">
-                        <button @click="submitWorkflow()" type="button" class="border border-amber-500 bg-amber-50 px-3 py-2 text-sm hover:bg-amber-100" x-show="canSubmit">Submit</button>
-                        <button @click="approveWorkflow()" type="button" class="border border-emerald-500 bg-emerald-50 px-3 py-2 text-sm hover:bg-emerald-100" x-show="canApprove">Approve</button>
-                        <button @click="cancelWorkflow()" type="button" class="border border-red-300 px-3 py-2 text-sm hover:bg-red-50" x-show="canCancel">Cancel</button>
-                        <button @click="amendWorkflow()" type="button" class="border border-sky-300 px-3 py-2 text-sm hover:bg-sky-50" x-show="canAmend">Amend</button>
+                    <div style="display:flex;gap:var(--claro-space-xs)">
+                        <button @click="submitWorkflow()" type="button" class="claro-button claro-button--small" style="color:#7a5a00;background:var(--claro-color-warning-bg)" x-show="canSubmit">Submit</button>
+                        <button @click="approveWorkflow()" type="button" class="claro-button claro-button--small" style="color:#1a7a4a;background:var(--claro-color-success-bg)" x-show="canApprove">Approve</button>
+                        <button @click="cancelWorkflow()" type="button" class="claro-button claro-button--small claro-button--danger" x-show="canCancel">Cancel</button>
+                        <button @click="amendWorkflow()" type="button" class="claro-button claro-button--small" x-show="canAmend">Amend</button>
                     </div>
                 </template>
             </div>
-        </header>
+        </div>
 
-        <section class="border border-zinc-300 bg-white p-4">
-            <div class="space-y-6">
-                <template x-for="session in sessions" :key="session.uid">
-                    <section class="border border-zinc-200 bg-zinc-50/40">
-                        <div class="border-b border-zinc-200 px-4 py-3">
-                            <h2 class="font-medium" x-text="session.title || 'Session'"></h2>
-                            <p x-show="session.description" class="mt-1 text-sm text-zinc-500" x-text="session.description"></p>
-                        </div>
-                        <div class="p-4">
-                            <div class="grid gap-4" :style="sessionGridStyle(session)">
-                                <template x-for="columnNumber in sessionColumnNumbers(session)" :key="session.uid + '_' + columnNumber">
-                                    <div class="space-y-4">
-                                        <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.fieldname">
-                                            <label class="block">
-                                                <span class="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                                                    <span x-text="field.label"></span>
-                                                    <span x-show="field.is_required" x-cloak class="text-red-600">*</span>
-                                                    <span x-show="field.read_only" x-cloak class="border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] tracking-normal text-sky-800">Read only</span>
-                                                </span>
-                                                <template x-if="field.fieldtype === 'Check'">
-                                                    <input x-model="form[field.fieldname]" type="checkbox" class="h-4 w-4 border-zinc-400" :disabled="field.read_only">
-                                                </template>
-                                                <template x-if="field.fieldtype === 'Select'">
-                                                    <select x-model="form[field.fieldname]" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :disabled="field.read_only" :required="field.is_required">
-                                                        <option value="">Select</option>
-                                                        <template x-for="option in parseOptions(field.options)" :key="option">
-                                                            <option :value="option" x-text="option"></option>
-                                                        </template>
-                                                    </select>
-                                                </template>
-                                                <template x-if="field.fieldtype === 'Link'">
-                                                    <div class="relative" @click.outside="closeLinkLookup(field.fieldname)">
-                                                        <input
-                                                            x-model="form[field.fieldname]"
-                                                            @focus="openLinkLookup(field)"
-                                                            @click="openLinkLookup(field)"
-                                                            @input="handleLinkInput(field)"
-                                                            @change="handleLinkChange(field)"
-                                                            type="text"
-                                                            class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500"
-                                                            :placeholder="field.placeholder || ''"
-                                                            :readonly="field.read_only"
-                                                            :required="field.is_required"
-                                                            autocomplete="off"
-                                                        >
-                                                        <div x-show="linkLookupOpen(field.fieldname)" x-cloak class="absolute left-0 top-12 z-20 w-[22rem] max-w-[calc(100vw-3rem)] border border-zinc-300 bg-white shadow-sm">
-                                                            <div x-show="linkLookupState(field.fieldname).loading" x-cloak class="border-b border-zinc-200 px-3 py-2 text-sm text-zinc-500">
-                                                                Searching...
-                                                            </div>
-                                                            <div class="max-h-80 overflow-auto">
-                                                                <template x-for="item in linkLookupState(field.fieldname).items" :key="item.name">
-                                                                    <button @click.prevent="selectLinkLookupItem(field, item)" type="button" class="block w-full border-b border-zinc-100 px-3 py-2 text-left hover:bg-zinc-50">
-                                                                        <div class="font-medium text-zinc-900" x-text="linkLookupCodeText(item)"></div>
-                                                                        <div x-show="linkLookupPrimaryText(field, item) !== ''" x-cloak class="text-sm text-zinc-500" x-text="linkLookupPrimaryText(field, item)"></div>
-                                                                    </button>
-                                                                </template>
-                                                                <div x-show="!linkLookupState(field.fieldname).loading && linkLookupState(field.fieldname).items.length === 0" x-cloak class="px-3 py-2 text-sm text-zinc-500">
-                                                                    No linked record found.
-                                                                </div>
+        <div style="display:grid;gap:var(--claro-space-m)">
+            <template x-for="session in sessions" :key="session.uid">
+                <section class="claro-card">
+                    <div class="claro-card__content" style="padding-bottom:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                        <h2 style="margin:0" x-text="session.title || 'Session'"></h2>
+                        <p x-show="session.description" style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="session.description"></p>
+                    </div>
+                    <div class="claro-card__content">
+                        <div :style="sessionGridStyle(session)">
+                            <template x-for="columnNumber in sessionColumnNumbers(session)" :key="session.uid + '_' + columnNumber">
+                                <div style="display:grid;gap:var(--claro-space-m);align-content:start">
+                                    <template x-for="field in sessionFieldsByColumn(session.uid, columnNumber)" :key="field.fieldname">
+                                        <label style="display:block">
+                                            <span style="display:flex;align-items:center;gap:var(--claro-space-xs);margin-bottom:var(--claro-space-xs);font-size:var(--claro-font-size-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--claro-color-text-light)">
+                                                <span x-text="field.label"></span>
+                                                <span x-show="field.is_required" x-cloak style="color:var(--claro-color-error)">*</span>
+                                                <span x-show="field.read_only" x-cloak class="claro-badge claro-badge--info" style="font-size:var(--claro-font-size-xxs);letter-spacing:normal">Read only</span>
+                                            </span>
+                                            <template x-if="field.fieldtype === 'Check'">
+                                                <input x-model="form[field.fieldname]" type="checkbox" :disabled="field.read_only">
+                                            </template>
+                                            <template x-if="field.fieldtype === 'Select'">
+                                                <select x-model="form[field.fieldname]" class="claro-select" :disabled="field.read_only" :required="field.is_required">
+                                                    <option value="">Select</option>
+                                                    <template x-for="option in parseOptions(field.options)" :key="option">
+                                                        <option :value="option" x-text="option"></option>
+                                                    </template>
+                                                </select>
+                                            </template>
+                                            <template x-if="field.fieldtype === 'Link'">
+                                                <div style="position:relative" @click.outside="closeLinkLookup(field.fieldname)">
+                                                    <input
+                                                        x-model="form[field.fieldname]"
+                                                        @focus="openLinkLookup(field)"
+                                                        @click="openLinkLookup(field)"
+                                                        @input="handleLinkInput(field)"
+                                                        @change="handleLinkChange(field)"
+                                                        type="text"
+                                                        class="claro-input"
+                                                        :placeholder="field.placeholder || ''"
+                                                        :readonly="field.read_only"
+                                                        :required="field.is_required"
+                                                        autocomplete="off"
+                                                    >
+                                                    <div x-show="linkLookupOpen(field.fieldname)" x-cloak class="claro-card" style="position:absolute;left:0;top:calc(100% + 4px);z-index:20;width:22rem;max-width:calc(100vw - 3rem);overflow:hidden">
+                                                        <div x-show="linkLookupState(field.fieldname).loading" x-cloak style="padding:var(--claro-space-s) var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)">
+                                                            Searching...
+                                                        </div>
+                                                        <div style="max-height:20rem;overflow:auto">
+                                                            <template x-for="item in linkLookupState(field.fieldname).items" :key="item.name">
+                                                                <button @click.prevent="selectLinkLookupItem(field, item)" type="button" style="display:block;width:100%;padding:var(--claro-space-s) var(--claro-space-m);border:0;border-bottom:1px solid var(--claro-gray-100);background:var(--claro-color-bg);text-align:left;cursor:pointer" @mouseenter="\$el.style.background='var(--claro-color-bg-hover)'" @mouseleave="\$el.style.background='var(--claro-color-bg)'">
+                                                                    <div style="font-weight:500;color:var(--claro-color-text)" x-text="linkLookupCodeText(item)"></div>
+                                                                    <div x-show="linkLookupPrimaryText(field, item) !== ''" x-cloak style="font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="linkLookupPrimaryText(field, item)"></div>
+                                                                </button>
+                                                            </template>
+                                                            <div x-show="!linkLookupState(field.fieldname).loading && linkLookupState(field.fieldname).items.length === 0" x-cloak style="padding:var(--claro-space-s) var(--claro-space-m);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)">
+                                                                No linked record found.
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </template>
-                                                <template x-if="field.fieldtype === 'Table' || field.fieldtype === 'Child Table (JSONB)'">
-                                                    <div class="w-full" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
-                                                        <table class="w-full border-collapse border border-zinc-300 text-sm">
-                                                            <thead>
-                                                                <tr class="bg-zinc-100">
-                                                                    <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
-                                                                        <th class="border border-zinc-300 px-2 py-1.5 text-left font-medium" x-text="col.label || col.fieldname"></th>
-                                                                    </template>
-                                                                    <th x-show="!field.read_only" class="border border-zinc-300 px-2 py-1.5 w-10"></th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <template x-for="(row, rowIdx) in (form[field.fieldname] || [])" :key="rowIdx">
-                                                                    <tr>
-                                                                        <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
-                                                                            <td class="border border-zinc-300 px-2 py-1">
-                                                                                <template x-if="col.fieldtype === 'Check'">
-                                                                                    <input type="checkbox" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="h-4 w-4 border-zinc-400">
-                                                                                </template>
-                                                                                <template x-if="col.fieldtype === 'Select'">
-                                                                                    <select x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
-                                                                                        <option value="">Select</option>
-                                                                                        <template x-for="opt in parseOptions(col.options || '')" :key="opt">
-                                                                                            <option :value="opt" x-text="opt"></option>
-                                                                                        </template>
-                                                                                    </select>
-                                                                                </template>
-                                                                                <template x-if="col.fieldtype === 'Int'">
-                                                                                    <input type="number" step="1" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
-                                                                                </template>
-                                                                                <template x-if="col.fieldtype === 'Float'">
-                                                                                    <input type="number" step="any" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
-                                                                                </template>
-                                                                                <template x-if="!['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
-                                                                                    <input type="text" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="w-full border border-zinc-300 px-1.5 py-1 text-sm">
-                                                                                </template>
-                                                                            </td>
-                                                                        </template>
-                                                                        <td x-show="!field.read_only" class="border border-zinc-300 px-2 py-1 text-center">
-                                                                            <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" class="text-red-600 hover:text-red-800 text-xs font-bold" title="Remove row">&times;</button>
-                                                                        </td>
-                                                                    </tr>
+                                                </div>
+                                            </template>
+                                            <template x-if="field.fieldtype === 'Table' || field.fieldtype === 'Child Table (JSONB)'">
+                                                <div :class="field.read_only ? 'claro-card claro-card--readonly' : 'claro-card'">
+                                                    <table class="claro-table" style="margin:0">
+                                                        <thead>
+                                                            <tr>
+                                                                <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                    <th x-text="col.label || col.fieldname"></th>
                                                                 </template>
-                                                            </tbody>
-                                                        </table>
-                                                        <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="mt-1 border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50">+ Add Row</button>
-                                                    </div>
-                                                </template>
-                                                <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
-                                                    <textarea x-model="form[field.fieldname]" rows="6" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
-                                                </template>
-                                                <template x-if="field.fieldtype === 'Attach' || field.fieldtype === 'Attach Image'">
-                                                    <div class="flex items-center gap-2" :class="field.read_only ? 'opacity-60 pointer-events-none' : ''">
-                                                        <template x-if="form[field.fieldname]">
-                                                            <a :href="fileDownloadUrl(form[field.fieldname])" target="_blank" class="inline-flex items-center gap-1 text-sky-700 underline text-sm" x-text="'View ' + (form[field.fieldname] || '').substring(0, 8) + '...'"></a>
-                                                        </template>
-                                                        <input type="file" :accept="field.fieldtype === 'Attach Image' ? 'image/*' : ''" @change="handleFileSelect(field, \$event)" class="block w-full text-sm text-zinc-500 file:mr-2 file:border file:border-zinc-300 file:px-2 file:py-1 file:text-sm file:bg-zinc-50 file:hover:bg-zinc-100" :disabled="field.read_only" :required="field.is_required && !form[field.fieldname]">
-                                                        <div x-show="form[field.fieldname + '__uploading']" x-cloak class="text-xs text-zinc-500">Uploading...</div>
-                                                    </div>
-                                                </template>
-                                                <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)', 'Attach', 'Attach Image'].includes(field.fieldtype)">
-                                                    <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="w-full border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
-                                                </template>
-                                            </label>
-                                        </template>
-                                    </div>
-                                </template>
-                            </div>
+                                                                <th x-show="!field.read_only" style="width:2.5rem"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <template x-for="(row, rowIdx) in (form[field.fieldname] || [])" :key="rowIdx">
+                                                                <tr>
+                                                                    <template x-for="col in (field.child_columns || [])" :key="col.fieldname">
+                                                                        <td>
+                                                                            <template x-if="col.fieldtype === 'Check'">
+                                                                                <input type="checkbox" x-model="form[field.fieldname][rowIdx][col.fieldname]">
+                                                                            </template>
+                                                                            <template x-if="col.fieldtype === 'Select'">
+                                                                                <select x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-select">
+                                                                                    <option value="">Select</option>
+                                                                                    <template x-for="opt in parseOptions(col.options || '')" :key="opt">
+                                                                                        <option :value="opt" x-text="opt"></option>
+                                                                                    </template>
+                                                                                </select>
+                                                                            </template>
+                                                                            <template x-if="col.fieldtype === 'Int'">
+                                                                                <input type="number" step="1" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
+                                                                            </template>
+                                                                            <template x-if="col.fieldtype === 'Float'">
+                                                                                <input type="number" step="any" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
+                                                                            </template>
+                                                                            <template x-if="!['Check', 'Select', 'Int', 'Float'].includes(col.fieldtype)">
+                                                                                <input type="text" x-model="form[field.fieldname][rowIdx][col.fieldname]" class="claro-input">
+                                                                            </template>
+                                                                        </td>
+                                                                    </template>
+                                                                    <td x-show="!field.read_only" style="text-align:center">
+                                                                        <button @click="removeChildRow(field.fieldname, rowIdx)" type="button" style="color:var(--claro-color-error);font-size:var(--claro-font-size-s);font-weight:700;background:none;border:0;cursor:pointer" title="Remove row">&times;</button>
+                                                                    </td>
+                                                                </tr>
+                                                            </template>
+                                                        </tbody>
+                                                    </table>
+                                                    <button x-show="!field.read_only" @click="addChildRow(field.fieldname)" type="button" class="claro-button claro-button--small">+ Add Row</button>
+                                                </div>
+                                            </template>
+                                            <template x-if="field.fieldtype === 'Text' || field.fieldtype === 'Code'">
+                                                <textarea x-model="form[field.fieldname]" rows="6" class="claro-textarea" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required"></textarea>
+                                            </template>
+                                            <template x-if="field.fieldtype === 'Attach' || field.fieldtype === 'Attach Image'">
+                                                <div style="display:flex;align-items:center;gap:var(--claro-space-m)" :class="field.read_only ? 'claro-readonly' : ''">
+                                                    <template x-if="form[field.fieldname]">
+                                                        <a :href="fileDownloadUrl(form[field.fieldname])" target="_blank" style="color:var(--claro-color-primary);text-decoration:underline;font-size:var(--claro-font-size-s)" x-text="'View ' + (form[field.fieldname] || '').substring(0, 8) + '...'"></a>
+                                                    </template>
+                                                    <input type="file" :accept="field.fieldtype === 'Attach Image' ? 'image/*' : ''" @change="handleFileSelect(field, \$event)" :disabled="field.read_only" :required="field.is_required && !form[field.fieldname]">
+                                                    <div x-show="form[field.fieldname + '__uploading']" x-cloak style="font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light)">Uploading...</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="!['Check', 'Select', 'Link', 'Text', 'Code', 'Table', 'Child Table (JSONB)', 'Attach', 'Attach Image'].includes(field.fieldtype)">
+                                                <input x-model="form[field.fieldname]" :type="inputType(field.fieldtype)" class="claro-input" :placeholder="field.placeholder || ''" :readonly="field.read_only" :required="field.is_required">
+                                            </template>
+                                        </label>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
-                    </section>
-                </template>
-            </div>
-        </section>
+                    </div>
+                </section>
+            </template>
+        </div>
     </div>
 
     <script><?php readfile({$scriptPath}); ?></script>
@@ -814,11 +827,11 @@ function {$entitySnake}ListApp(boot) {
         },
         workflowStateBadgeClass(state) {
             const s = (state || '').toLowerCase();
-            if (s === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-            if (s === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
-            if (s === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
-            if (s === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
-            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (s === 'draft') return 'claro-badge--draft';
+            if (s === 'submitted') return 'claro-badge--submitted';
+            if (s === 'approved') return 'claro-badge--approved';
+            if (s === 'cancelled') return 'claro-badge--cancelled';
+            return 'claro-badge--draft';
         },
         async workflowAction(name, urlBase) {
             if (!name) return;
@@ -1021,7 +1034,7 @@ function {$entitySnake}FormApp(boot) {
         },
         sessionGridStyle(session) {
             const count = Math.min(4, Math.max(1, Number(session?.column_count || 1)));
-            return 'grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
+            return 'display:grid;gap:var(--claro-space-l);grid-template-columns: repeat(' + String(count) + ', minmax(0, 1fr));';
         },
         sessionFieldsByColumn(sessionUid, columnNumber) {
             return this.fields.filter((field) => {
@@ -1246,11 +1259,11 @@ function {$entitySnake}FormApp(boot) {
         },
         get workflowStateBadgeClass() {
             const state = (this.workflowState || '').toLowerCase();
-            if (state === 'draft') return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-            if (state === 'submitted') return 'border-amber-400 bg-amber-50 text-amber-800';
-            if (state === 'approved') return 'border-emerald-400 bg-emerald-50 text-emerald-800';
-            if (state === 'cancelled') return 'border-red-300 bg-red-50 text-red-700';
-            return 'border-zinc-300 bg-zinc-100 text-zinc-700';
+            if (state === 'draft') return 'claro-badge--draft';
+            if (state === 'submitted') return 'claro-badge--submitted';
+            if (state === 'approved') return 'claro-badge--approved';
+            if (state === 'cancelled') return 'claro-badge--cancelled';
+            return 'claro-badge--draft';
         },
         async submitWorkflow() {
             await this.save(true);

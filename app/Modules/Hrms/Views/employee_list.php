@@ -19,9 +19,12 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?></title>
     <link rel="stylesheet" href="<?= base_url('assets/vendor/tailwindcss/tailwind.min.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/volt/claro.css') ?>">
+    <script defer src="<?= base_url('assets/volt/claro.js') ?>"></script>
     <script defer src="<?= base_url('assets/vendor/alpinejs/alpine.min.js') ?>"></script>
+    <style>[x-cloak]{display:none!important}</style>
 </head>
-<body class="min-h-screen bg-zinc-100 text-base text-zinc-900">
+<body class="claro-body">
     <div x-data="employeeListApp({
             title: <?= esc(json_encode($title, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             dataUrl: <?= esc(json_encode($dataUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
@@ -35,74 +38,81 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
             approveUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/approve'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/cancel'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             amendUrlBase: <?= esc(json_encode(site_url('hrms/api/employee/amend'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
-        })" x-init="init()" class="mx-auto max-w-7xl p-6">
-        <header class="mb-4 flex items-center justify-between border border-zinc-300 bg-white px-4 py-3">
-            <div>
-                <h1 class="font-semibold"><?= esc($title) ?></h1>
-                <p class="text-zinc-500">Generated list route: <?= esc('/hrms/employee') ?></p>
+        })" x-init="init()" class="claro-page claro-page--wide">
+        <div class="claro-table-toolbar">
+            <div class="claro-table-toolbar__left">
+                <div class="claro-page-header" style="margin-bottom:0">
+                    <h1 class="claro-page-header__title"><?= esc($title) ?></h1>
+                    <p class="claro-page-header__subtitle"><?= esc('/hrms/employee') ?></p>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <a href="<?= esc($builderUrl) ?>" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Open Builder</a>
-                <a href="<?= esc($createUrl) ?>" class="inline-flex items-center border border-slate-900 bg-slate-900 px-3 py-2 font-semibold text-white hover:bg-slate-800">Create Employee</a>
+            <div class="claro-table-toolbar__right">
+                <a href="<?= esc($builderUrl) ?>" class="claro-button claro-button--small">Open Builder</a>
+                <a href="<?= esc($createUrl) ?>" class="claro-button claro-button--small claro-button--primary">Create Employee</a>
             </div>
-        </header>
+        </div>
 
-        <section class="border border-zinc-300 bg-white">
-            <div class="flex flex-wrap items-center gap-3 border-b border-zinc-300 px-4 py-3">
-                <input x-model="query" @keydown.enter.prevent="load(1)" type="text" placeholder="Filter rows" class="min-w-64 flex-1 border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500">
-                <select x-model="perPage" @change="load(1)" class="border border-zinc-300 px-3 py-2 outline-none focus:border-zinc-500">
+        <div class="claro-card">
+            <div class="claro-card__content" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--claro-space-m);padding-bottom:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                <div class="claro-search" style="flex:1;min-width:16rem">
+                    <span class="claro-search__icon">
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    <input x-model="query" @keydown.enter.prevent="load(1)" type="text" placeholder="Filter rows" class="claro-input claro-search__input">
+                </div>
+                <select x-model="perPage" @change="load(1)" class="claro-select" style="width:auto">
                     <template x-for="option in perPageOptions" :key="option">
                         <option :value="option" x-text="option"></option>
                     </template>
                 </select>
-                <button @click="load(1)" type="button" class="border border-zinc-300 px-3 py-2 hover:bg-zinc-50">Reload</button>
+                <button @click="load(1)" type="button" class="claro-button claro-button--small">Reload</button>
             </div>
 
-            <div class="overflow-auto">
-                <table class="min-w-full border-collapse">
-                    <thead class="bg-zinc-50">
+            <div style="overflow:auto">
+                <table class="claro-table" style="margin:0">
+                    <thead>
                         <tr>
                             <template x-for="column in columns" :key="column.fieldname">
-                                <th class="border-b border-zinc-300 px-4 py-3 text-left font-medium" x-text="column.label"></th>
+                                <th x-text="column.label"></th>
                             </template>
-                            <th class="border-b border-zinc-300 px-4 py-3 text-left font-medium">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <template x-if="loading">
                             <tr>
-                                <td :colspan="columns.length + 1" class="px-4 py-8 text-center text-zinc-500">Loading...</td>
+                                <td :colspan="columns.length + 1" style="text-align:center;padding:var(--claro-space-xl) var(--claro-space-m);color:var(--claro-color-text-light)">Loading...</td>
                             </tr>
                         </template>
                         <template x-if="!loading && rows.length === 0">
                             <tr>
-                                <td :colspan="columns.length + 1" class="px-4 py-8 text-center text-zinc-500">No rows found.</td>
+                                <td :colspan="columns.length + 1" style="text-align:center;padding:var(--claro-space-xl) var(--claro-space-m);color:var(--claro-color-text-light)">No rows found.</td>
                             </tr>
                         </template>
                         <template x-for="row in rows" :key="row.name ?? JSON.stringify(row)">
-                            <tr class="border-b border-zinc-200">
+                            <tr>
                                 <template x-for="column in columns" :key="column.fieldname">
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <template x-if="column.fieldname === 'workflow_state'">
-                                            <span class="inline-block rounded border px-2 py-0.5 text-xs font-medium" x-bind:class="workflowStateBadgeClass(String(row.workflow_state || ''))" x-text="row.workflow_state || 'Draft'"></span>
+                                            <span class="claro-badge" x-bind:class="workflowStateBadgeClass(String(row.workflow_state || ''))" x-text="row.workflow_state || 'Draft'"></span>
                                         </template>
                                         <template x-if="column.fieldname !== 'workflow_state' && isLinkColumn(column) && canOpenLinkedRecord(column, row)">
-                                            <button @click="openLinkedRecord(column, row)" type="button" class="text-left text-sky-700 underline" x-text="linkDisplayValue(column, row)"></button>
+                                            <button @click="openLinkedRecord(column, row)" type="button" style="color:var(--claro-color-primary);text-decoration:underline" x-text="linkDisplayValue(column, row)"></button>
                                         </template>
                                         <template x-if="column.fieldname !== 'workflow_state' && (!isLinkColumn(column) || !canOpenLinkedRecord(column, row))">
                                             <span x-text="isLinkColumn(column) ? linkDisplayValue(column, row) : cellValue(row, column.fieldname)"></span>
                                         </template>
                                     </td>
                                 </template>
-                                <td class="px-4 py-3">
-                                    <div class="flex flex-wrap gap-1">
-                                        <button @click="openEdit(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Edit</button>
-                                        <button @click="deleteRow(row.name)" type="button" class="border border-zinc-300 px-2 py-1 hover:bg-zinc-50">Delete</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="border border-amber-500 px-2 py-1 text-amber-800 hover:bg-amber-50">Submit</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="border border-emerald-500 px-2 py-1 text-emerald-800 hover:bg-emerald-50">Approve</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Cancel</button>
-                                        <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="border border-sky-300 px-2 py-1 text-sky-700 hover:bg-sky-50">Amend</button>
-                                    </div>
+                                <td class="claro-table__actions">
+                                    <button @click="openEdit(row.name)" type="button" class="claro-button claro-button--small">Edit</button>
+                                    <button @click="deleteRow(row.name)" type="button" class="claro-button claro-button--small">Delete</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Draft'" @click="submitRow(row.name)" type="button" class="claro-button claro-button--small" style="color:#7a5a00;background:var(--claro-color-warning-bg)">Submit</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="approveRow(row.name)" type="button" class="claro-button claro-button--small" style="color:#1a7a4a;background:var(--claro-color-success-bg)">Approve</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Submitted'" @click="cancelRow(row.name)" type="button" class="claro-button claro-button--small claro-button--danger">Cancel</button>
+                                    <button x-show="isSubmittable && row.workflow_state === 'Cancelled' && !row.amended_from" @click="amendRow(row.name)" type="button" class="claro-button claro-button--small">Amend</button>
                                 </td>
                             </tr>
                         </template>
@@ -110,14 +120,14 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                 </table>
             </div>
 
-            <div class="flex items-center justify-between border-t border-zinc-300 px-4 py-3">
-                <p class="text-zinc-500" x-text="paginationText()"></p>
-                <div class="flex gap-2">
-                    <button @click="load(page - 1)" :disabled="page <= 1" type="button" class="border border-zinc-300 px-3 py-2 disabled:opacity-40">Prev</button>
-                    <button @click="load(page + 1)" :disabled="page >= totalPages" type="button" class="border border-zinc-300 px-3 py-2 disabled:opacity-40">Next</button>
+            <div class="claro-pagination">
+                <p style="margin:0" x-text="paginationText()"></p>
+                <div class="claro-pagination__controls">
+                    <button @click="load(page - 1)" :disabled="page <= 1" type="button" class="claro-button claro-button--small">Prev</button>
+                    <button @click="load(page + 1)" :disabled="page >= totalPages" type="button" class="claro-button claro-button--small">Next</button>
                 </div>
             </div>
-        </section>
+        </div>
     </div>
 
     <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Employee/employee_list.js'); ?></script>
