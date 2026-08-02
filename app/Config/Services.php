@@ -7,6 +7,8 @@ namespace Config;
 use CodeIgniter\Config\BaseService;
 use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Services\AuthService;
+use Volt\Core\Engine\NamingSeriesGenerator;
+use Volt\Core\Engine\QueueDispatcher;
 use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Events\EventBus;
@@ -105,6 +107,24 @@ class Services extends BaseService
         }
 
         return new SystemSettingService();
+    }
+
+    public static function voltNamingSeries(?bool $getShared = true): NamingSeriesGenerator
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltNamingSeries');
+        }
+
+        return new NamingSeriesGenerator();
+    }
+
+    public static function voltQueue(?bool $getShared = true): QueueDispatcher
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltQueue');
+        }
+
+        return new QueueDispatcher();
     }
 
     public static function voltWorkflowEngine(?bool $getShared = true): WorkflowEngine

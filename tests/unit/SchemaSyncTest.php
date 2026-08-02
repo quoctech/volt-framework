@@ -32,6 +32,13 @@ final class SchemaSyncTest extends CIUnitTestCase
         $this->schemaResults = [];
         $this->dbc = $this->createMock(BaseConnection::class);
 
+        // Forge escapes identifiers internally; stub as identity so SQL building works.
+        $this->dbc->method('escapeIdentifiers')->willReturnCallback(
+            static fn ($value) => is_array($value)
+                ? array_map(static fn ($v) => (string) $v, $value)
+                : (string) $value,
+        );
+
         // query callback: handle schema queries via schemaResults, capture others
         $self = $this;
         $this->dbc->method('query')->willReturnCallback(
@@ -127,6 +134,8 @@ final class SchemaSyncTest extends CIUnitTestCase
                 'data_type' => 'character varying',
                 'character_maximum_length' => 100,
                 'is_nullable' => 'NO',
+                'numeric_precision' => null,
+                'numeric_scale' => null,
             ];
         }
         $this->schemaResults[$tableName] = $rows;

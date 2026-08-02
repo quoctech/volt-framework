@@ -583,13 +583,6 @@ final class VoltResourceController extends Controller
         return (string) ($meta['entity']['module'] ?? '');
     }
 
-    private function getAutoname(string $entityName): string
-    {
-        $meta = $this->getCompiledMeta($entityName);
-
-        return (string) ($meta['entity']['autoname'] ?? 'HASH');
-    }
-
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -958,56 +951,7 @@ final class VoltResourceController extends Controller
 
     private function generateDocumentName(string $entityName): string
     {
-        $pattern = mb_trim($this->getAutoname($entityName));
-        if ($pattern === '' || $pattern === 'HASH') {
-            return bin2hex(random_bytes(16));
-        }
-
-        $resolved = strtr($pattern, [
-            '.YYYY.' => gmdate('Y'),
-            '.YY.' => gmdate('y'),
-            '.MM.' => gmdate('m'),
-            '.DD.' => gmdate('d'),
-        ]);
-        $resolved = preg_replace('/([\-\/])\.(#+)/', '$1$2', $resolved) ?? $resolved;
-
-        if (! preg_match('/#+/', $resolved, $matches)) {
-            return $resolved;
-        }
-
-        $token = $matches[0];
-        $sequence = $this->nextSequenceValue(strtolower($this->snake($entityName) . ':' . $resolved));
-        $serial = str_pad((string) $sequence, strlen($token), '0', STR_PAD_LEFT);
-
-        return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;
-    }
-
-    private function nextSequenceValue(string $key): int
-    {
-        $this->db->transStart();
-
-        $row = $this->db->table('sys_sequence')
-            ->where('key', $key)
-            ->get()
-            ->getRowArray();
-
-        $current = is_array($row) ? (int) ($row['current_value'] ?? 0) : 0;
-        $next = $current + 1;
-
-        if (is_array($row)) {
-            $this->db->table('sys_sequence')
-                ->where('key', $key)
-                ->update(['current_value' => $next]);
-        } else {
-            $this->db->table('sys_sequence')->insert([
-                'key' => $key,
-                'current_value' => $next,
-            ]);
-        }
-
-        $this->db->transComplete();
-
-        return $next;
+        return service('voltNamingSeries')->generateForEntity($entityName, $this->getCompiledMeta($entityName));
     }
 
     // ========================================================================

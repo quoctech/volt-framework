@@ -7,6 +7,7 @@ namespace Volt\Core\Commands;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Volt\Core\Engine\QueueWorker;
+use Volt\Core\Queue\JobHandlerInterface;
 
 final class VoltQueueWork extends BaseCommand
 {
@@ -15,21 +16,67 @@ final class VoltQueueWork extends BaseCommand
     protected $description = 'Process pending queue jobs';
     protected $usage       = 'volt:queue-work [options]';
     protected $options     = [
-        '--once' => 'Process only one job and exit',
-        '--sleep' => 'Seconds to wait when no jobs are available (default: 3)',
+        '--once'          => 'Process only one job and exit',
+        '--sleep'         => 'Seconds to wait when no jobs are available (default: 3)',
+        '--queue'         => 'Only process jobs from this queue (default: all queues)',
+        '--max-jobs'      => 'Process up to N jobs then exit',
+        '--max-time'      => 'Run for at most N seconds then exit (default: 0 = unlimited)',
+        '--timeout'       => 'Override job timeout in seconds',
+        '--stale-requeue' => 'Requeue stale running jobs before processing',
+        '--status'        => 'Print queue status counts and exit',
+        '--retry'         => 'Reset a job id (failed/dead) back to queued and exit',
+        '--purge-dead'    => 'Purge dead jobs older than --days and exit',
+        '--days'          => 'Age threshold in days for purge-dead (default: 30)',
     ];
 
     public function run(array $params): void
     {
-        $once  = array_key_exists('once', $params);
-        $sleep = (int) ($params['sleep'] ?? 3);
-        $loop  = true;
-
         $worker = new QueueWorker();
         $this->discoverHandlers($worker);
 
-        while ($loop) {
-            $processed = $worker->processNext();
+        if (CLI::getOption('status')) {
+            $this->printStatus();
+
+            return;
+        }
+
+        $retryId = CLI::getOption('retry');
+        if ($retryId !== null && $retryId !== true) {
+            $this->retryJob((int) $retryId);
+
+            return;
+        }
+
+        if (CLI::getOption('purge-dead')) {
+            $days = (int) (CLI::getOption('days') ?? 30);
+            $this->purgeDead($days);
+
+            return;
+        }
+
+        if (CLI::getOption('stale-requeue')) {
+            $requeued = $worker->requeueStaleJobs();
+            CLI::write("Requeued {$requeued} stale job(s).", 'yellow');
+        }
+
+        $once      = CLI::getOption('once') === true;
+        $queue     = CLI::getOption('queue');
+        $queue     = is_string($queue) ? $queue : null;
+        $sleep     = max(0, (int) (CLI::getOption('sleep') ?? 3));
+        $maxJobs   = CLI::getOption('max-jobs') !== null && CLI::getOption('max-jobs') !== true ? (int) CLI::getOption('max-jobs') : null;
+        $maxTime   = (int) (CLI::getOption('max-time') ?? 0);
+        $timeout   = CLI::getOption('timeout') !== null && CLI::getOption('timeout') !== true ? (int) CLI::getOption('timeout') : null;
+        $startedAt = time();
+
+        while (true) {
+            if ($maxTime > 0 && (time() - $startedAt) >= $maxTime) {
+                CLI::write('Reached --max-time, exiting.', 'yellow');
+                break;
+            }
+
+            $processed = $once
+                ? $worker->processNext($queue, $timeout)
+                : $worker->processAll($queue, $maxJobs, $timeout) > 0;
 
             if ($processed) {
                 CLI::write('Job processed.', 'green');
@@ -37,13 +84,52 @@ final class VoltQueueWork extends BaseCommand
                 CLI::write('No jobs pending.', 'yellow');
             }
 
-            if ($once) {
-                $loop = false;
+            if ($once || ($maxJobs !== null && $maxJobs > 0)) {
                 break;
             }
 
             sleep($sleep);
         }
+    }
+
+    private function printStatus(): void
+    {
+        $counts = (new \Volt\Core\Models\QueueJobModel())->counts();
+
+        if ($counts === []) {
+            CLI::write('Queue is empty.', 'green');
+
+            return;
+        }
+
+        foreach ($counts as $status => $total) {
+            $color = match ($status) {
+                'queued'    => 'yellow',
+                'running'   => 'blue',
+                'completed' => 'green',
+                'dead'      => 'red',
+                default     => 'white',
+            };
+            CLI::write(sprintf('%-10s %d', $status, $total), $color);
+        }
+    }
+
+    private function retryJob(int $id): void
+    {
+        $model = new \Volt\Core\Models\QueueJobModel();
+
+        if ($model->resetFailed($id)) {
+            CLI::write("Job {$id} requeued.", 'green');
+        } else {
+            CLI::error("Job {$id} not found or not reset.");
+        }
+    }
+
+    private function purgeDead(int $days): void
+    {
+        $model = new \Volt\Core\Models\QueueJobModel();
+        $purged = $model->purgeDead($days);
+        CLI::write("Purged {$purged} dead job(s).", 'green');
     }
 
     private function discoverHandlers(QueueWorker $worker): void
@@ -54,58 +140,34 @@ final class VoltQueueWork extends BaseCommand
             return;
         }
 
-        $files = glob($handlerDir . '/*.php');
-
-        if ($files === false) {
-            return;
-        }
-
-        foreach ($files as $file) {
-            $contents = file_get_contents($file);
-
-            if ($contents === false) {
-                continue;
-            }
-
-            if (preg_match('/^<\?php\s+declare\(strict_types=1\);\s+namespace\s+(\S+);/m', $contents, $nsMatch) !== 1) {
-                continue;
-            }
-
-            if (preg_match('/class\s+(\w+)/', $contents, $classMatch) !== 1) {
-                continue;
-            }
-
+        foreach (glob($handlerDir . '/*.php') ?: [] as $file) {
             require_once $file;
 
-            $fqcn = $nsMatch[1] . '\\' . $classMatch[1];
-
-            if (! class_exists($fqcn)) {
+            $class = $this->resolveHandlerClass($file);
+            if ($class === null) {
                 continue;
             }
 
-            $instance = new $fqcn();
-
-            $jobType = $this->inferJobType($classMatch[1], $instance);
-
-            if ($jobType !== null) {
-                $worker->registerHandler($jobType, [$instance, 'handle']);
-            }
+            $instance = new $class();
+            $worker->registerHandler($instance::JOB_TYPE, [$instance, 'handle']);
         }
     }
 
-    /**
-     * @param object $instance
-     */
-    private function inferJobType(string $className, object $instance): ?string
+    private function resolveHandlerClass(string $file): ?string
     {
-        if (defined(get_class($instance) . '::JOB_TYPE')) {
-            return $instance::JOB_TYPE;
+        $declared = get_declared_classes();
+
+        foreach ($declared as $class) {
+            if (! is_subclass_of($class, JobHandlerInterface::class)) {
+                continue;
+            }
+
+            $reflection = new \ReflectionClass($class);
+            if ($reflection->getFileName() === realpath($file)) {
+                return $class;
+            }
         }
 
-        if (str_ends_with($className, 'Handler')) {
-            return substr($className, 0, -7);
-        }
-
-        return $className;
+        return null;
     }
 }

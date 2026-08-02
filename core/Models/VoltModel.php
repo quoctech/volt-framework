@@ -528,55 +528,7 @@ abstract class VoltModel extends Model
 
     private function generateDocumentName(): string
     {
-        $db = VoltDatabase::connection();
-        $row = $db->table('sys_entity')
-            ->select('autoname')
-            ->where('name', strtolower($this->entityName))
-            ->get()
-            ->getRowArray();
-
-        $pattern = is_array($row) ? mb_trim((string) ($row['autoname'] ?? '')) : '';
-        if ($pattern === '' || $pattern === 'HASH') {
-            return bin2hex(random_bytes(16));
-        }
-
-        $resolved = strtr($pattern, [
-            '.YYYY.' => gmdate('Y'),
-            '.YY.'   => gmdate('y'),
-            '.MM.'   => gmdate('m'),
-            '.DD.'   => gmdate('d'),
-        ]);
-        $resolved = preg_replace('/([\-\/])\.(#+)/', '$1$2', $resolved) ?? $resolved;
-
-        if (! preg_match('/#+/', $resolved, $matches)) {
-            return $resolved;
-        }
-
-        $token = $matches[0];
-        $key = strtolower($this->snake($this->entityName) . ':' . $resolved);
-
-        $db->transStart();
-        $seqRow = $db->table('sys_sequence')
-            ->where('key', $key)
-            ->get()
-            ->getRowArray();
-        $current = is_array($seqRow) ? (int) ($seqRow['current_value'] ?? 0) : 0;
-        $next = $current + 1;
-        if (is_array($seqRow)) {
-            $db->table('sys_sequence')->where('key', $key)->update(['current_value' => $next]);
-        } else {
-            $db->table('sys_sequence')->insert(['key' => $key, 'current_value' => $next]);
-        }
-        $db->transComplete();
-
-        $serial = str_pad((string) $next, strlen($token), '0', STR_PAD_LEFT);
-
-        return preg_replace('/#+/', $serial, $resolved, 1) ?? $resolved;
-    }
-
-    private function snake(string $input): string
-    {
-        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $input));
+        return service('voltNamingSeries')->generateForEntity($this->entityName);
     }
 
     protected function assertDocumentEditable(string $id): void
@@ -801,6 +753,10 @@ abstract class VoltModel extends Model
     {
         $timestamp = date('Y-m-d H:i:s');
         $actorName = $this->resolveActorName();
+
+        if ($isInsert && $this->hasColumn(self::COL_NAME) && (! isset($row[self::COL_NAME]) || mb_trim((string) $row[self::COL_NAME]) === '')) {
+            $row[self::COL_NAME] = service('voltNamingSeries')->generateForEntity($this->entityName);
+        }
 
         if ($isInsert && $this->hasColumn(self::COL_OWNER) && (! isset($row[self::COL_OWNER]) || mb_trim((string) $row[self::COL_OWNER]) === '')) {
             $row[self::COL_OWNER] = $actorName;

@@ -40,7 +40,12 @@ class VoltSync extends BaseCommand
     ];
 
     protected $options = [
-        '--all' => 'Đồng bộ quét sạch toàn bộ các thực thể đang khai báo trong hệ thống',
+        '--all'               => 'Đồng bộ quét sạch toàn bộ các thực thể đang khai báo trong hệ thống',
+        '--dry-run'           => 'Chỉ tính toán plan, không apply thay đổi nào',
+        '--prune'             => 'Cho phép xóa cột dư thừa không còn khai báo trong metadata (phá vỡ)',
+        '--allow-type-change' => 'Cho phép đổi kiểu dữ liệu cột khi metadata khác schema vật lý (phá vỡ)',
+        '--allow-rename'      => 'Cho phép đổi tên cột theo bản đồ --renames',
+        '--renames'           => 'Bản đồ đổi tên cột dạng "old:new,old2:new2" (yêu cầu --allow-rename)',
     ];
 
     /**
@@ -62,6 +67,8 @@ class VoltSync extends BaseCommand
      */
     public function run(array $params): void
     {
+        $opts = $this->buildOptions();
+
         // Kịch bản 1: Đồng bộ tất cả thực thể (--all)
         if (CLI::getOption('all')) {
             CLI::write('🔄 Đang quét danh mục để đồng bộ toàn diện hệ thống...', 'yellow');
@@ -75,7 +82,7 @@ class VoltSync extends BaseCommand
             }
 
             foreach ($entities as $entity) {
-                $this->executeSync($entity['name']);
+                $this->executeSync($entity['name'], $opts);
             }
             
             CLI::write('🎉 Đã hoàn thành đồng bộ toàn diện hệ thống Volt Framework!', 'green');
@@ -90,16 +97,65 @@ class VoltSync extends BaseCommand
             return;
         }
 
-        $this->executeSync((string)$entityName);
+        $this->executeSync((string)$entityName, $opts);
+    }
+
+    /**
+     * Đọc và chuẩn hóa các option CLI thành opts cho SchemaSync.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildOptions(): array
+    {
+        $opts = [
+            'dry_run'            => (bool) CLI::getOption('dry-run'),
+            'prune'              => (bool) CLI::getOption('prune'),
+            'allow_drop'         => (bool) CLI::getOption('prune'),
+            'allow_type_change'  => (bool) CLI::getOption('allow-type-change'),
+            'allow_rename'       => (bool) CLI::getOption('allow-rename'),
+            'renames'            => $this->parseRenames((string) CLI::getOption('renames')),
+        ];
+
+        if (CLI::getOption('dry-run')) {
+            CLI::write('📋 Chế độ DRY-RUN: chỉ tính toán plan, không apply thay đổi.', 'yellow');
+        }
+
+        return $opts;
+    }
+
+    /**
+     * Chuyển chuỗi "old:new,old2:new2" thành mảng assoc.
+     *
+     * @return array<string, string>
+     */
+    private function parseRenames(string $raw): array
+    {
+        if (mb_trim($raw) === '') {
+            return [];
+        }
+
+        $result = [];
+        foreach (explode(',', $raw) as $pair) {
+            $parts = explode(':', mb_trim($pair), 2);
+            $old = mb_trim((string) ($parts[0] ?? ''));
+            $new = mb_trim((string) ($parts[1] ?? ''));
+            if ($old !== '' && $new !== '') {
+                $result[$old] = $new;
+            }
+        }
+
+        return $result;
     }
 
     /**
      * Hàm điều hướng lệnh thực thi thô sạch sẽ, bảo đảm Type Hinting chặt chẽ
+     *
+     * @param array<string, mixed> $opts
      */
-    private function executeSync(string $entityName): void
+    private function executeSync(string $entityName, array $opts = []): void
     {
         CLI::write("⚡ Đang kiểm tra thực thể: {$entityName}...", 'cyan');
-        $result = $this->engine()->syncEntity($entityName);
+        $result = $this->engine()->syncEntity($entityName, $opts);
 
         if ($result['status'] === 'success') {
             foreach ($result['logs'] as $log) {
