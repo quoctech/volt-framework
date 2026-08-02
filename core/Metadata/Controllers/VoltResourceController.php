@@ -696,7 +696,7 @@ final class VoltResourceController extends Controller
 
         foreach ($this->getFormFields($entityName) as $field) {
             $fieldname = (string) ($field['fieldname'] ?? '');
-            if ($fieldname === '') {
+            if ($fieldname === '' || ! (bool) ($field['in_list_view'] ?? true)) {
                 continue;
             }
 
@@ -740,21 +740,20 @@ final class VoltResourceController extends Controller
                 continue;
             }
 
-            $custom = is_array($field['f_custom_jsonb'] ?? null) ? $field['f_custom_jsonb'] : [];
             $row = [
                 'fieldname' => $fieldname,
                 'label' => (string) ($field['label'] ?? ''),
                 'fieldtype' => (string) ($field['fieldtype'] ?? 'Input'),
                 'options' => (string) ($field['options'] ?? ''),
-                'default_value' => $field['default_value'] ?? $custom['default_value'] ?? '',
-                'placeholder' => (string) ($field['placeholder'] ?? $custom['placeholder'] ?? ''),
-                'fetch_from' => (string) ($field['fetch_from'] ?? $custom['fetch_from'] ?? ''),
+                'default_value' => $field['default_value'] ?? '',
+                'placeholder' => (string) ($field['placeholder'] ?? ''),
+                'fetch_from' => (string) ($field['fetch_from'] ?? ''),
                 'is_required' => (bool) ($field['reqd'] ?? $field['is_required'] ?? false),
                 'read_only' => (bool) ($field['read_only'] ?? false),
                 'idx' => (int) ($field['idx'] ?? 0),
-                'session_uid' => (string) ($field['session_uid'] ?? $custom['session_uid'] ?? self::DEFAULT_SESSION_UID),
-                'column' => min(4, max(1, (int) ($field['column'] ?? $custom['column'] ?? 1))),
-                'custom_meta' => $custom,
+                'session_uid' => (string) ($field['session_uid'] ?? self::DEFAULT_SESSION_UID),
+                'column' => min(4, max(1, (int) ($field['column'] ?? 1))),
+                'in_list_view' => (bool) ($field['in_list_view'] ?? true),
             ];
 
             if (in_array($row['fieldtype'], ['Table', 'Child Table (JSONB)'], true)) {

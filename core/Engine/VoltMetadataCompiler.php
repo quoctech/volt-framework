@@ -249,6 +249,9 @@ final class VoltMetadataCompiler
     /**
      * Deep merge associative arrays while replacing list values.
      *
+     * Giá trị `null` và `[]` được áp dụng trực tiếp (clear), thay vì bị bỏ qua
+     * như trước — nhờ builder không còn ghi `[]` cho field không có custom data.
+     *
      * @param array<string, mixed> $base
      * @param array<string, mixed> $patch
      *
@@ -257,10 +260,6 @@ final class VoltMetadataCompiler
     private function deepPatch(array $base, array $patch): array
     {
         foreach ($patch as $key => $value) {
-            if ($value === [] || $value === null) {
-                continue;
-            }
-
             if (
                 is_array($value)
                 && isset($base[$key])

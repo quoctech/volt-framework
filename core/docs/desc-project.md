@@ -16,7 +16,7 @@ Các phần đã có trong code:
 
 - Namespace `Volt\Core` map vào thư mục [`core`](../).
 - Migration tạo 10 bảng hệ thống `sys_*` (`sys_entity`, `sys_entity_field`, `sys_entity_custom`, `sys_user`, `sys_permission`, `sys_sequence`, `sys_audit_trail`, `sys_queue_job`, `sys_module`, `sys_error_log`) + 2 migration nâng cấp (`sys_queue_job` mở rộng, `sys_schema_migration`).
-- `SchemaSync` — đồng bộ metadata → bảng vật lý Postgres theo model plan/apply (CREATE/ALTER/DROP/RENAME/INDEX), hỗ trợ dry-run, prune, đổi tên, đổi kiểu.
+- `SchemaSync` — đồng bộ metadata → bảng vật lý Postgres theo model plan/apply (CREATE/ALTER/DROP/RENAME/INDEX), hỗ trợ dry-run, prune, đổi tên, đổi kiểu, và `--data-check` (kiểm tra dữ liệu không sửa schema).
 - `VoltMetadataCompiler` — compile metadata từ 3 bảng `sys_*`, cache vào Redis.
 - `MetadataValidator` — validate entity name, field name, field type, module.
 - `VoltModel` — abstract model lõi với permission check, audit trail, system fields, workflow state machine (Draft→Submitted→Cancelled, amend).
@@ -241,7 +241,7 @@ Chức năng:
 
 ### Tầng tài liệu
 
-- Viết test cho `VoltModel`, `VoltResourceController`, `VoltMetadataCompiler`.
+- Test hiện có: `WorkflowEngine`, `WorkflowCommentRequirement`, `SchemaSync`, `VoltMetadataCompiler`, `NamingSeriesGenerator`, `VoltModel` (base CRUD, child table, workflow, event), `VoltResourceController`, `TableNameResolver`, `VoltDatabase`, `FileModel`, `QueryParser`, `QueueWorker`, `QueueJobModel`, `QueueDispatcher`, `PermissionResolver`, `AuditTrailWriter`, `EventBus`.
 - Hoàn thiện `VOLT_FRAMEWORK.md` cho từng module core.
 
 ## Tóm tắt

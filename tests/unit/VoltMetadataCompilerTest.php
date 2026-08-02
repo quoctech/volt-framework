@@ -173,6 +173,65 @@ final class VoltMetadataCompilerTest extends CIUnitTestCase
         $this->assertSame(1, $role['fields']['full_name']['reqd']);
     }
 
+    public function testCustomMetaCanClearValueToNull(): void
+    {
+        $this->givenEntity('Employee', 'hrms');
+        $this->givenFields('Employee', [
+            [
+                'parent' => 'Employee', 'fieldname' => 'full_name', 'fieldtype' => 'Data',
+                'label' => 'Full Name', 'reqd' => 0, 'idx' => 1, 'options' => '',
+            ],
+        ]);
+        $this->givenCustom('Employee', [
+            [
+                'entity_name' => 'Employee',
+                'apply_to_role' => null,
+                'custom_meta' => ['fields' => ['full_name' => ['placeholder' => 'Enter name']]],
+            ],
+            [
+                'entity_name' => 'Employee',
+                'apply_to_role' => 'hr_manager',
+                'custom_meta' => ['fields' => ['full_name' => ['placeholder' => null]]],
+            ],
+        ]);
+
+        $global = $this->compiler()->compileEntity('Employee');
+        $this->assertSame('Enter name', $global['fields']['full_name']['placeholder']);
+
+        $role = $this->compiler()->compileEntity('Employee', 'hr_manager');
+        $this->assertArrayHasKey('placeholder', $role['fields']['full_name']);
+        $this->assertNull($role['fields']['full_name']['placeholder']);
+    }
+
+    public function testCustomMetaCanClearValueToEmptyArray(): void
+    {
+        $this->givenEntity('Employee', 'hrms');
+        $this->givenFields('Employee', [
+            [
+                'parent' => 'Employee', 'fieldname' => 'full_name', 'fieldtype' => 'Data',
+                'label' => 'Full Name', 'reqd' => 0, 'idx' => 1, 'options' => '',
+            ],
+        ]);
+        $this->givenCustom('Employee', [
+            [
+                'entity_name' => 'Employee',
+                'apply_to_role' => null,
+                'custom_meta' => ['entity' => ['custom_attributes' => ['layout' => ['sessions' => ['a']]]]],
+            ],
+            [
+                'entity_name' => 'Employee',
+                'apply_to_role' => 'hr_manager',
+                'custom_meta' => ['entity' => ['custom_attributes' => ['layout' => ['sessions' => []]]]],
+            ],
+        ]);
+
+        $global = $this->compiler()->compileEntity('Employee');
+        $this->assertSame(['a'], $global['entity']['custom_attributes']['layout']['sessions']);
+
+        $role = $this->compiler()->compileEntity('Employee', 'hr_manager');
+        $this->assertSame([], $role['entity']['custom_attributes']['layout']['sessions']);
+    }
+
     public function testCompileEntityUsesCacheOnSecondCall(): void
     {
         $this->givenEntity('Employee', 'hrms');

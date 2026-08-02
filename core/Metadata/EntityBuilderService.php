@@ -729,7 +729,12 @@ final class EntityBuilderService
                 continue;
             }
 
-            $customPatch['fields'][$fieldname] = $field['f_custom_jsonb'] ?? [];
+            $fieldCustom = $field['f_custom_jsonb'] ?? [];
+            if ($fieldCustom === []) {
+                continue;
+            }
+
+            $customPatch['fields'][$fieldname] = $fieldCustom;
         }
 
         return $customPatch;

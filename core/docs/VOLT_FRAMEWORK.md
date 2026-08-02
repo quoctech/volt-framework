@@ -208,7 +208,7 @@ Entity Builder UI → EntityBuilderService::saveEntity()
 | Nguồn | Bảng | Dữ liệu |
 |-------|------|---------|
 | Entity config | `sys_entity` | name, module, label, autoname, istable, issingle, states, custom_attributes |
-| Field definitions | `sys_entity_field` | fieldname, label, fieldtype, options, reqd, read_only, hidden, idx, f_custom_jsonb |
+| Field definitions | `sys_entity_field` | fieldname, label, fieldtype, options, reqd, read_only, hidden, idx |
 | Custom patches | `sys_entity_custom` | entity_name, apply_to_role, custom_meta (JSONB deep-merge) |
 
 ### 4.3 Compiler output
