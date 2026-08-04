@@ -9,6 +9,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Engine\MigrationCoordinator;
 use Volt\Core\Metadata\EntityBuilderService;
 
 class EntityBuilderController extends Controller
@@ -226,5 +227,84 @@ class EntityBuilderController extends Controller
         $payload = $this->request->getPost();
 
         return is_array($payload) ? $payload : null;
+    }
+
+    public function migrations(): ResponseInterface
+    {
+        try {
+            $filters = [
+                'entity' => mb_trim((string) ($this->request->getGet('entity') ?? '')),
+                'status' => mb_trim((string) ($this->request->getGet('status') ?? '')),
+            ];
+
+            return $this->response->setJSON([
+                'status' => 'ok',
+                'data'   => (new MigrationCoordinator())->list($filters),
+            ]);
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [], 'entity_builder', 'entity_builder_migrations_list_failed');
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    public function approveMigration(int $id): ResponseInterface
+    {
+        return $this->runMigrationAction('approve', $id);
+    }
+
+    public function applyMigration(int $id): ResponseInterface
+    {
+        return $this->runMigrationAction('apply', $id);
+    }
+
+    public function rollbackMigration(int $id): ResponseInterface
+    {
+        return $this->runMigrationAction('rollback', $id);
+    }
+
+    private function runMigrationAction(string $action, int $id): ResponseInterface
+    {
+        try {
+            $coordinator = new MigrationCoordinator();
+            $actor = $this->deskUserName();
+
+            $result = match ($action) {
+                'approve'  => $coordinator->approve($id, $actor),
+                'apply'    => $coordinator->apply($id, $actor),
+                'rollback' => $coordinator->rollback($id, $actor),
+                default    => throw new InvalidArgumentException("Unknown migration action: {$action}"),
+            };
+
+            if (($result['status'] ?? '') !== 'success') {
+                return $this->response->setStatusCode(422)->setJSON($result);
+            }
+
+            return $this->response->setJSON([
+                'status'  => 'ok',
+                'message' => $result['message'] ?? null,
+                'data'    => ['request' => $result['request'] ?? null],
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, ['migration_id' => $id], 'entity_builder', 'entity_builder_migration_action_failed');
+            return $this->response->setStatusCode(500)->setJSON([
+                'status'  => 'error',
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    private function deskUserName(): string
+    {
+        $user = service('voltAuth')->currentUser();
+
+        return $user !== null ? (string) $user->name : 'system';
     }
 }

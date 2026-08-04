@@ -29,6 +29,9 @@ final class SchemaSyncTest extends CIUnitTestCase
     /** @var list<object> Index data returned by getIndexData() */
     private array $indexData = [];
 
+    /** @var array<string, list<array<string, mixed>>> Constraint names returned by table_constraints query */
+    private array $constraintResults = [];
+
     private int $entityCalls = 0;
 
     /** @var array<string, list<array<string, mixed>>> */
@@ -47,6 +50,7 @@ final class SchemaSyncTest extends CIUnitTestCase
         $this->entityCalls = 0;
         $this->queryResults = [];
         $this->dispatchedJobs = [];
+        $this->constraintResults = [];
 
         $queueModel = $this->createMock(QueueJobModel::class);
         $queueModel->method('dispatch')->willReturnCallback(
@@ -72,7 +76,12 @@ final class SchemaSyncTest extends CIUnitTestCase
                 if (stripos($sql, 'information_schema') !== false) {
                     $binds = $args[0] ?? [];
                     $table = is_array($binds) ? (string) ($binds[0] ?? '') : '';
-                    $rows = $self->schemaResults[$table] ?? [];
+
+                    if (stripos($sql, 'table_constraints') !== false) {
+                        $rows = $self->constraintResults[$table] ?? [];
+                    } else {
+                        $rows = $self->schemaResults[$table] ?? [];
+                    }
 
                     $result = $self->createMock(BaseResult::class);
                     $result->method('getResultArray')->willReturn($rows);
@@ -127,7 +136,14 @@ final class SchemaSyncTest extends CIUnitTestCase
         $result = $this->sync->syncEntity('TestEntity');
 
         $this->assertSame('success', $result['status']);
-        $this->assertStringContainsString('CREATE TABLE', $this->queries[0] ?? '');
+        $hasCreateTable = false;
+        foreach ($this->queries as $q) {
+            if (stripos($q, 'CREATE TABLE') !== false) {
+                $hasCreateTable = true;
+                break;
+            }
+        }
+        $this->assertTrue($hasCreateTable, 'Expected CREATE TABLE query');
     }
 
     public function testSyncEntityAddsMissingColumn(): void
@@ -487,6 +503,272 @@ final class SchemaSyncTest extends CIUnitTestCase
             static fn (array $op): bool => $op['operation'] === 'create_index',
         ));
         $this->assertSame([], $indexOps, 'Existing index must not be re-planned.');
+    }
+
+    public function testOrphanIndexNotDroppedWithoutPrune(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'email' => ['type' => 'character varying', 'length' => 255],
+        ]);
+
+        $index = new stdClass();
+        $index->name = 'ix_test_entity_legacy';
+        $index->fields = ['legacy'];
+        $this->indexData = [$index];
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'email',
+            'fieldtype' => 'Data',
+            'label' => 'Email',
+            'length' => 255,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks([
+            'istable' => 0,
+            'custom_attributes' => ['indexes' => ['email']],
+        ], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity');
+        $drops = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'drop_index',
+        ));
+        $this->assertSame([], $drops, 'Orphan index must not be dropped without --prune.');
+    }
+
+    public function testOrphanIndexDroppedWithPrune(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'email' => ['type' => 'character varying', 'length' => 255],
+        ]);
+
+        $index = new stdClass();
+        $index->name = 'ix_test_entity_legacy';
+        $index->fields = ['legacy'];
+        $this->indexData = [$index];
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'email',
+            'fieldtype' => 'Data',
+            'label' => 'Email',
+            'length' => 255,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks([
+            'istable' => 0,
+            'custom_attributes' => ['indexes' => ['email']],
+        ], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity', ['prune' => true]);
+        $drops = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'drop_index',
+        ));
+        $this->assertCount(1, $drops);
+        $this->assertSame('ix_test_entity_legacy', $drops[0]['index_name']);
+        $this->assertSame('breaking', $drops[0]['severity']);
+    }
+
+    public function testPlansUniqueConstraintFromCustomAttributes(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'email' => ['type' => 'character varying', 'length' => 255],
+        ]);
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'email',
+            'fieldtype' => 'Data',
+            'label' => 'Email',
+            'length' => 255,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks([
+            'istable' => 0,
+            'custom_attributes' => ['uniques' => ['email']],
+        ], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity');
+        $this->assertSame('success', $result['status']);
+
+        $constraintOps = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'add_constraint',
+        ));
+        $this->assertCount(1, $constraintOps);
+        $this->assertSame('ix_test_entity_email_uq', $constraintOps[0]['constraint_name']);
+        $this->assertSame('breaking', $constraintOps[0]['severity']);
+    }
+
+    public function testSkipsExistingConstraint(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'email' => ['type' => 'character varying', 'length' => 255],
+        ]);
+
+        $this->constraintResults['tab_test_entity'] = [
+            ['constraint_name' => 'ix_test_entity_email_uq'],
+        ];
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'email',
+            'fieldtype' => 'Data',
+            'label' => 'Email',
+            'length' => 255,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks([
+            'istable' => 0,
+            'custom_attributes' => ['uniques' => ['email']],
+        ], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity');
+        $constraintOps = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'add_constraint',
+        ));
+        $this->assertSame([], $constraintOps, 'Existing constraint must not be re-planned.');
+    }
+
+    public function testPlansExpandContractForRequiredColumnWithDefault(): void
+    {
+        $this->givenBaseTable('tab_test_entity');
+
+        $this->queryResults = [
+            'SELECT 1 FROM tab_test_entity' => [['x' => 1]],
+        ];
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'code',
+            'fieldtype' => 'Data',
+            'label' => 'Code',
+            'length' => 50,
+            'reqd' => 1,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks(['istable' => 0], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity', ['defaults' => ['code' => 'PENDING']]);
+        $this->assertSame('success', $result['status']);
+
+        $operations = array_map(static fn (array $op): string => $op['operation'], $result['plan']);
+        $this->assertContains('add_column', $operations);
+        $this->assertContains('backfill_data', $operations);
+        $this->assertContains('set_not_null', $operations);
+
+        $backfill = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'backfill_data',
+        ));
+        $this->assertSame('code', $backfill[0]['column']);
+        $this->assertSame('code IS NULL', $backfill[0]['where']);
+    }
+
+    public function testAddsNullableColumnWhenRequiredWithoutDefault(): void
+    {
+        $this->givenBaseTable('tab_test_entity');
+
+        $this->queryResults = [
+            'SELECT 1 FROM tab_test_entity' => [['x' => 1]],
+        ];
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'code',
+            'fieldtype' => 'Data',
+            'label' => 'Code',
+            'length' => 50,
+            'reqd' => 1,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks(['istable' => 0], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity');
+        $this->assertSame('success', $result['status']);
+
+        $addOps = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'add_column',
+        ));
+        $this->assertCount(1, $addOps);
+        $this->assertTrue($addOps[0]['def']['null'], 'Required column without default must be added nullable first.');
+        $this->assertArrayNotHasKey('backfill_data', array_flip(array_column($result['plan'], 'operation')));
+    }
+
+    public function testTypeChangePlansUsingExpression(): void
+    {
+        $this->givenBaseTable('tab_test_entity', [
+            'qty' => ['type' => 'character varying', 'length' => 50],
+        ]);
+
+        $fieldRow = [
+            'parent' => 'test_entity',
+            'fieldname' => 'qty',
+            'fieldtype' => 'Int',
+            'label' => 'Qty',
+            'length' => null,
+            'reqd' => 0,
+            'idx' => 1,
+            'options' => '',
+        ];
+
+        $this->setupTableMocks(['istable' => 0], [$fieldRow]);
+
+        $result = $this->sync->planEntity('TestEntity', ['allow_type_change' => true]);
+        $this->assertSame('success', $result['status']);
+
+        $alterOps = array_values(array_filter(
+            $result['plan'],
+            static fn (array $op): bool => $op['operation'] === 'alter_column',
+        ));
+        $this->assertCount(1, $alterOps);
+        $this->assertSame('qty::integer', $alterOps[0]['using']);
+        $this->assertSame('breaking', $alterOps[0]['severity']);
+    }
+
+    public function testInverseSqlGeneratedForReversibleOps(): void
+    {
+        $this->assertStringContainsString(
+            'DROP COLUMN',
+            (string) $this->sync->inverseSqlFor([
+                'operation' => 'add_column',
+                'table'     => 'tab_test_entity',
+                'column'    => 'email',
+            ]),
+        );
+        $this->assertStringContainsString(
+            'DROP INDEX',
+            (string) $this->sync->inverseSqlFor([
+                'operation' => 'create_index',
+                'table'     => 'tab_test_entity',
+                'index_name' => 'ix_test_entity_email',
+            ]),
+        );
+        $this->assertNull($this->sync->inverseSqlFor([
+            'operation' => 'drop_column',
+            'table'     => 'tab_test_entity',
+            'column'    => 'email',
+        ]), 'Destructive ops must not expose an automatic inverse.');
     }
 
     public function testSyncDispatchesRebuildCacheJobWhenChangesApplied(): void

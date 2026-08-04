@@ -7,6 +7,7 @@ namespace Volt\Core\Engine;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Forge;
 use CodeIgniter\Database\RawSql;
+use Config\Volt as VoltConfig;
 use Throwable;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
@@ -14,9 +15,11 @@ use Volt\Core\Validation\MetadataValidator;
 
 /**
  * Đồng bộ schema vật lý từ metadata. *
- * - Không phá hủy: thay đổi "phá vỡ" (đổi kiểu, xóa cột) chỉ nằm trong plan khi được bật flag.
+ * - Không phá hủy: thay đổi "phá vỡ" (đổi kiểu, xóa cột, drop index/constraint)
+ *   chỉ nằm trong plan khi được bật flag; việc apply thực tế phải qua
+ *   MigrationCoordinator để đảm bảo preview + approval (không tự ý thay đổi production).
  * - Dùng CI4 Forge cho mọi DDL; raw SQL chỉ dùng khi Forge không hỗ trợ
- *   (CREATE INDEX trên bảng đã tồn tại, RENAME COLUMN).
+ *   (CREATE INDEX trên bảng đã tồn tại, RENAME COLUMN, USING, backfill).
  * - Ghi mỗi thao tác đã apply vào sys_schema_migration.
  */
 class SchemaSync
@@ -26,6 +29,7 @@ class SchemaSync
     private readonly BaseConnection $db;
     private readonly MetadataValidator $validator;
     private ?QueueDispatcher $queue;
+    private ?VoltConfig $voltConfig = null;
 
     public function __construct(
         ?BaseConnection $db = null,
@@ -190,6 +194,8 @@ class SchemaSync
             return false;
         }
 
+        $customAttributes = $this->getEntityMeta($entityName)['custom_attributes'];
+
         $currentSchema = $this->getPostgresSchema($tableName);
 
         // Đổi tên bảng legacy (giữ dữ liệu) trước khi xử lý phần còn lại.
@@ -223,8 +229,7 @@ class SchemaSync
                 if (isset($currentSchema[$colName])) {
                     continue;
                 }
-                $ops[] = $this->makeOp('add_column', $entityName, $tableName, column: $colName, severity: 'safe', sql: "ADD COLUMN {$colName}", extra: ['def' => $colDef]);
-                $logs[] = "🛠️ Kế hoạch thêm base column: {$colName} vào {$tableName}";
+                $this->planAddColumn($tableName, $entityName, $colName, $colDef, $ops, $logs, $opts);
             }
 
             $this->planRenames($tableName, $entityName, $currentSchema, $metaFields, $ops, $logs, $opts);
@@ -238,8 +243,7 @@ class SchemaSync
                 $def = $this->columnDefFromField($field);
 
                 if (! isset($currentSchema[$colName])) {
-                    $ops[] = $this->makeOp('add_column', $entityName, $tableName, column: $colName, severity: 'safe', sql: "ADD COLUMN {$colName}", extra: ['def' => $def]);
-                    $logs[] = "🛠️ Phát hiện thiếu trường! Kế hoạch vá thêm cột: {$colName} vào {$tableName}";
+                    $this->planAddColumn($tableName, $entityName, $colName, $def, $ops, $logs, $opts);
                     continue;
                 }
 
@@ -249,7 +253,8 @@ class SchemaSync
             $this->planOrphanDrops($tableName, $entityName, $currentSchema, $metaFields, $baseColumns, $ops, $logs, $opts);
         }
 
-        $this->planIndexes($tableName, $entityName, $metaFields, $this->getEntityMeta($entityName)['custom_attributes'], $ops, $logs);
+        $this->planIndexes($tableName, $entityName, $metaFields, $customAttributes, $ops, $logs, $opts);
+        $this->planConstraints($tableName, $entityName, $customAttributes, $ops, $logs, $opts);
 
         // Đồng bộ child table (mode separate).
         if (! $isChild) {
@@ -273,23 +278,55 @@ class SchemaSync
      */
     private function applyPlan(array &$plan, array $opts): void
     {
-        foreach ($plan['plan'] as $op) {
-            if (! $this->opAllowed($op, $opts)) {
-                continue;
-            }
+        $this->acquireAdvisoryLock();
 
-            try {
-                $this->applyOp($op);
+        try {
+            foreach ($plan['plan'] as $op) {
+                if (! $this->opAllowed($op, $opts)) {
+                    continue;
+                }
+
+                $this->applyOperation($op);
                 $this->logMigration($op);
-            } catch (Throwable $e) {
-                service('voltErrorLog')->logException($e, [
-                    'entity'    => $op['entity'] ?? null,
-                    'operation' => $op['operation'] ?? null,
-                    'table'     => $op['table'] ?? null,
-                ], 'schema_sync', 'schema_sync_apply_failed');
-                throw $e;
             }
+        } finally {
+            $this->releaseAdvisoryLock();
         }
+    }
+
+    /**
+     * Chặn 2 luồng schema sync chạy song song trên cùng DB để tránh
+     * deadlock/race khi cùng ALTER một bảng. Dùng session-level advisory lock
+     * (không mở transaction) để không ảnh hưởng tới CREATE INDEX CONCURRENTLY.
+     */
+    public function acquireAdvisoryLock(): void
+    {
+        $key = max(1, (int) $this->voltConfig()->schemaSyncAdvisoryLockKey);
+        $this->db->query('SELECT pg_advisory_lock(' . $key . ')');
+    }
+
+    public function releaseAdvisoryLock(): void
+    {
+        $key = max(1, (int) $this->voltConfig()->schemaSyncAdvisoryLockKey);
+        $this->db->query('SELECT pg_advisory_unlock(' . $key . ')');
+    }
+
+    /** Yêu cầu approval cho op breaking hay không (theo cấu hình). */
+    public function requiresApprovalForBreaking(): bool
+    {
+        return (bool) $this->voltConfig()->schemaSyncRequireApprovalForBreaking;
+    }
+
+    /** Apply một operation đơn lẻ (dùng bởi cả applyPlan lẫn MigrationCoordinator). */
+    public function applyOperation(array $op): void
+    {
+        $this->applyOp($op);
+    }
+
+    /** Kiểm tra operation có được phép apply với opts cho trước hay không. */
+    public function isOpAllowed(array $op, array $opts): bool
+    {
+        return $this->opAllowed($op, $opts);
     }
 
     /**
@@ -304,9 +341,11 @@ class SchemaSync
 
         // Thao tác phá vỡ chỉ apply khi flag tương ứng được bật ở lúc plan.
         return match ($op['operation'] ?? '') {
-            'drop_column'  => (bool) ($opts['allow_drop'] ?? $opts['prune'] ?? false),
-            'alter_column' => (bool) ($opts['allow_type_change'] ?? false),
-            default        => false,
+            'drop_column'     => (bool) ($opts['allow_drop'] ?? $opts['prune'] ?? false),
+            'drop_index'      => (bool) ($opts['allow_drop'] ?? $opts['prune'] ?? false),
+            'drop_constraint' => (bool) ($opts['allow_drop'] ?? $opts['prune'] ?? false),
+            'alter_column'    => (bool) ($opts['allow_type_change'] ?? false),
+            default           => false,
         };
     }
 
@@ -318,14 +357,19 @@ class SchemaSync
         $table = (string) $op['table'];
 
         match ($op['operation']) {
-            'rename_table'   => (new Forge($this->db))->renameTable((string) $op['old_table'], $table),
-            'create_table'   => $this->applyCreateTable($op),
-            'add_column'     => (new Forge($this->db))->addColumn($table, [$op['column'] => $this->fieldDef($op['def'])]),
-            'alter_column'   => $this->applyAlterColumn($op),
-            'rename_column'  => $this->applyRenameColumn($op),
-            'drop_column'    => $this->applyDropColumn($op),
-            'create_index'   => $this->applyCreateIndex($op),
-            default          => null,
+            'rename_table'    => (new Forge($this->db))->renameTable((string) $op['old_table'], $table),
+            'create_table'    => $this->applyCreateTable($op),
+            'add_column'      => (new Forge($this->db))->addColumn($table, [$op['column'] => $this->fieldDef($op['def'])]),
+            'alter_column'    => $this->applyAlterColumn($op),
+            'rename_column'   => $this->applyRenameColumn($op),
+            'drop_column'     => $this->applyDropColumn($op),
+            'create_index'    => $this->applyCreateIndex($op),
+            'drop_index'      => $this->applyDropIndex($op),
+            'backfill_data'   => $this->applyBackfillData($op),
+            'set_not_null'    => $this->applySetNotNull($op),
+            'add_constraint'  => $this->applyAddConstraint($op),
+            'drop_constraint' => $this->applyDropConstraint($op),
+            default           => null,
         };
     }
 
@@ -348,8 +392,27 @@ class SchemaSync
      */
     private function applyAlterColumn(array $op): void
     {
-        $apply = function () use ($op): void {
-            (new Forge($this->db))->modifyColumn((string) $op['table'], [$op['column'] => $this->fieldDef($op['def'])]);
+        $table = (string) $op['table'];
+        $column = (string) $op['column'];
+        $def = $op['def'] ?? [];
+
+        $apply = function () use ($op, $table, $column, $def): void {
+            $using = $op['using'] ?? null;
+
+            if (is_string($using) && $using !== '') {
+                $sql = 'ALTER TABLE ' . $this->db->escapeIdentifiers($table)
+                     . ' ALTER COLUMN ' . $this->db->escapeIdentifiers($column)
+                     . ' TYPE ' . $this->pgType($def);
+                if ($using !== '') {
+                    $sql .= ' USING ' . $using;
+                }
+                $this->db->query($sql);
+            } else {
+                (new Forge($this->db))->modifyColumn($table, [$column => $this->fieldDef($def)]);
+            }
+
+            $this->applyColumnNullability($table, $column, $def);
+            $this->applyColumnDefault($table, $column, $def);
         };
 
         if (($op['severity'] ?? '') === 'breaking') {
@@ -357,6 +420,38 @@ class SchemaSync
         } else {
             $apply();
         }
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     */
+    private function applyColumnNullability(string $table, string $column, array $def): void
+    {
+        $escTable = $this->db->escapeIdentifiers($table);
+        $escCol = $this->db->escapeIdentifiers($column);
+
+        if (($def['null'] ?? true) === true) {
+            $this->db->query("ALTER TABLE {$escTable} ALTER COLUMN {$escCol} DROP NOT NULL");
+        } else {
+            $this->db->query("ALTER TABLE {$escTable} ALTER COLUMN {$escCol} SET NOT NULL");
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $def
+     */
+    private function applyColumnDefault(string $table, string $column, array $def): void
+    {
+        if (! array_key_exists('default', $def)) {
+            return;
+        }
+
+        $escTable = $this->db->escapeIdentifiers($table);
+        $escCol = $this->db->escapeIdentifiers($column);
+        $value = $def['default'];
+        $expr = $value instanceof RawSql ? (string) $value : "'" . $this->db->escape((string) $value) . "'";
+
+        $this->db->query("ALTER TABLE {$escTable} ALTER COLUMN {$escCol} SET DEFAULT {$expr}");
     }
 
     /**
@@ -384,7 +479,9 @@ class SchemaSync
      */
     private function applyCreateIndex(array $op): void
     {
-        $sql = 'CREATE INDEX IF NOT EXISTS ' . $this->db->escapeIdentifiers($this->sanitizeIdentifier((string) $op['index_name']))
+        $concurrent = (bool) ($op['concurrent'] ?? false);
+        $sql = 'CREATE INDEX ' . ($concurrent ? 'CONCURRENTLY IF NOT EXISTS ' : 'IF NOT EXISTS ')
+             . $this->db->escapeIdentifiers($this->sanitizeIdentifier((string) $op['index_name']))
              . ' ON ' . $this->db->escapeIdentifiers((string) $op['table'])
              . ' (' . $this->db->escapeIdentifiers((string) $op['column']) . ')';
 
@@ -394,16 +491,114 @@ class SchemaSync
     /**
      * @param array<string, mixed> $op
      */
-    private function logMigration(array $op): void
+    private function applyDropIndex(array $op): void
     {
-        $this->db->table(self::TABLE_MIGRATION)->insert([
-            'entity'     => (string) ($op['entity'] ?? ''),
-            'table_name' => (string) ($op['table'] ?? ''),
-            'operation'  => (string) ($op['operation'] ?? ''),
-            'sql'        => (string) ($op['sql'] ?? ''),
-            'dry_run'    => 0,
-            'created_by' => 'system',
-        ]);
+        $this->db->query(
+            'DROP INDEX IF EXISTS ' . $this->db->escapeIdentifiers($this->sanitizeIdentifier((string) $op['index_name'])),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $op
+     */
+    private function applyBackfillData(array $op): void
+    {
+        $table = (string) $op['table'];
+        $column = (string) $op['column'];
+        $expr = (string) ($op['expr'] ?? 'NULL');
+        $where = (string) ($op['where'] ?? '');
+
+        $sql = 'UPDATE ' . $this->db->escapeIdentifiers($table)
+             . ' SET ' . $this->db->escapeIdentifiers($column) . ' = ' . $expr;
+
+        if ($where !== '') {
+            $sql .= ' WHERE ' . $where;
+        }
+
+        $this->db->query($sql);
+    }
+
+    /**
+     * @param array<string, mixed> $op
+     */
+    private function applySetNotNull(array $op): void
+    {
+        $this->db->query(
+            'ALTER TABLE ' . $this->db->escapeIdentifiers((string) $op['table'])
+            . ' ALTER COLUMN ' . $this->db->escapeIdentifiers((string) $op['column'])
+            . ' SET NOT NULL',
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $op
+     */
+    private function applyAddConstraint(array $op): void
+    {
+        $this->db->query((string) $op['sql']);
+    }
+
+    /**
+     * @param array<string, mixed> $op
+     */
+    private function applyDropConstraint(array $op): void
+    {
+        $this->db->query(
+            'ALTER TABLE ' . $this->db->escapeIdentifiers((string) $op['table'])
+            . ' DROP CONSTRAINT IF EXISTS ' . $this->db->escapeIdentifiers((string) $op['constraint_name']),
+        );
+    }
+
+    /**
+     * Ghi một operation đã apply vào sys_schema_migration.
+     *
+     * @param array<string, mixed> $op
+     * @param array<string, mixed> $extra migration_id|status|applied_at|created_by
+     */
+    public function logMigration(array $op, array $extra = []): void
+    {
+        $inverse = $this->inverseSqlFor($op);
+
+        $this->db->table(self::TABLE_MIGRATION)->insert(array_filter([
+            'entity'      => (string) ($op['entity'] ?? ''),
+            'table_name'  => (string) ($op['table'] ?? ''),
+            'operation'   => (string) ($op['operation'] ?? ''),
+            'sql'         => (string) ($op['sql'] ?? ''),
+            'dry_run'     => 0,
+            'created_by'  => (string) ($extra['created_by'] ?? 'system'),
+            'migration_id' => $extra['migration_id'] ?? null,
+            'status'      => (string) ($extra['status'] ?? 'applied'),
+            'severity'    => (string) ($op['severity'] ?? 'safe'),
+            'downtime'    => (string) ($op['downtime'] ?? $this->downtimeFor($op)),
+            'inverse_sql' => $inverse,
+            'applied_at'  => $extra['applied_at'] ?? new RawSql('CURRENT_TIMESTAMP'),
+        ], static fn (mixed $value): bool => $value !== null && $value !== ''));
+    }
+
+    /**
+     * Sinh SQL nghịch đảo cho một operation (dùng cho rollback).
+     * Trả về null khi thao tác làm mất dữ liệu và không thể tự động đảo ngược.
+     *
+     * @param array<string, mixed> $op
+     */
+    public function inverseSqlFor(array $op): ?string
+    {
+        $table = (string) $op['table'];
+        $escTable = $this->db->escapeIdentifiers($table);
+
+        return match ($op['operation']) {
+            'create_table'   => 'DROP TABLE IF EXISTS ' . $escTable,
+            'add_column'     => 'ALTER TABLE ' . $escTable . ' DROP COLUMN IF EXISTS ' . $this->db->escapeIdentifiers((string) $op['column']),
+            'rename_column'  => 'ALTER TABLE ' . $escTable . ' RENAME COLUMN ' . $this->db->escapeIdentifiers((string) $op['to']) . ' TO ' . $this->db->escapeIdentifiers((string) $op['from']),
+            'rename_table'   => 'ALTER TABLE ' . $escTable . ' RENAME TO ' . $this->db->escapeIdentifiers((string) $op['old_table']),
+            'create_index'   => 'DROP INDEX IF EXISTS ' . $this->db->escapeIdentifiers($this->sanitizeIdentifier((string) $op['index_name'])),
+            'drop_index'     => (string) ($op['sql'] ?? '') !== '' ? (string) $op['sql'] : null,
+            'set_not_null'   => 'ALTER TABLE ' . $escTable . ' ALTER COLUMN ' . $this->db->escapeIdentifiers((string) $op['column']) . ' DROP NOT NULL',
+            'add_constraint' => 'ALTER TABLE ' . $escTable . ' DROP CONSTRAINT IF EXISTS ' . $this->db->escapeIdentifiers((string) $op['constraint_name']),
+            'drop_constraint'=> (string) ($op['sql'] ?? '') !== '' ? (string) $op['sql'] : null,
+            // alter_column (nhất là breaking), drop_column, backfill_data: mất dữ liệu / không tự đảo ngược được.
+            default          => null,
+        };
     }
 
     /**
@@ -429,11 +624,238 @@ class SchemaSync
         }
 
         if ($opts['allow_type_change'] ?? false) {
-            $ops[] = $this->makeOp('alter_column', $entityName, $tableName, column: $field['fieldname'], severity: 'breaking', sql: "ALTER COLUMN {$field['fieldname']}", extra: ['def' => $desired]);
+            $extra = ['def' => $desired];
+            $using = $this->typeUsingExpr($desired, $actual, $field['fieldname']);
+            if ($using !== null) {
+                $extra['using'] = $using;
+            }
+            $ops[] = $this->makeOp('alter_column', $entityName, $tableName, column: $field['fieldname'], severity: 'breaking', sql: "ALTER COLUMN {$field['fieldname']}", extra: $extra);
             $logs[] = "⚠ Kế hoạch đổi kiểu cột: {$field['fieldname']} trên {$tableName} (phá vỡ)";
         } else {
             $logs[] = "⏭ Bỏ qua đổi kiểu cột: {$field['fieldname']} trên {$tableName} (cần --allow-type-change)";
         }
+    }
+
+    /**
+     * Sinh biểu thức USING hợp lệ để convert dữ liệu khi đổi kiểu cột.
+     * Chỉ sinh cho cặp kiểu chuyển đổi an toàn; trả về null → dùng convert mặc định của PG.
+     *
+     * @param array<string, mixed> $desired
+     * @param array<string, mixed> $actual
+     */
+    private function typeUsingExpr(array $desired, array $actual, string $column): ?string
+    {
+        $target = strtoupper((string) ($desired['type'] ?? ''));
+        $source = strtolower((string) ($actual['type'] ?? ''));
+        $escCol = $this->db->escapeIdentifiers($column);
+
+        // Các cast không mất dữ liệu (hoặc kiểm soát được), cho phép tự convert.
+        if ($target === 'INTEGER' && in_array($source, ['character varying', 'text', 'numeric'], true)) {
+            return "{$escCol}::integer";
+        }
+
+        if ($target === 'NUMERIC' && in_array($source, ['character varying', 'text'], true)) {
+            return "{$escCol}::numeric";
+        }
+
+        if (in_array($target, ['DATE', 'TIMESTAMP', 'TIME'], true) && in_array($source, ['character varying', 'text'], true)) {
+            return "{$escCol}::" . strtolower($target);
+        }
+
+        if ($target === 'JSONB' && in_array($source, ['character varying', 'text'], true)) {
+            return "NULLIF({$escCol}, '')::jsonb";
+        }
+
+        return null;
+    }
+
+    /**
+     * Lập kế hoạch thêm một cột, áp dụng expand/contract (thêm nullable -> backfill
+     * -> SET NOT NULL) khi cột là bắt buộc trên bảng đã có dữ liệu.
+     *
+     * @param array<string, mixed> $def
+     * @param list<array<string, mixed>> $ops
+     * @param list<string> $logs
+     * @param array<string, mixed> $opts
+     */
+    private function planAddColumn(string $tableName, string $entityName, string $colName, array $def, array &$ops, array &$logs, array $opts): void
+    {
+        $isRequired = ($def['null'] ?? true) === false;
+        $hasRows = $this->tableHasRows($tableName);
+
+        if ($isRequired && $hasRows) {
+            $nullableDef = $def;
+            $nullableDef['null'] = true;
+
+            $ops[] = $this->makeOp('add_column', $entityName, $tableName, column: $colName, severity: 'safe', sql: "ADD COLUMN {$colName}", extra: ['def' => $nullableDef]);
+            $logs[] = "➕ Kế hoạch thêm cột (nullable trước): {$colName} vào {$tableName}";
+
+            $default = $opts['defaults'][$colName] ?? $def['default'] ?? null;
+            if ($default !== null) {
+                $expr = $default instanceof RawSql ? (string) $default : "'" . $this->db->escape((string) $default) . "'";
+                $ops[] = $this->makeOp('backfill_data', $entityName, $tableName, column: $colName, severity: 'safe', sql: "UPDATE {$tableName} SET {$colName} = {$expr}", extra: ['expr' => $expr, 'where' => $colName . ' IS NULL']);
+                $logs[] = "🪣 Kế hoạch backfill giá trị mặc định cho {$colName} trên {$tableName}";
+                $ops[] = $this->makeOp('set_not_null', $entityName, $tableName, column: $colName, severity: 'safe', sql: "ALTER COLUMN {$colName} SET NOT NULL");
+                $logs[] = "🚫 Kế hoạch đặt NOT NULL cho {$colName} trên {$tableName}";
+            } else {
+                $logs[] = "⏳ Cột {$colName} là bắt buộc không có default — cần backfill thủ công trước khi đặt NOT NULL.";
+            }
+
+            return;
+        }
+
+        $ops[] = $this->makeOp('add_column', $entityName, $tableName, column: $colName, severity: 'safe', sql: "ADD COLUMN {$colName}", extra: ['def' => $def]);
+        $logs[] = "🛠️ Kế hoạch thêm cột: {$colName} vào {$tableName}";
+    }
+
+    /**
+     * Lập kế hoạch constraint (UNIQUE / CHECK / FK) từ custom_attributes.
+     * Chỉ chạy khi metadata khai báo constraint; không tự suy đoán để tránh phá schema.
+     *
+     * @param mixed $customAttributes
+     * @param list<array<string, mixed>> $ops
+     * @param list<string> $logs
+     * @param array<string, mixed> $opts
+     */
+    private function planConstraints(string $tableName, string $entityName, mixed $customAttributes, array &$ops, array &$logs, array $opts): void
+    {
+        $attrs = $this->normalizeCustomAttributes($customAttributes);
+        $uniques = $attrs['uniques'] ?? [];
+        $checks = $attrs['checks'] ?? [];
+        $foreignKeys = $attrs['foreign_keys'] ?? [];
+
+        if ($uniques === [] && $checks === [] && $foreignKeys === []) {
+            return;
+        }
+
+        $existing = $this->existingConstraints($tableName);
+        $prefix = 'ix_' . TableNameResolver::normalizeIdentifier($entityName) . '_';
+        $desiredNames = [];
+
+        foreach ($uniques as $fieldname) {
+            $fieldname = $this->sanitizeIdentifier((string) $fieldname);
+            if ($fieldname === 'idx') {
+                continue;
+            }
+            $name = $prefix . $fieldname . '_uq';
+            $desiredNames[$name] = true;
+            if (in_array($name, $existing, true)) {
+                continue;
+            }
+            $ops[] = $this->makeOp(
+                'add_constraint',
+                $entityName,
+                $tableName,
+                column: $fieldname,
+                severity: 'breaking',
+                sql: 'ALTER TABLE ' . $this->db->escapeIdentifiers($tableName)
+                    . ' ADD CONSTRAINT ' . $this->db->escapeIdentifiers($name)
+                    . ' UNIQUE (' . $this->db->escapeIdentifiers($fieldname) . ')',
+                extra: ['constraint_name' => $name, 'kind' => 'unique'],
+            );
+            $logs[] = "🔒 Kế hoạch thêm UNIQUE constraint: {$name} trên {$tableName} ({$fieldname})";
+        }
+
+        foreach ($checks as $idx => $check) {
+            if (! is_array($check)) {
+                continue;
+            }
+            $fieldname = $this->sanitizeIdentifier((string) ($check['field'] ?? $check['fieldname'] ?? 'check_' . $idx));
+            $expr = (string) ($check['expr'] ?? '');
+            if ($expr === '') {
+                continue;
+            }
+            $name = $prefix . $fieldname . '_ck' . $idx;
+            $desiredNames[$name] = true;
+            if (in_array($name, $existing, true)) {
+                continue;
+            }
+            $ops[] = $this->makeOp(
+                'add_constraint',
+                $entityName,
+                $tableName,
+                column: $fieldname,
+                severity: 'breaking',
+                sql: 'ALTER TABLE ' . $this->db->escapeIdentifiers($tableName)
+                    . ' ADD CONSTRAINT ' . $this->db->escapeIdentifiers($name)
+                    . ' CHECK (' . $expr . ')',
+                extra: ['constraint_name' => $name, 'kind' => 'check'],
+            );
+            $logs[] = "🔒 Kế hoạch thêm CHECK constraint: {$name} trên {$tableName}";
+        }
+
+        foreach ($foreignKeys as $fk) {
+            if (! is_array($fk)) {
+                continue;
+            }
+            $fieldname = $this->sanitizeIdentifier((string) ($fk['field'] ?? $fk['fieldname'] ?? ''));
+            $references = (string) ($fk['references'] ?? '');
+            $onDelete = (string) ($fk['on_delete'] ?? 'CASCADE');
+            if ($fieldname === 'idx' || $references === '') {
+                continue;
+            }
+            $name = $prefix . $fieldname . '_fk';
+            $desiredNames[$name] = true;
+            if (in_array($name, $existing, true)) {
+                continue;
+            }
+            $onDelete = $this->sanitizeOnDelete($onDelete);
+            $ops[] = $this->makeOp(
+                'add_constraint',
+                $entityName,
+                $tableName,
+                column: $fieldname,
+                severity: 'breaking',
+                sql: 'ALTER TABLE ' . $this->db->escapeIdentifiers($tableName)
+                    . ' ADD CONSTRAINT ' . $this->db->escapeIdentifiers($name)
+                    . ' FOREIGN KEY (' . $this->db->escapeIdentifiers($fieldname) . ')'
+                    . ' REFERENCES ' . $this->db->escapeIdentifiers($references)
+                    . ' ON DELETE ' . $onDelete,
+                extra: ['constraint_name' => $name, 'kind' => 'foreign_key'],
+            );
+            $logs[] = "🔗 Kế hoạch thêm FK constraint: {$name} trên {$tableName} ({$fieldname} -> {$references})";
+        }
+
+        if (! ($opts['allow_drop'] ?? $opts['prune'] ?? false)) {
+            return;
+        }
+
+        foreach ($existing as $name) {
+            if (! str_starts_with($name, $prefix)) {
+                continue;
+            }
+            if (isset($desiredNames[$name])) {
+                continue;
+            }
+            $ops[] = $this->makeOp(
+                'drop_constraint',
+                $entityName,
+                $tableName,
+                severity: 'breaking',
+                sql: 'ALTER TABLE ' . $this->db->escapeIdentifiers($tableName)
+                    . ' ADD CONSTRAINT ' . $this->db->escapeIdentifiers($name),
+                extra: ['constraint_name' => $name],
+            );
+            $logs[] = "🗑 Kế hoạch xóa constraint dư: {$name} trên {$tableName} (phá vỡ)";
+        }
+    }
+
+    private function sanitizeOnDelete(string $value): string
+    {
+        $value = strtoupper(mb_trim($value));
+        $allowed = ['CASCADE', 'RESTRICT', 'SET NULL', 'NO ACTION'];
+
+        return in_array($value, $allowed, true) ? $value : 'CASCADE';
+    }
+
+    /** @return array<string, mixed> */
+    private function normalizeCustomAttributes(mixed $customAttributes): array
+    {
+        if (is_string($customAttributes)) {
+            $customAttributes = json_decode($customAttributes, true);
+        }
+
+        return is_array($customAttributes) ? $customAttributes : [];
     }
 
     /**
@@ -508,26 +930,48 @@ class SchemaSync
      * @param mixed $customAttributes
      * @param list<array<string, mixed>> $ops
      * @param list<string> $logs
+     * @param array<string, mixed> $opts
      */
-    private function planIndexes(string $tableName, string $entityName, array $metaFields, mixed $customAttributes, array &$ops, array &$logs): void
+    private function planIndexes(string $tableName, string $entityName, array $metaFields, mixed $customAttributes, array &$ops, array &$logs, array $opts): void
     {
         $indexes = $this->normalizeIndexHints($customAttributes);
         $metaFieldnames = array_column($metaFields, 'fieldname');
         $existingIndexes = $this->existingIndexes($tableName);
+        $normalizedEntity = TableNameResolver::normalizeIdentifier($entityName);
+        $prefix = 'ix_' . $normalizedEntity . '_';
+        $concurrent = (bool) $this->voltConfig()->schemaSyncConcurrentIndexCreate;
 
+        $desiredNames = [];
         foreach ($indexes as $fieldname) {
             if (! in_array($fieldname, $metaFieldnames, true)) {
                 continue;
             }
 
-            $indexName = 'ix_' . TableNameResolver::normalizeIdentifier($entityName) . '_' . $fieldname;
+            $indexName = $prefix . $fieldname;
+            $desiredNames[$indexName] = true;
 
             if (in_array($indexName, $existingIndexes, true)) {
                 continue;
             }
 
-            $ops[] = $this->makeOp('create_index', $entityName, $tableName, column: $fieldname, severity: 'safe', sql: "CREATE INDEX {$indexName}", extra: ['index_name' => $indexName]);
+            $ops[] = $this->makeOp('create_index', $entityName, $tableName, column: $fieldname, severity: 'safe', sql: "CREATE INDEX {$indexName}", extra: ['index_name' => $indexName, 'concurrent' => $concurrent]);
             $logs[] = "📇 Kế hoạch tạo index: {$indexName} trên {$tableName} ({$fieldname})";
+        }
+
+        // Xóa index dư (theo quy ước đặt tên) không còn khai báo — cần flag phá vỡ.
+        if (! ($opts['allow_drop'] ?? $opts['prune'] ?? false)) {
+            return;
+        }
+
+        foreach ($existingIndexes as $name) {
+            if (! str_starts_with($name, $prefix)) {
+                continue;
+            }
+            if (isset($desiredNames[$name])) {
+                continue;
+            }
+            $ops[] = $this->makeOp('drop_index', $entityName, $tableName, severity: 'breaking', sql: "CREATE INDEX {$name}", extra: ['index_name' => $name, 'concurrent' => $concurrent]);
+            $logs[] = "🗑 Kế hoạch xóa index dư: {$name} trên {$tableName} (phá vỡ)";
         }
     }
 
@@ -800,17 +1244,108 @@ class SchemaSync
         return $names;
     }
 
+    /** @return list<string> Tên các constraint hiện có trên bảng. */
+    private function existingConstraints(string $tableName): array
+    {
+        $sql = 'SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = ?';
+        $result = $this->db->query($sql, [strtolower($tableName)])->getResultArray();
+
+        $names = [];
+        foreach ($result as $row) {
+            $name = (string) ($row['constraint_name'] ?? '');
+            if ($name !== '') {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
+    }
+
+    private function tableHasRows(string $tableName): bool
+    {
+        try {
+            $result = $this->db->query("SELECT 1 FROM {$tableName} LIMIT 1");
+
+            return $result !== null && $result->getRow() !== null;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /** Map forge def type về kiểu PostgreSQL thực tế cho câu ALTER COLUMN TYPE. */
+    private function pgType(array $def): string
+    {
+        $type = strtoupper((string) ($def['type'] ?? 'TEXT'));
+
+        return match ($type) {
+            'VARCHAR'  => 'VARCHAR(' . (int) ($def['constraint'] ?? 255) . ')',
+            'CHAR'     => 'CHAR(' . (int) ($def['constraint'] ?? 255) . ')',
+            'NUMERIC'  => 'NUMERIC(' . $this->pgNumericPrecision($def['constraint'] ?? '18, 4') . ')',
+            'INTEGER'  => 'INTEGER',
+            'SMALLINT' => 'SMALLINT',
+            'BIGINT'   => 'BIGINT',
+            'JSONB'    => 'JSONB',
+            'TEXT'     => 'TEXT',
+            'DATE'     => 'DATE',
+            'TIMESTAMP'=> 'TIMESTAMP',
+            'TIME'     => 'TIME',
+            default    => 'TEXT',
+        };
+    }
+
+    /** Trả về dạng "precision, scale" hợp lệ cho NUMERIC SQL. */
+    private function pgNumericPrecision(mixed $constraint): string
+    {
+        $normalized = preg_replace('/[^0-9]/', ':', (string) $constraint);
+        $parts = array_values(array_filter(explode(':', $normalized), static fn (string $p): bool => $p !== ''));
+
+        $precision = (int) ($parts[0] ?? 18);
+        $scale = (int) ($parts[1] ?? 4);
+
+        return $precision . ', ' . $scale;
+    }
+
     private function queue(): ?QueueDispatcher
     {
         return $this->queue ??= service('voltQueue');
     }
 
+    private function voltConfig(): VoltConfig
+    {
+        if ($this->voltConfig === null) {
+            try {
+                $this->voltConfig = config(VoltConfig::class);
+            } catch (Throwable) {
+                $this->voltConfig = new VoltConfig();
+            }
+        }
+
+        return $this->voltConfig;
+    }
+
+    /** @return bool TRUE khi môi trường hiện tại được coi là production. */
+    public function isProductionEnv(): bool
+    {
+        $env = (string) (ENVIRONMENT ?? '');
+        $production = array_filter(array_map('trim', explode(',', $this->voltConfig()->schemaSyncProductionEnvs)));
+
+        return $production === [] || $env !== '' && in_array($env, $production, true);
+    }
+
     private function withLockTimeout(callable $fn): void
     {
+        $lockTimeoutMs = $this->voltConfig()->schemaSyncLockTimeoutMs;
+        $statementTimeoutMs = $this->voltConfig()->schemaSyncStatementTimeoutMs;
+
         $this->db->transStart();
 
         try {
-            $this->db->query("SET LOCAL lock_timeout = '2000'");
+            if ($lockTimeoutMs > 0) {
+                $this->db->query("SET LOCAL lock_timeout = '" . (int) $lockTimeoutMs . "'");
+            }
+            if ($statementTimeoutMs > 0) {
+                $this->db->query("SET LOCAL statement_timeout = '" . (int) $statementTimeoutMs . "'");
+            }
             $fn();
             $this->db->transComplete();
         } catch (Throwable $e) {
@@ -843,7 +1378,7 @@ class SchemaSync
      */
     private function makeOp(string $operation, string $entity, string $table, ?string $column = null, string $severity = 'safe', string $sql = '', array $extra = []): array
     {
-        return array_merge([
+        $op = array_merge([
             'operation' => $operation,
             'entity'    => $entity,
             'table'     => $table,
@@ -851,5 +1386,23 @@ class SchemaSync
             'severity'  => $severity,
             'sql'       => $sql,
         ], $extra);
+
+        $op['downtime'] ??= $this->downtimeFor($op);
+
+        return $op;
+    }
+
+    /** Phân loại mức downtime của một operation (none|brief|full). */
+    private function downtimeFor(array $op): string
+    {
+        $operation = (string) ($op['operation'] ?? '');
+        $severity = (string) ($op['severity'] ?? 'safe');
+
+        return match ($operation) {
+            'create_table', 'add_column', 'backfill_data', 'create_index' => 'none',
+            'rename_table', 'rename_column', 'set_not_null', 'add_constraint' => 'brief',
+            'alter_column' => $severity === 'breaking' ? 'full' : 'brief',
+            default        => 'full',
+        };
     }
 }

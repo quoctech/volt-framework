@@ -8,6 +8,7 @@ use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\BaseConnection;
 use Volt\Core\Database\VoltDatabase;
+use Volt\Core\Engine\MigrationCoordinator;
 use Volt\Core\Engine\SchemaSync;
 
 class VoltSync extends BaseCommand
@@ -46,13 +47,23 @@ class VoltSync extends BaseCommand
         '--allow-type-change' => 'Cho phép đổi kiểu dữ liệu cột khi metadata khác schema vật lý (phá vỡ)',
         '--allow-rename'      => 'Cho phép đổi tên cột theo bản đồ --renames',
         '--renames'           => 'Bản đồ đổi tên cột dạng "old:new,old2:new2" (yêu cầu --allow-rename)',
+        '--defaults'          => 'Bản đồ backfill giá trị mặc định cho cột mới bắt buộc dạng "field:value,field2:value2"',
         '--data-check'        => 'Chỉ kiểm tra dữ liệu thực tế (đếm dòng, duplicate name, child mồ côi), không sửa schema',
+        '--preview'           => 'Tính plan (dry-run) và in ra, không tạo migration request',
+        '--request'           => 'Tạo migration request từ metadata hiện tại (breaking ops chờ duyệt)',
+        '--approve <id>'      => 'Duyệt migration request (cho phép apply breaking ops)',
+        '--apply <id>'        => 'Áp dụng migration request đã duyệt',
+        '--rollback <id>'     => 'Rollback migration request đã applied (bằng inverse ops)',
+        '--list-migrations'   => 'Liệt kê migration requests (lọc theo [entity] hoặc --status)',
+        '--status <s>'        => 'Lọc theo trạng thái migration (dùng với --list-migrations)',
     ];
 
     /**
      * Bộ não xử lý đồng bộ cấu trúc
      */
     private ?SchemaSync $engine = null;
+
+    private ?MigrationCoordinator $coordinator = null;
 
     /**
      * Kết nối database lõi
@@ -68,6 +79,38 @@ class VoltSync extends BaseCommand
      */
     public function run(array $params): void
     {
+        // Kịch bản migration request management (approval flow)
+        $migrationId = (int) (CLI::getOption('apply') ?? CLI::getOption('approve') ?? CLI::getOption('rollback') ?? 0);
+        if ($migrationId > 0) {
+            $this->runMigrationAction((string) CLI::getOption('approve'), (string) CLI::getOption('apply'), (string) CLI::getOption('rollback'), $migrationId);
+            return;
+        }
+
+        if (CLI::getOption('list-migrations')) {
+            $this->listMigrations($params[0] ?? '');
+            return;
+        }
+
+        // Kịch bản preview / request
+        $runEntityName = $params[0] ?? CLI::getSegment(2);
+        if (CLI::getOption('preview')) {
+            if (empty($runEntityName)) {
+                CLI::error('❌ Cần chỉ định EntityName để preview.');
+                return;
+            }
+            $this->runPreview((string) $runEntityName);
+            return;
+        }
+
+        if (CLI::getOption('request')) {
+            if (empty($runEntityName)) {
+                CLI::error('❌ Cần chỉ định EntityName để tạo migration request.');
+                return;
+            }
+            $this->runRequest((string) $runEntityName);
+            return;
+        }
+
         $opts = $this->buildOptions();
 
         // Kịch bản 0: Kiểm tra dữ liệu thực tế (--data-check)
@@ -142,6 +185,7 @@ class VoltSync extends BaseCommand
             'allow_type_change'  => (bool) CLI::getOption('allow-type-change'),
             'allow_rename'       => (bool) CLI::getOption('allow-rename'),
             'renames'            => $this->parseRenames((string) CLI::getOption('renames')),
+            'defaults'           => $this->parseDefaults((string) CLI::getOption('defaults')),
         ];
 
         if (CLI::getOption('dry-run')) {
@@ -169,6 +213,30 @@ class VoltSync extends BaseCommand
             $new = mb_trim((string) ($parts[1] ?? ''));
             if ($old !== '' && $new !== '') {
                 $result[$old] = $new;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Chuyển chuỗi "field:value,field2:value2" thành mảng assoc backfill defaults.
+     *
+     * @return array<string, string>
+     */
+    private function parseDefaults(string $raw): array
+    {
+        if (mb_trim($raw) === '') {
+            return [];
+        }
+
+        $result = [];
+        foreach (explode(',', $raw) as $pair) {
+            $parts = explode(':', mb_trim($pair), 2);
+            $field = mb_trim((string) ($parts[0] ?? ''));
+            $value = mb_trim((string) ($parts[1] ?? ''));
+            if ($field !== '' && $value !== '') {
+                $result[$field] = $value;
             }
         }
 
@@ -233,6 +301,142 @@ class VoltSync extends BaseCommand
     private function engine(): SchemaSync
     {
         return $this->engine ??= new SchemaSync();
+    }
+
+    private function coordinator(): MigrationCoordinator
+    {
+        return $this->coordinator ??= new MigrationCoordinator();
+    }
+
+    private function runPreview(string $entityName): void
+    {
+        $result = $this->coordinator()->preview($entityName, $this->buildOptions());
+
+        if (($result['status'] ?? '') !== 'success') {
+            CLI::error('❌ ' . ($result['message'] ?? 'Preview thất bại.'));
+            return;
+        }
+
+        $this->printPlan($result['plan'] ?? [], $result['logs'] ?? []);
+        CLI::write('ℹ️  Preview chỉ là tính toán (dry-run) — không tạo migration request.', 'yellow');
+    }
+
+    private function runRequest(string $entityName): void
+    {
+        $result = $this->coordinator()->request($entityName, 'cli', [
+            'allow_type_change' => true,
+            'prune'             => true,
+            'allow_drop'        => true,
+        ]);
+
+        if (($result['status'] ?? '') !== 'success') {
+            CLI::error('❌ ' . ($result['message'] ?? 'Tạo migration request thất bại.'));
+            return;
+        }
+
+        $this->printPlan($result['plan'] ?? [], $result['logs'] ?? []);
+
+        $safe = $result['safe_migration'] ?? null;
+        $pending = $result['migration'] ?? null;
+
+        if ($safe !== null && ($safe['status'] ?? '') === 'applied') {
+            CLI::write("✅ Safe ops đã áp dụng (migration #{$safe['id']}).", 'green');
+        }
+
+        if ($pending !== null && ($pending['status'] ?? '') === 'pending_approval') {
+            CLI::write("⏳ Breaking ops tạo migration request #{$pending['id']} chờ duyệt.", 'yellow');
+            CLI::write("   Duyệt: php spark volt:sync --approve {$pending['id']}", 'yellow');
+            CLI::write("   Áp dụng sau khi duyệt: php spark volt:sync --apply {$pending['id']}", 'yellow');
+        }
+    }
+
+    private function runMigrationAction(string $approve, string $apply, string $rollback, int $id): void
+    {
+        $coordinator = $this->coordinator();
+
+        if ($approve !== '') {
+            $result = $coordinator->approve($id, 'cli');
+            $this->printMigrationResult($result, 'duyệt');
+            return;
+        }
+
+        if ($apply !== '') {
+            $result = $coordinator->apply($id, 'cli');
+            $this->printMigrationResult($result, 'áp dụng');
+            return;
+        }
+
+        if ($rollback !== '') {
+            $result = $coordinator->rollback($id, 'cli');
+            $this->printMigrationResult($result, 'rollback');
+        }
+    }
+
+    /** @param array<string, mixed> $result */
+    private function printMigrationResult(array $result, string $verb): void
+    {
+        if (($result['status'] ?? '') === 'success') {
+            $request = $result['request'] ?? [];
+            CLI::write("✅ Đã {$verb} migration #{$request['id']}: {$request['status']}", 'green');
+            if (($result['message'] ?? '') !== '') {
+                CLI::write('   ' . $result['message'], 'green');
+            }
+            return;
+        }
+
+        CLI::error('❌ ' . ($result['message'] ?? "Không thể {$verb} migration."));
+    }
+
+    private function listMigrations(string $entityName): void
+    {
+        $filters = [];
+        if ($entityName !== '') {
+            $filters['entity'] = $entityName;
+        }
+        $status = (string) CLI::getOption('status');
+        if ($status !== '') {
+            $filters['status'] = $status;
+        }
+
+        $rows = $this->coordinator()->list($filters);
+
+        if ($rows === []) {
+            CLI::write('Không có migration request nào.', 'yellow');
+            return;
+        }
+
+        CLI::table(array_map(static fn (array $r): array => [
+            'id'     => (string) $r['id'],
+            'entity' => $r['entity'],
+            'status' => $r['status'],
+            'ops'    => (string) count($r['ops'] ?? []),
+            'by'     => (string) ($r['requested_by'] ?? ''),
+        ], $rows), ['id', 'entity', 'status', 'ops', 'requested_by']);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plan
+     * @param list<string> $logs
+     */
+    private function printPlan(array $plan, array $logs): void
+    {
+        foreach ($logs as $log) {
+            CLI::write('   ' . $log, 'white');
+        }
+
+        if ($plan === []) {
+            CLI::write('ℹ️  Không có thay đổi schema.', 'yellow');
+            return;
+        }
+
+        $rows = array_map(static fn (array $op): array => [
+            'table'     => (string) ($op['table'] ?? ''),
+            'operation' => (string) ($op['operation'] ?? ''),
+            'column'    => (string) ($op['column'] ?? ''),
+            'severity'  => (string) ($op['severity'] ?? 'safe'),
+            'downtime'  => (string) ($op['downtime'] ?? ''),
+        ], $plan);
+        CLI::table($rows, ['table', 'operation', 'column', 'severity', 'downtime']);
     }
 
     private function db(): BaseConnection

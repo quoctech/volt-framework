@@ -104,6 +104,10 @@ $routes->group('api/entity-builder', ['namespace' => 'Volt\Core\Metadata\Control
     $routes->post('module/save', 'EntityBuilderController::saveModule');
     $routes->post('save', 'EntityBuilderController::save');
     $routes->post('delete/(:segment)', 'EntityBuilderController::delete/$1');
+    $routes->get('migrations', 'EntityBuilderController::migrations');
+    $routes->post('migrations/approve/(:num)', 'EntityBuilderController::approveMigration/$1');
+    $routes->post('migrations/apply/(:num)', 'EntityBuilderController::applyMigration/$1');
+    $routes->post('migrations/rollback/(:num)', 'EntityBuilderController::rollbackMigration/$1');
 });
 
 $routes->group('api/pages', ['namespace' => 'Volt\Core\Metadata\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {

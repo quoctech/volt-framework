@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Volt\Core\Metadata;
 
 use CodeIgniter\Database\BaseConnection;
-use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Database\RawSql;
 use InvalidArgumentException;
 use Throwable;
 use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
-use Volt\Core\Engine\SchemaSync;
+use Volt\Core\Engine\MigrationCoordinator;
 
 final class EntityBuilderService
 {
@@ -437,17 +436,19 @@ final class EntityBuilderService
                 $this->saveWorkflow($entity['name'], $workflowPayload);
             }
 
-            $sync = new SchemaSync();
-            $result = $sync->syncEntity($entity['name']);
-            if (($result['status'] ?? 'error') !== 'success') {
-                throw new DatabaseException((string) ($result['message'] ?? 'Schema synchronization failed.'));
-            }
-
             $compiled = $this->compileMetadata($entity, $fields, $customPatch);
             // Mỗi lần save entity đều đồng bộ lại artifact để code app luôn khớp metadata mới nhất.
             $artifacts = $this->artifactScaffolder->scaffoldEntity($entity['module'], $entity['name'], $compiled);
 
             $this->db->transComplete();
+
+            // Sau khi metadata đã commit: tính plan + apply an toàn / chờ duyệt breaking.
+            // KHÔNG tự ý chạy DDL trong transaction metadata nữa (rủi ro khóa bảng production).
+            $migration = (new MigrationCoordinator())->request($entity['name'], 'system', [
+                'allow_type_change' => true,
+                'prune'             => true,
+                'allow_drop'        => true,
+            ]);
 
             (new AwesomeBarModel())->registerEntity(
                 (string) ($entity['name'] ?? ''),
@@ -460,11 +461,12 @@ final class EntityBuilderService
             service('voltMetadataCompiler')->invalidateEntity($entity['name']);
 
             return [
-                'entity'   => $entity,
-                'fields'   => $fields,
-                'compiled' => $compiled,
+                'entity'    => $entity,
+                'fields'    => $fields,
+                'compiled'  => $compiled,
                 'artifacts' => $artifacts,
-                'workflow' => $this->loadWorkflow($entity['name']),
+                'workflow'  => $this->loadWorkflow($entity['name']),
+                'migration' => $migration,
             ];
         } catch (Throwable $throwable) {
             try {

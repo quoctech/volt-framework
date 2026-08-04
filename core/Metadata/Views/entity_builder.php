@@ -57,6 +57,9 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
             'saveUrl' => site_url('api/entity-builder/save'),
             'deleteUrl' => site_url('api/entity-builder/delete'),
             'deskUrl' => site_url('desk'),
+            'approveMigrationUrl' => site_url('api/entity-builder/migrations/approve'),
+            'applyMigrationUrl' => site_url('api/entity-builder/migrations/apply'),
+            'rollbackMigrationUrl' => site_url('api/entity-builder/migrations/rollback'),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>)"
         x-init="init()"
         @keydown.window.ctrl.s.prevent="save()"
@@ -610,6 +613,53 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
             <span x-text="flash.message"></span>
         </div>
 
+        <div
+            x-show="migrationModalOpen"
+            x-cloak
+            class="claro-dialog"
+            @keydown.escape.window="closeMigrationModal()"
+        >
+            <div class="claro-dialog__overlay" @click="closeMigrationModal()"></div>
+            <div class="claro-dialog__panel max-w-2xl" @click.stop>
+                <div class="claro-dialog__title">
+                    Schema changes need approval
+                    <button type="button" class="claro-dialog__close" @click="closeMigrationModal()">&times;</button>
+                </div>
+                <div class="claro-dialog__body">
+                    <p style="margin:0 0 var(--claro-space-s);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)">
+                        Breaking schema changes on <strong x-text="pendingMigration?.entity"></strong> (migration #<span x-text="pendingMigration?.id"></span>) are held pending approval before being applied to the database.
+                    </p>
+                    <table class="claro-table" style="width:100%;font-size:var(--claro-font-size-s)">
+                        <thead>
+                            <tr>
+                                <th>Table</th>
+                                <th>Operation</th>
+                                <th>Column</th>
+                                <th>Severity</th>
+                                <th>Downtime</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="row in migrationRows(pendingMigration)" :key="row.operation + row.column">
+                                <tr>
+                                    <td x-text="row.table"></td>
+                                    <td x-text="row.operation"></td>
+                                    <td x-text="row.column"></td>
+                                    <td x-text="row.severity"></td>
+                                    <td x-text="row.downtime"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <p style="margin:var(--claro-space-s) 0 0;font-size:var(--claro-font-size-xs);color:var(--claro-color-text-light)" x-text="pendingMigration?.summary?.requires_approval ? 'Approval required before these changes take effect.' : ''"></p>
+                </div>
+                <div class="claro-dialog__actions">
+                    <button @click="closeMigrationModal()" type="button" class="claro-button claro-button--small">Later</button>
+                    <button @click="approvePendingMigration()" type="button" class="claro-button claro-button--small claro-button--primary">Approve &amp; Apply</button>
+                </div>
+            </div>
+        </div>
+
         <?= view('Volt\\Core\\Metadata\\Views\\partials\\modal', [
             'modalState' => 'deleteModalOpen',
             'title' => 'Delete Entity',
@@ -630,6 +680,11 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                 saveUrl: boot.saveUrl,
                 deleteUrl: boot.deleteUrl,
                 deskUrl: boot.deskUrl,
+                approveMigrationUrl: boot.approveMigrationUrl,
+                applyMigrationUrl: boot.applyMigrationUrl,
+                rollbackMigrationUrl: boot.rollbackMigrationUrl,
+                pendingMigration: null,
+                migrationModalOpen: false,
                 entity: {
                     name: '',
                     module: '',
@@ -1523,9 +1578,101 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
 
                         this.entityListUrl = result.data?.artifacts?.list_url || this.buildEntityListUrl();
                         history.replaceState({}, '', `?entity=${encodeURIComponent(entityName)}`);
-                        this.toast('info', `Saved ${entityName}.`);
+
+                        const migration = result.data?.migration || null;
+                        const safeMigration = result.data?.safe_migration || null;
+
+                        if (safeMigration && safeMigration.request?.status === 'applied') {
+                            this.toast('info', `Saved ${entityName}. Schema safe changes applied (migration #${safeMigration.request?.id}).`);
+                        } else {
+                            this.toast('info', `Saved ${entityName}.`);
+                        }
+
+                        if (migration && migration.status === 'pending_approval') {
+                            this.pendingMigration = migration;
+                            this.migrationModalOpen = true;
+                        } else {
+                            this.pendingMigration = null;
+                        }
                     } catch (error) {
                         this.toast('error', error.message || 'Unable to save entity.');
+                    }
+                },
+                closeMigrationModal() {
+                    this.migrationModalOpen = false;
+                },
+                migrationOperationLabel(operation) {
+                    const labels = {
+                        alter_column: 'Change column type',
+                        drop_column: 'Drop column',
+                        drop_index: 'Drop index',
+                        drop_constraint: 'Drop constraint',
+                        add_constraint: 'Add constraint',
+                        rename_column: 'Rename column',
+                        create_index: 'Create index',
+                        backfill_data: 'Backfill data',
+                        set_not_null: 'Set NOT NULL',
+                        add_column: 'Add column',
+                        create_table: 'Create table',
+                    };
+                    return labels[operation] || operation;
+                },
+                migrationRows(migration) {
+                    return (migration?.ops || []).map((op) => ({
+                        table: op.table || '',
+                        operation: this.migrationOperationLabel(op.operation || ''),
+                        column: op.column || '',
+                        severity: op.severity || 'safe',
+                        downtime: op.downtime || 'none',
+                        sql: op.sql || '',
+                    }));
+                },
+                async approvePendingMigration() {
+                    const id = this.pendingMigration?.id;
+                    if (!id) return;
+                    try {
+                        const response = await fetch(`${this.requestUrl(this.approveMigrationUrl)}/${id}`, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({}),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || result.status !== 'ok') {
+                            throw new Error(result.message || 'Approval failed.');
+                        }
+                        await this.applyPendingMigration(id);
+                    } catch (error) {
+                        this.toast('error', error.message || 'Unable to approve migration.');
+                    }
+                },
+                async applyPendingMigration(approvedId) {
+                    const id = approvedId || this.pendingMigration?.id;
+                    if (!id) return;
+                    try {
+                        const response = await fetch(`${this.requestUrl(this.applyMigrationUrl)}/${id}`, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({}),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || result.status !== 'ok') {
+                            throw new Error(result.message || 'Apply failed.');
+                        }
+                        this.pendingMigration = null;
+                        this.migrationModalOpen = false;
+                        this.toast('info', `Migration #${id} applied.`);
+                    } catch (error) {
+                        this.toast('error', error.message || 'Unable to apply migration.');
                     }
                 },
                 buildSavePayload() {
