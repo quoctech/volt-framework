@@ -13,11 +13,15 @@ function leaveFormApp(boot) {
         approveUrl: boot.approveUrl || '',
         cancelUrl: boot.cancelUrl || '',
         amendUrl: boot.amendUrl || '',
+        activityUrlBase: boot.activityUrlBase || '',
         workflowState: '',
         amendedFrom: '',
         uploadUrl: '',
         form: {},
         linkLookups: {},
+        activityItems: [],
+        activityLoading: false,
+        activityLang: boot.activityLang || {},
         requestUrl(url) {
             const resolved = new URL(String(url || ''), window.location.origin);
             if (resolved.origin === window.location.origin) {
@@ -49,6 +53,7 @@ function leaveFormApp(boot) {
 
             if (this.recordName) {
                 this.load();
+                this.loadActivity();
             }
         },
         addChildRow(fieldname) {
@@ -336,6 +341,118 @@ function leaveFormApp(boot) {
             if (result.data && Object.prototype.hasOwnProperty.call(result.data, 'amended_from')) {
                 this.amendedFrom = String(result.data.amended_from || '');
             }
+        },
+        async loadActivity() {
+            if (!this.activityUrlBase || !this.recordName) {
+                return;
+            }
+
+            this.activityLoading = true;
+
+            try {
+                const response = await fetch(this.requestUrl(this.activityUrlBase + '/' + encodeURIComponent(this.recordName)), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Unable to load activity.');
+                }
+
+                this.activityItems = Array.isArray(result.items) ? result.items : [];
+            } catch (error) {
+                console.error(error);
+                this.activityItems = [];
+            } finally {
+                this.activityLoading = false;
+            }
+        },
+        activityActionLabel(item) {
+            const action = String(item?.action || '');
+            if (action.startsWith('workflow:')) {
+                return action.replace('workflow:', '');
+            }
+
+            if (action === 'create') {
+                return this.activityLang.created || 'created';
+            }
+
+            if (action === 'update' || action === 'write') {
+                return this.activityLang.updated || 'updated';
+            }
+
+            if (action === 'delete') {
+                return this.activityLang.deleted || 'deleted';
+            }
+
+            return action;
+        },
+        activityActor(item) {
+            return String(item?.changed_by || 'system');
+        },
+        activitySummary(item) {
+            const delta = item?.delta || {};
+            const after = delta.after || {};
+            const comment = after.comment;
+
+            if (comment && String(comment).trim() !== '') {
+                return String(comment);
+            }
+
+            if (delta.before && after && delta.before.workflow_state && after.workflow_state
+                && delta.before.workflow_state !== after.workflow_state) {
+                return String(delta.before.workflow_state) + ' → ' + String(after.workflow_state);
+            }
+
+            const changes = this.activityChanges(item);
+            if (changes.length > 0) {
+                return changes.length + ' ' + (this.activityLang.fields_changed || 'field(s) changed');
+            }
+
+            const status = item?.status;
+            if (status) {
+                return String(status);
+            }
+
+            return this.activityActionLabel(item);
+        },
+        activityChanges(item) {
+            const changes = item?.delta?.changes;
+            if (!changes || typeof changes !== 'object') {
+                return [];
+            }
+
+            return Object.keys(changes).map((field) => {
+                const entry = changes[field] || {};
+                const before = entry && Object.prototype.hasOwnProperty.call(entry, 'before') ? entry.before : '';
+                const after = entry && Object.prototype.hasOwnProperty.call(entry, 'after') ? entry.after : '';
+                const fmt = (value) => (value === null || value === undefined || value === '' ? '(empty)' : String(value));
+                return { field: field, before: fmt(before), after: fmt(after) };
+            });
+        },
+        activityRelativeTime(changedAt) {
+            if (!changedAt) {
+                return '';
+            }
+
+            const then = new Date(String(changedAt).replace(' ', 'T'));
+            const diffMs = Date.now() - then.getTime();
+            if (Number.isNaN(diffMs)) {
+                return String(changedAt);
+            }
+
+            const seconds = Math.floor(diffMs / 1000);
+            if (seconds < 60) return this.activityLang.just_now || 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return minutes + ' ' + (this.activityLang.minutes_ago || 'm ago');
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return hours + ' ' + (this.activityLang.hours_ago || 'h ago');
+            const days = Math.floor(hours / 24);
+            if (days < 30) return days + ' ' + (this.activityLang.days_ago || 'd ago');
+            return String(changedAt);
         },
         get canSubmit() {
             return this.isSubmittable && this.workflowState === 'Draft' && this.recordName !== '';

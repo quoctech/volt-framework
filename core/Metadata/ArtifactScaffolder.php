@@ -507,6 +507,8 @@ PHP;
 /** @var string \$approveUrl */
 /** @var string \$cancelUrl */
 /** @var string \$amendUrl */
+/** @var string \$activityUrlBase */
+/** @var array<string, string> \$activityLang */
 \$__lang = \Volt\Core\Config\Lang\LangService::load();
 ?><!doctype html>
 <html lang="<?= esc(\$__lang['code'] ?? 'en') ?>">
@@ -534,7 +536,9 @@ PHP;
             submitUrl: <?= esc(json_encode(\$submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             approveUrl: <?= esc(json_encode(\$approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode(\$cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            amendUrl: <?= esc(json_encode(\$amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            amendUrl: <?= esc(json_encode(\$amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            activityUrlBase: <?= esc(json_encode(\$activityUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            activityLang: <?= esc(json_encode(\$activityLang, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="claro-page claro-page--wide">
         <div class="claro-table-toolbar">
             <div class="claro-table-toolbar__left">
@@ -710,6 +714,45 @@ PHP;
                 </section>
             </template>
         </div>
+
+        <template x-if="recordName">
+            <section class="claro-card" style="margin-top:var(--claro-space-l)">
+                <div class="claro-card__content" style="padding-bottom:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                    <h2 style="margin:0" x-text="activityLang.title || 'Activity'"></h2>
+                    <p x-show="activityLang.description" style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.description"></p>
+                </div>
+                <div class="claro-card__content">
+                    <div x-show="activityLoading" style="padding:var(--claro-space-m);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.loading || 'Loading activity...'">
+                    </div>
+                    <div x-show="!activityLoading && activityItems.length === 0" style="padding:var(--claro-space-m);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.empty || 'No activity yet.'">
+                    </div>
+                    <div x-show="!activityLoading" style="display:grid;gap:var(--claro-space-s)">
+                        <template x-for="item in activityItems" :key="item.id">
+                            <div style="display:flex;gap:var(--claro-space-m);padding:var(--claro-space-s) 0;border-bottom:1px solid var(--claro-gray-100)">
+                                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:0 0 auto">
+                                    <span class="claro-badge" style="font-size:var(--claro-font-size-xxs);letter-spacing:normal" x-text="activityActionLabel(item)"></span>
+                                    <span style="font-size:var(--claro-font-size-xxs);color:var(--claro-color-text-light)" x-text="activityRelativeTime(item.changed_at)"></span>
+                                </div>
+                                <div style="font-size:var(--claro-font-size-s);min-width:0">
+                                    <div style="font-weight:600;color:var(--claro-color-text)" x-text="activityActor(item)"></div>
+                                    <div style="color:var(--claro-color-text-light)" x-text="activitySummary(item)"></div>
+                                    <template x-if="activityChanges(item).length > 0">
+                                        <div style="margin-top:var(--claro-space-xs);font-size:var(--claro-font-size-xs);color:var(--claro-gray-600)">
+                                            <template x-for="change in activityChanges(item)" :key="change.field">
+                                                <div x-text="change.field + ': ' + change.before + ' → ' + change.after"></div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="item.request_id">
+                                        <div style="margin-top:2px;font-size:var(--claro-font-size-xxs);color:var(--claro-gray-500)" x-text="'ID: ' + item.request_id"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+        </template>
     </div>
 
     <script><?php readfile({$scriptPath}); ?></script>
@@ -937,11 +980,15 @@ function {$entitySnake}FormApp(boot) {
         approveUrl: boot.approveUrl || '',
         cancelUrl: boot.cancelUrl || '',
         amendUrl: boot.amendUrl || '',
+        activityUrlBase: boot.activityUrlBase || '',
         workflowState: '',
         amendedFrom: '',
         uploadUrl: '',
         form: {},
         linkLookups: {},
+        activityItems: [],
+        activityLoading: false,
+        activityLang: boot.activityLang || {},
         requestUrl(url) {
             const resolved = new URL(String(url || ''), window.location.origin);
             if (resolved.origin === window.location.origin) {
@@ -973,6 +1020,7 @@ function {$entitySnake}FormApp(boot) {
 
             if (this.recordName) {
                 this.load();
+                this.loadActivity();
             }
         },
         addChildRow(fieldname) {
@@ -1261,6 +1309,118 @@ function {$entitySnake}FormApp(boot) {
                 this.amendedFrom = String(result.data.amended_from || '');
             }
         },
+        async loadActivity() {
+            if (!this.activityUrlBase || !this.recordName) {
+                return;
+            }
+
+            this.activityLoading = true;
+
+            try {
+                const response = await fetch(this.requestUrl(this.activityUrlBase + '/' + encodeURIComponent(this.recordName)), {
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'ok') {
+                    throw new Error(result.message || 'Unable to load activity.');
+                }
+
+                this.activityItems = Array.isArray(result.items) ? result.items : [];
+            } catch (error) {
+                console.error(error);
+                this.activityItems = [];
+            } finally {
+                this.activityLoading = false;
+            }
+        },
+        activityActionLabel(item) {
+            const action = String(item?.action || '');
+            if (action.startsWith('workflow:')) {
+                return action.replace('workflow:', '');
+            }
+
+            if (action === 'create') {
+                return this.activityLang.created || 'created';
+            }
+
+            if (action === 'update' || action === 'write') {
+                return this.activityLang.updated || 'updated';
+            }
+
+            if (action === 'delete') {
+                return this.activityLang.deleted || 'deleted';
+            }
+
+            return action;
+        },
+        activityActor(item) {
+            return String(item?.changed_by || 'system');
+        },
+        activitySummary(item) {
+            const delta = item?.delta || {};
+            const after = delta.after || {};
+            const comment = after.comment;
+
+            if (comment && String(comment).trim() !== '') {
+                return String(comment);
+            }
+
+            if (delta.before && after && delta.before.workflow_state && after.workflow_state
+                && delta.before.workflow_state !== after.workflow_state) {
+                return String(delta.before.workflow_state) + ' → ' + String(after.workflow_state);
+            }
+
+            const changes = this.activityChanges(item);
+            if (changes.length > 0) {
+                return changes.length + ' ' + (this.activityLang.fields_changed || 'field(s) changed');
+            }
+
+            const status = item?.status;
+            if (status) {
+                return String(status);
+            }
+
+            return this.activityActionLabel(item);
+        },
+        activityChanges(item) {
+            const changes = item?.delta?.changes;
+            if (!changes || typeof changes !== 'object') {
+                return [];
+            }
+
+            return Object.keys(changes).map((field) => {
+                const entry = changes[field] || {};
+                const before = entry && Object.prototype.hasOwnProperty.call(entry, 'before') ? entry.before : '';
+                const after = entry && Object.prototype.hasOwnProperty.call(entry, 'after') ? entry.after : '';
+                const fmt = (value) => (value === null || value === undefined || value === '' ? '(empty)' : String(value));
+                return { field: field, before: fmt(before), after: fmt(after) };
+            });
+        },
+        activityRelativeTime(changedAt) {
+            if (!changedAt) {
+                return '';
+            }
+
+            const then = new Date(String(changedAt).replace(' ', 'T'));
+            const diffMs = Date.now() - then.getTime();
+            if (Number.isNaN(diffMs)) {
+                return String(changedAt);
+            }
+
+            const seconds = Math.floor(diffMs / 1000);
+            if (seconds < 60) return this.activityLang.just_now || 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return minutes + ' ' + (this.activityLang.minutes_ago || 'm ago');
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return hours + ' ' + (this.activityLang.hours_ago || 'h ago');
+            const days = Math.floor(hours / 24);
+            if (days < 30) return days + ' ' + (this.activityLang.days_ago || 'd ago');
+            return String(changedAt);
+        },
         get canSubmit() {
             return this.isSubmittable && this.workflowState === 'Draft' && this.recordName !== '';
         },
@@ -1398,6 +1558,7 @@ JS;
             $routeLines[] = "\$routes->get('api/{$entity['snake']}', 'VoltResourceController::data/{$entity['snake']}');";
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/link-options', 'VoltResourceController::linkOptions/{$entity['snake']}');";
             $routeLines[] = "\$routes->get('api/{$entity['snake']}/load/(:segment)', 'VoltResourceController::show/{$entity['snake']}/\$1');";
+            $routeLines[] = "\$routes->get('api/{$entity['snake']}/activity/(:segment)', 'VoltResourceController::activity/{$entity['snake']}/\$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/save', 'VoltResourceController::store/{$entity['snake']}');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/delete/(:segment)', 'VoltResourceController::destroy/{$entity['snake']}/\$1');";
             $routeLines[] = "\$routes->post('api/{$entity['snake']}/restore/(:segment)', 'VoltResourceController::restore/{$entity['snake']}/\$1');";

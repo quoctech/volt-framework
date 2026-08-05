@@ -13,6 +13,8 @@
 /** @var string $approveUrl */
 /** @var string $cancelUrl */
 /** @var string $amendUrl */
+/** @var string $activityUrlBase */
+/** @var array<string, string> $activityLang */
 $__lang = \Volt\Core\Config\Lang\LangService::load();
 ?><!doctype html>
 <html lang="<?= esc($__lang['code'] ?? 'en') ?>">
@@ -40,7 +42,9 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
             submitUrl: <?= esc(json_encode($submitUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             approveUrl: <?= esc(json_encode($approveUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
             cancelUrl: <?= esc(json_encode($cancelUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
-            amendUrl: <?= esc(json_encode($amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
+            amendUrl: <?= esc(json_encode($amendUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            activityUrlBase: <?= esc(json_encode($activityUrlBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>,
+            activityLang: <?= esc(json_encode($activityLang, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>
         })" x-init="init()" class="claro-page claro-page--wide">
         <div class="claro-table-toolbar">
             <div class="claro-table-toolbar__left">
@@ -216,6 +220,45 @@ $__lang = \Volt\Core\Config\Lang\LangService::load();
                 </section>
             </template>
         </div>
+
+        <template x-if="recordName">
+            <section class="claro-card" style="margin-top:var(--claro-space-l)">
+                <div class="claro-card__content" style="padding-bottom:var(--claro-space-m);border-bottom:1px solid var(--claro-gray-100)">
+                    <h2 style="margin:0" x-text="activityLang.title || 'Activity'"></h2>
+                    <p x-show="activityLang.description" style="margin:var(--claro-space-xs) 0 0;font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.description"></p>
+                </div>
+                <div class="claro-card__content">
+                    <div x-show="activityLoading" style="padding:var(--claro-space-m);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.loading || 'Loading activity...'">
+                    </div>
+                    <div x-show="!activityLoading && activityItems.length === 0" style="padding:var(--claro-space-m);font-size:var(--claro-font-size-s);color:var(--claro-color-text-light)" x-text="activityLang.empty || 'No activity yet.'">
+                    </div>
+                    <div x-show="!activityLoading" style="display:grid;gap:var(--claro-space-s)">
+                        <template x-for="item in activityItems" :key="item.id">
+                            <div style="display:flex;gap:var(--claro-space-m);padding:var(--claro-space-s) 0;border-bottom:1px solid var(--claro-gray-100)">
+                                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:0 0 auto">
+                                    <span class="claro-badge" style="font-size:var(--claro-font-size-xxs);letter-spacing:normal" x-text="activityActionLabel(item)"></span>
+                                    <span style="font-size:var(--claro-font-size-xxs);color:var(--claro-color-text-light)" x-text="activityRelativeTime(item.changed_at)"></span>
+                                </div>
+                                <div style="font-size:var(--claro-font-size-s);min-width:0">
+                                    <div style="font-weight:600;color:var(--claro-color-text)" x-text="activityActor(item)"></div>
+                                    <div style="color:var(--claro-color-text-light)" x-text="activitySummary(item)"></div>
+                                    <template x-if="activityChanges(item).length > 0">
+                                        <div style="margin-top:var(--claro-space-xs);font-size:var(--claro-font-size-xs);color:var(--claro-gray-600)">
+                                            <template x-for="change in activityChanges(item)" :key="change.field">
+                                                <div x-text="change.field + ': ' + change.before + ' → ' + change.after"></div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="item.request_id">
+                                        <div style="margin-top:2px;font-size:var(--claro-font-size-xxs);color:var(--claro-gray-500)" x-text="'ID: ' + item.request_id"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+        </template>
     </div>
 
     <script><?php readfile(APPPATH . 'Modules/Hrms/Entities/Leave/leave_form.js'); ?></script>

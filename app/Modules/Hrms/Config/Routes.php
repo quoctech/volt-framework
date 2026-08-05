@@ -12,6 +12,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/employee', 'VoltResourceController::data/employee');
     $routes->get('api/employee/link-options', 'VoltResourceController::linkOptions/employee');
     $routes->get('api/employee/load/(:segment)', 'VoltResourceController::show/employee/$1');
+    $routes->get('api/employee/activity/(:segment)', 'VoltResourceController::activity/employee/$1');
     $routes->post('api/employee/save', 'VoltResourceController::store/employee');
     $routes->post('api/employee/delete/(:segment)', 'VoltResourceController::destroy/employee/$1');
     $routes->post('api/employee/restore/(:segment)', 'VoltResourceController::restore/employee/$1');
@@ -30,6 +31,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/employeeeducation', 'VoltResourceController::data/employeeeducation');
     $routes->get('api/employeeeducation/link-options', 'VoltResourceController::linkOptions/employeeeducation');
     $routes->get('api/employeeeducation/load/(:segment)', 'VoltResourceController::show/employeeeducation/$1');
+    $routes->get('api/employeeeducation/activity/(:segment)', 'VoltResourceController::activity/employeeeducation/$1');
     $routes->post('api/employeeeducation/save', 'VoltResourceController::store/employeeeducation');
     $routes->post('api/employeeeducation/delete/(:segment)', 'VoltResourceController::destroy/employeeeducation/$1');
     $routes->post('api/employeeeducation/restore/(:segment)', 'VoltResourceController::restore/employeeeducation/$1');
@@ -48,6 +50,7 @@ $routes->group('hrms', ['namespace' => '\Volt\Core\Metadata\Controllers', 'filte
     $routes->get('api/leave', 'VoltResourceController::data/leave');
     $routes->get('api/leave/link-options', 'VoltResourceController::linkOptions/leave');
     $routes->get('api/leave/load/(:segment)', 'VoltResourceController::show/leave/$1');
+    $routes->get('api/leave/activity/(:segment)', 'VoltResourceController::activity/leave/$1');
     $routes->post('api/leave/save', 'VoltResourceController::store/leave');
     $routes->post('api/leave/delete/(:segment)', 'VoltResourceController::destroy/leave/$1');
     $routes->post('api/leave/restore/(:segment)', 'VoltResourceController::restore/leave/$1');
