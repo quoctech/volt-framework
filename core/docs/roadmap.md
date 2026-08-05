@@ -184,16 +184,18 @@ Mục tiêu:
 
 Hạng mục:
 
-- viết `AuditTrailWriter`
+- viết `AuditTrailWriter` ✅ (ghi đồng bộ + fallback `sys_error_log`)
 - chuẩn hóa logger và error handling
-- bổ sung `sys_error_log` + `ErrorLogService` để lưu lỗi runtime vào DB
-- ghi actor, action, entity, document id, timestamp, delta
+- bổ sung `sys_error_log` + `ErrorLogService` để lưu lỗi runtime vào DB ✅ (có `request_id`)
+- ghi actor, action, entity, document id, timestamp, delta → mở rộng thành **Operations**: category, tenant, ip/user-agent, `request_id` correlation ✅
+- append-only + hash-chain chống giả mạo + `volt:audit-verify` / `volt:clean-audit` ✅
+- ghi mọi workflow transition (kể cả không comment) ✅
 - ẩn thông tin nhạy cảm ở production
 
-Ưu tiên hiệu suất:
+Ưu hiệu suất:
 
-- cân nhắc đẩy audit nặng sang queue
-- index theo `(entity, doc_id)`
+- audit ghi đồng bộ (truy vết đầy đủ); đã index theo `(category, changed_at)`, `request_id`, `tenant`
+- nếu latency trở thành vấn đề: cân nhắc đẩy audit nặng sang queue
 
 Tiêu chí hoàn thành:
 
@@ -297,6 +299,14 @@ Tiêu chí hoàn thành:
 - ~~custom page management (Page List)~~ ✅ `core/Metadata/` — PageModel, PageService, PageController, page_list + page_form views, route gen, scaffold, AwesomeBar integration
 - ~~multi-tenant strategy~~ ✅ Database-per-Tenant (hub DB `volt_enterprise` + per-tenant DB `volt_{name}`), domain-based resolution, auto DB create/drop with migrations, CLI commands, `VoltDatabase` connection routing
 - ~~soft delete chuẩn hóa~~ ✅ cột `deleted_at` mọi bảng entity + "Xóa thẳng" (`custom_attributes.hard_delete`) trong Entity Settings; filter mọi query path (REST/workspace); API `restore` + `?purge=1`; `VoltModel::restore()`
+- ~~rate limit toàn cục~~ ✅ `RateLimitFilter` (global before, 300 req/60s/IP, HTTP 429 + Retry-After, except health endpoints)
+- ~~DB backup/restore~~ ✅ `core/System/Services/BackupService.php` + `volt:backup` (pg_dump -Fc, `--verify` restore thử, `--prune` retention 30d)
+- ~~health check~~ ✅ `HealthController` — `/health`, `/api/health`, `/api/health/detail` (DB + Redis + disk)
+- ~~cảnh báo lỗi webhook~~ ✅ `core/System/Services/AlertService.php` (`voltAlert`) — HMAC-SHA256, min level threshold, fire-and-forget
+- ~~tenant lifecycle an toàn~~ ✅ soft-delete + trash/restore/purge (`deleted_at`/`purge_at`), purge backup trước khi drop DB, `volt:purge-tenants`
+- ~~production guard cho schema/entity drop~~ ✅ `SchemaSync` opAllowed + `EntityBuilderService::assertDropAllowedInProduction()` (chặn drop khi production & chưa bật `volt.schemaSyncAllowDirectDropInProduction`)
+- ~~audit fail-closed~~ ✅ `volt.strictAudit` — insert audit lỗi → ném RuntimeException (chặn nghiệp vụ)
+- ~~platform developer role~~ ✅ role `platform_developer` + `PlatformFilter` cho custom page management (admin hoặc platform dev)
 - ~~event bus nội bộ~~ ✅ `core/Events/` — EventBus + Event class + 7 dispatch points in VoltModel
 - ~~report/export engine~~ ✅ `core/Report/` — CsvExporter, XlsxExporter, ReportQueryBuilder, ReportService, PivotEngine + admin UI + `api/reports/*`
 - ~~Role UI~~ ✅ `core/Role/` — Role management desk

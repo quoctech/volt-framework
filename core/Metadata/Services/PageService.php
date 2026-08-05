@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Volt\Core\Metadata\Services;
 
 use InvalidArgumentException;
+use Throwable;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 use Volt\Core\Metadata\Models\PageModel;
 
@@ -146,6 +148,8 @@ class PageService
             $actor?->name ?? 'system'
         );
 
+        $this->auditPage('metadata:page_save', $name, $originalName !== null, $payload);
+
         return $this->pageModel->getByName($name) ?? $payload;
     }
 
@@ -162,6 +166,11 @@ class PageService
         $this->regeneratePageRoutes();
 
         (new AwesomeBarModel())->removeEntity('page_' . $name);
+
+        $this->auditPage('metadata:page_delete', $name, false, [
+            'module' => $page['module'] ?? null,
+            'route'  => $page['route'] ?? null,
+        ]);
     }
 
     /**
@@ -240,6 +249,31 @@ use CodeIgniter\Router\RouteCollection;
 PHP;
 
         $this->writeFile(self::PAGE_ROUTES_FILE, $content);
+    }
+
+    /**
+     * @param array<string, mixed> $after
+     */
+    private function auditPage(string $action, string $name, bool $isUpdate, array $after): void
+    {
+        $after['is_update'] = $isUpdate;
+
+        try {
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_METADATA,
+                $action,
+                'page',
+                $name,
+                [],
+                $after,
+            );
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [
+                'page' => $name,
+                'action' => $action,
+                'operation' => 'pageAudit',
+            ], 'metadata', 'page_audit_failed');
+        }
     }
 
     private function normalizeName(string $name): string

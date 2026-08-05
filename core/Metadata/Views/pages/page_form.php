@@ -5,6 +5,9 @@ $modules = $modules ?? [];
 $roles = $roles ?? [];
 $isEdit = $page !== null;
 $pageRoles = $isEdit ? json_decode($page['roles'] ?? '[]', true) : [];
+$isPlatformDeveloper = $isPlatformDeveloper ?? false;
+$pagesJsEnabled = $pagesJsEnabled ?? true;
+$canEditJs = $pagesJsEnabled && $isPlatformDeveloper;
 ?>
 <div>
     <div style="margin-bottom:var(--claro-space-m)">
@@ -81,7 +84,14 @@ $pageRoles = $isEdit ? json_decode($page['roles'] ?? '[]', true) : [];
             </div>
             <div class="claro-form-item" style="margin-bottom:0">
                 <label class="claro-form-item__label" for="js_content">JavaScript</label>
+                <?php if ($canEditJs): ?>
                 <textarea id="js_content" name="js_content" rows="10" class="claro-textarea" style="font-family:monospace" placeholder="// Page JavaScript"><?= esc($page['js_content'] ?? '') ?></textarea>
+                <div class="claro-form-item__description">Chỉ platform developer mới được chỉnh sửa JavaScript.</div>
+                <?php else: ?>
+                <div class="claro-readonly" style="padding:var(--claro-space-s) var(--claro-space-m);border:1px solid var(--claro-gray-100);border-radius:var(--claro-radius, 4px);color:var(--claro-color-text-light);font-size:var(--claro-font-size-s)">
+                    JavaScript bị vô hiệu hóa hoặc bạn không có quyền platform developer.
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 

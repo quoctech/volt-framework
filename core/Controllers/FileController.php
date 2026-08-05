@@ -7,7 +7,10 @@ namespace Volt\Core\Controllers;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\Response;
 use Config\Services;
+use Volt\Core\Audit\AuditTrailWriter;
+use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Models\FileModel;
+use Volt\Core\Security\PermissionResolver;
 
 final class FileController extends Controller
 {
@@ -29,6 +32,11 @@ final class FileController extends Controller
 
     public function upload(): Response
     {
+        $user = $this->currentUser();
+        if (! $user instanceof UserEntity) {
+            return $this->fail('Authentication required.', 401);
+        }
+
         $file = $this->request->getFile('file');
         if (!$file || !$file->isValid()) {
             return $this->fail('No file uploaded or file is invalid.', 400);
@@ -41,6 +49,16 @@ final class FileController extends Controller
         $mimeType = $file->getMimeType();
         if (!in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
             return $this->fail('File type not allowed: ' . $mimeType, 415);
+        }
+
+        $attachedToEntity = $this->request->getPost('attached_to_entity');
+        $attachedToName   = $this->request->getPost('attached_to_name');
+        $attachedToField  = $this->request->getPost('attached_to_field');
+
+        if ($attachedToEntity) {
+            if (! $this->canAccessEntity($attachedToEntity, 'write', $user)) {
+                return $this->fail('You do not have permission to upload files to this record.', 403);
+            }
         }
 
         $uuid = $this->generateUUID();
@@ -61,11 +79,8 @@ final class FileController extends Controller
             return $this->fail('Failed to store uploaded file.', 500);
         }
 
-        $attachedToEntity = $this->request->getPost('attached_to_entity');
-        $attachedToName   = $this->request->getPost('attached_to_name');
-        $attachedToField  = $this->request->getPost('attached_to_field');
         $isPrivate        = (int) ($this->request->getPost('is_private') ?? 1);
-        $owner            = session()->get('user_name') ?? 'system';
+        $owner            = $user->name ?? $user->username ?? 'system';
 
         $thumbnailPath = $this->generateThumbnail($destPath, $mimeType, $datePath, $uuid);
 
@@ -85,6 +100,14 @@ final class FileController extends Controller
 
         $this->fileModel->insert($record);
 
+        $this->writeFileAudit('file:upload', $uuid, [
+            'file_name' => $originalName,
+            'file_size' => $file->getSizeByUnit('b'),
+            'file_type' => $mimeType,
+            'attached_to_entity' => $attachedToEntity,
+            'attached_to_name' => $attachedToName,
+        ]);
+
         return $this->respond([
             'status' => 'ok',
             'message' => 'File uploaded.',
@@ -94,15 +117,31 @@ final class FileController extends Controller
 
     public function download(string $name): Response
     {
+        $user = $this->currentUser();
+        if (! $user instanceof UserEntity) {
+            return $this->fail('Authentication required.', 401);
+        }
+
         $file = $this->fileModel->find($name);
         if (!$file) {
             return $this->fail('File not found.', 404);
+        }
+
+        if (! $this->canAccessFile($file, 'read', $user)) {
+            return $this->fail('You do not have permission to download this file.', 403);
         }
 
         $filePath = WRITEPATH . 'uploads/' . $file['file_path'];
         if (!is_file($filePath)) {
             return $this->fail('File not found on disk.', 404);
         }
+
+        $this->writeFileAudit('file:download', $name, [
+            'file_name' => (string) $file['file_name'],
+            'file_size' => (int) ($file['file_size'] ?? 0),
+            'attached_to_entity' => $file['attached_to_entity'] ?? null,
+            'attached_to_name' => $file['attached_to_name'] ?? null,
+        ]);
 
         return $this->response->download($filePath, null)
             ->setFileName($file['file_name'])
@@ -112,12 +151,26 @@ final class FileController extends Controller
 
     public function delete(string $name): Response
     {
+        $user = $this->currentUser();
+        if (! $user instanceof UserEntity) {
+            return $this->fail('Authentication required.', 401);
+        }
+
         $file = $this->fileModel->find($name);
         if (!$file) {
             return $this->fail('File not found.', 404);
         }
 
+        if (! $this->canAccessFile($file, 'delete', $user)) {
+            return $this->fail('You do not have permission to delete this file.', 403);
+        }
+
         $this->fileModel->deleteFileWithRecord($name);
+
+        $this->writeFileAudit('file:delete', $name, [
+            'file_name' => (string) $file['file_name'],
+            'attached_to_entity' => $file['attached_to_entity'] ?? null,
+        ]);
 
         return $this->respond([
             'status' => 'ok',
@@ -127,12 +180,86 @@ final class FileController extends Controller
 
     public function listByEntity(string $entity, string $name, ?string $field = null): Response
     {
+        $user = $this->currentUser();
+        if (! $user instanceof UserEntity) {
+            return $this->fail('Authentication required.', 401);
+        }
+
+        if (! $this->canAccessEntity($entity, 'read', $user)) {
+            return $this->fail('You do not have permission to view files for this record.', 403);
+        }
+
         $files = $this->fileModel->findByEntity($entity, $name, $field);
 
         return $this->respond([
             'status' => 'ok',
             'data' => $files,
         ]);
+    }
+
+    private function canAccessFile(array $file, string $action, UserEntity $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        $attachedEntity = (string) ($file['attached_to_entity'] ?? '');
+        if ($attachedEntity !== '') {
+            return $this->canAccessEntity($attachedEntity, $action, $user);
+        }
+
+        $isPrivate = (int) ($file['is_private'] ?? 1) === 1;
+        $owner = (string) ($file['owner'] ?? '');
+
+        if ($isPrivate) {
+            return $owner !== '' && $this->sameActor($owner, $user);
+        }
+
+        return true;
+    }
+
+    private function canAccessEntity(string $entity, string $action, UserEntity $user): bool
+    {
+        $normalizedAction = in_array($action, ['create', 'delete'], true) ? 'write' : $action;
+
+        return service('voltPermissionResolver')->can($entity, $normalizedAction, null, null, $user);
+    }
+
+    private function sameActor(string $owner, UserEntity $user): bool
+    {
+        $name = $user->name ?? $user->username ?? '';
+
+        return $owner === $name || $owner === ($user->username ?? '');
+    }
+
+    private function currentUser(): ?UserEntity
+    {
+        try {
+            return service('voltAuth')->currentUser();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function writeFileAudit(string $action, string $name, array $after = []): void
+    {
+        $actor = 'system';
+
+        try {
+            $actor = service('voltAuth')->currentUser()?->name ?? 'system';
+        } catch (\Throwable) {
+        }
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_FILE,
+            $action,
+            'sys_file',
+            $name,
+            [],
+            $after,
+            $actor,
+            ['operation' => 'file'],
+        );
     }
 
     private function generateThumbnail(string $sourcePath, string $mimeType, string $datePath, string $uuid): ?string

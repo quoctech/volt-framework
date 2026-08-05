@@ -6,6 +6,7 @@ namespace Volt\Core\Auth\Services;
 
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\I18n\Time;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Entities\AuthEntity;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Models\UserModel;
@@ -85,12 +86,19 @@ class AuthService
         $user = $userModel->findByName($username);
 
         if (! $user || ! $user->isActive()) {
+            $this->auditLogin('auth:login_failed', $username, $tenantName, ['reason' => 'invalid_credentials']);
+
             $auth->message = LangService::get('auth.invalid_credentials');
 
             return $auth;
         }
 
         if ($this->isLocked($user)) {
+            $this->auditLogin('auth:login_locked', $username, $tenantName, [
+                'reason' => 'account_locked',
+                'locked_until' => (string) $user->locked_until,
+            ]);
+
             $auth->message = LangService::get('auth.account_locked');
 
             return $auth;
@@ -98,6 +106,11 @@ class AuthService
 
         if (! password_verify($password, $user->password)) {
             $this->registerFailedAttempt($user, $userModel);
+            $this->auditLogin('auth:login_failed', $username, $tenantName, [
+                'reason' => 'bad_password',
+                'attempts' => (int) $user->failed_login_attempts,
+            ]);
+
             $auth->message = LangService::get('auth.invalid_credentials');
 
             return $auth;
@@ -105,6 +118,10 @@ class AuthService
 
         $this->registerSuccessfulLogin($user, $userModel);
         $this->startSession($user, $tenantName);
+
+        $this->auditLogin('auth:login', $username, $tenantName, [
+            'roles' => $this->normalizeRoles($user->roles),
+        ]);
 
         $auth->fill([
             'authenticated'  => true,
@@ -158,6 +175,16 @@ class AuthService
         $this->userModel->insert($user);
         $this->startSession($user);
 
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:setup',
+            'sys_user',
+            $username,
+            [],
+            ['roles' => ['admin']],
+            $username,
+        );
+
         $auth->fill([
             'authenticated'  => true,
             'setup_required' => false,
@@ -170,9 +197,24 @@ class AuthService
 
     public function logout(): void
     {
+        $actor = $this->currentUser()?->name ?? 'unknown';
+        $tenant = VoltDatabase::resolveTenant(null);
+        $db = $tenant !== null ? VoltDatabase::tenantConnection($tenant) : VoltDatabase::connection();
+
         $session = session();
         $session->remove([self::SESSION_USER_KEY, self::SESSION_ROLES_KEY, self::SESSION_LOGIN_KEY]);
         $session->destroy();
+
+        (new AuditTrailWriter($db))->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:logout',
+            'sys_user',
+            $actor,
+            [],
+            [],
+            $actor,
+            ['tenant' => $tenant],
+        );
     }
 
     /**
@@ -203,6 +245,16 @@ class AuthService
         $this->userModel->update($user->name, [
             'password' => password_hash($newPassword, PASSWORD_DEFAULT),
         ]);
+
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:change_password',
+            'sys_user',
+            (string) $user->name,
+            [],
+            ['updated_at' => date('Y-m-d H:i:s')],
+            (string) $user->name,
+        );
 
         return ['ok' => true, 'message' => LangService::get('auth.password_updated')];
     }
@@ -243,6 +295,16 @@ class AuthService
         }
 
         $this->userModel->update($user->name, $payload);
+
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:api_token_issue',
+            'sys_user',
+            (string) $user->name,
+            [],
+            ['expires_at' => $metadata['api_token_expires_at']],
+            (string) $user->name,
+        );
 
         return $token;
     }
@@ -324,10 +386,86 @@ class AuthService
             'api_secret_hash' => $hash,
         ]);
 
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:api_key_issue',
+            'sys_user',
+            (string) $user->name,
+            [],
+            ['api_key' => $apiKey],
+            (string) $user->name,
+        );
+
         return [
             'api_key'    => $apiKey,
             'api_secret' => $apiSecret,
         ];
+    }
+
+    public function revokeApiToken(UserEntity $user): void
+    {
+        $metadata = $this->normalizeMetadata($user->user_metadata);
+        $before = [
+            'api_token_expires_at' => $metadata['api_token_expires_at'] ?? null,
+        ];
+
+        $metadata['api_token_hash'] = null;
+        $metadata['api_token_expires_at'] = null;
+
+        $payload = ['user_metadata' => $metadata];
+
+        if ($this->userModel->hasColumn('api_token_hash')) {
+            $payload['api_token_hash'] = null;
+        }
+
+        if ($this->userModel->hasColumn('api_token_expires_at')) {
+            $payload['api_token_expires_at'] = null;
+        }
+
+        $this->userModel->update($user->name, $payload);
+
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:api_token_revoke',
+            'sys_user',
+            (string) $user->name,
+            $before,
+            [],
+            (string) $user->name,
+        );
+    }
+
+    public function revokeApiKey(UserEntity $user): void
+    {
+        $metadata = $this->normalizeMetadata($user->user_metadata);
+        $before = [
+            'api_key' => $metadata['api_key'] ?? $user->api_key,
+        ];
+
+        $metadata['api_key'] = null;
+        $metadata['api_secret_hash'] = null;
+
+        $payload = ['user_metadata' => $metadata];
+
+        if ($this->userModel->hasColumn('api_key')) {
+            $payload['api_key'] = null;
+        }
+
+        if ($this->userModel->hasColumn('api_secret_hash')) {
+            $payload['api_secret_hash'] = null;
+        }
+
+        $this->userModel->update($user->name, $payload);
+
+        $this->audit()->write(
+            AuditTrailWriter::CAT_AUTH,
+            'auth:api_key_revoke',
+            'sys_user',
+            (string) $user->name,
+            $before,
+            [],
+            (string) $user->name,
+        );
     }
 
     public function authenticateApiKeySecret(?string $bearerToken): ?UserEntity
@@ -460,5 +598,29 @@ class AuthService
     {
         $userModel ??= $this->userModel;
         return $userModel->decodeJsonField($metadata);
+    }
+
+    private function audit(): AuditTrailWriter
+    {
+        return new AuditTrailWriter(VoltDatabase::connection());
+    }
+
+    /**
+     * @param array<string, mixed> $after
+     */
+    private function auditLogin(string $action, string $username, ?string $tenantName, array $after = []): void
+    {
+        $db = $tenantName !== null ? VoltDatabase::tenantConnection($tenantName) : VoltDatabase::connection();
+
+        (new AuditTrailWriter($db))->write(
+            AuditTrailWriter::CAT_AUTH,
+            $action,
+            'sys_user',
+            $username,
+            [],
+            $after,
+            $username,
+            ['tenant' => $tenantName],
+        );
     }
 }

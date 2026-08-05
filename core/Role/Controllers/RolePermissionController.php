@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Volt\Core\Role\Controllers;
 
 use CodeIgniter\Controller;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Role\Models\RoleModel;
 use Volt\Core\Role\Models\RolePermissionModel;
 
@@ -51,6 +52,7 @@ class RolePermissionController extends Controller
 
         $submitted = $this->request->getPost('entities');
         $allEntities = $this->permissionModel->getAllEntityNames();
+        $before = $this->permissionModel->getPermissionsForRole($role);
 
         foreach ($allEntities as $entity) {
             $actions = (isset($submitted[$entity]) && is_array($submitted[$entity]))
@@ -61,6 +63,20 @@ class RolePermissionController extends Controller
         }
 
         service('voltPermissionResolver')->clearAllCache();
+
+        $actor = service('voltAuth')->currentUser();
+        $after = $this->permissionModel->getPermissionsForRole($role);
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_PERMISSION,
+            'permission:update',
+            'sys_permission',
+            $role,
+            $before,
+            $after,
+            $actor?->name ?? 'system',
+            ['operation' => 'save_permissions'],
+        );
 
         return redirect()->to(site_url("desk/roles/permissions/{$role}"));
     }

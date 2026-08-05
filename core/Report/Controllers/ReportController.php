@@ -8,6 +8,7 @@ use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\Controller;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Report\Services\ReportService;
 
 class ReportController extends Controller
@@ -114,6 +115,20 @@ class ReportController extends Controller
 
         try {
             $export = $this->reportService->export($name, $format, $params);
+
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_EXPORT,
+                'report:export',
+                'report',
+                $name,
+                [],
+                [
+                    'format' => strtolower($format),
+                    'row_count' => max(0, substr_count($export['data'], "\n") - 1),
+                ],
+                service('voltAuth')->currentUser()?->name ?? 'system',
+                ['operation' => 'export'],
+            );
 
             return $this->response
                 ->setContentType($export['content_type'])

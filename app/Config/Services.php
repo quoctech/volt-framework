@@ -13,6 +13,7 @@ use Volt\Core\Engine\VoltMetadataCompiler;
 use Volt\Core\Engine\WorkflowEngine;
 use Volt\Core\Events\EventBus;
 use Volt\Core\Security\PermissionResolver;
+use Volt\Core\System\Services\AlertService;
 use Volt\Core\System\Services\ErrorLogService;
 use Volt\Core\System\Services\SystemSettingService;
 use Volt\Core\System\Services\SystemStatusService;
@@ -143,6 +144,15 @@ class Services extends BaseService
         }
 
         return new ErrorLogService();
+    }
+
+    public static function voltAlert(?bool $getShared = true): AlertService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('voltAlert');
+        }
+
+        return new AlertService();
     }
 
     public static function voltEventBus(?bool $getShared = true): EventBus

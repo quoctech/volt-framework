@@ -61,7 +61,7 @@ final class WorkflowAuditTrailTest extends CIUnitTestCase
             )
         ");
 
-        $this->testDocName = 'AT-TEST-00001';
+        $this->testDocName = 'AT-TEST-' . strtoupper(uniqid());
         $db->table($tableName)->insert([
             'name'           => $this->testDocName,
             'docstatus'      => 0,
@@ -69,8 +69,8 @@ final class WorkflowAuditTrailTest extends CIUnitTestCase
             'owner'          => 'test',
         ]);
 
-        // Clear any leftover audit trails from previous tests
-        $db->table('sys_audit_trail')->where('doc_id', $this->testDocName)->delete();
+        // sys_audit_trail là append-only nên không thể delete dọn dẹp theo doc_id.
+        // Mỗi test dùng doc name duy nhất để tránh nhiễu giữa các lần chạy.
     }
 
     protected function tearDown(): void
@@ -154,13 +154,19 @@ final class WorkflowAuditTrailTest extends CIUnitTestCase
         $this->assertSame('Amending to fix data', $delta['after']['comment']);
     }
 
-    public function testSubmitWithoutCommentDoesNotCreateAuditTrail(): void
+    public function testSubmitWithoutCommentStillCreatesAuditTrail(): void
     {
         $model = $this->createModel();
         $model->submit($this->testDocName);
 
         $trail = $this->getAuditTrail('workflow:submit');
-        $this->assertNull($trail, 'No audit trail expected when comment is null');
+        $this->assertNotNull($trail, 'Audit trail must be created even without a comment');
+
+        // Mọi transition đều được audit; comment chỉ xuất hiện khi có.
+        $delta = json_decode($trail['delta'], true);
+        $this->assertIsArray($delta);
+        $this->assertArrayHasKey('workflow_state', $delta['after']);
+        $this->assertArrayNotHasKey('comment', $delta['after']);
     }
 
     public function testAuditTrailHasCorrectDeltaFormat(): void

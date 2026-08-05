@@ -57,7 +57,11 @@ class Exceptions extends BaseConfig
      *
      * @var list<string>
      */
-    public array $sensitiveDataInTrace = [];
+    public array $sensitiveDataInTrace = [
+        'password', 'pwd', 'pass', 'secret', 'token', 'authorization',
+        'cookie', 'jwt', 'db_password', 'database.default.password',
+        'X-CSRF-TOKEN', 'csrf_test_name', 'client_secret',
+    ];
 
     /**
      * --------------------------------------------------------------------------
@@ -102,6 +106,6 @@ class Exceptions extends BaseConfig
      */
     public function handler(int $statusCode, Throwable $exception): ExceptionHandlerInterface
     {
-        return new VoltExceptionHandler(new ExceptionHandler($this));
+        return new VoltExceptionHandler(new \Volt\Core\System\Handlers\VoltMaskingExceptionHandler($this));
     }
 }

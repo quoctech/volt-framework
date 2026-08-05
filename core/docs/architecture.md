@@ -313,23 +313,25 @@ Thiết kế mong muốn:
 
 ## Audit architecture
 
-Audit trail là thành phần mặc định của ERP engine.
+Audit trail là thành phần mặc định của ERP engine, ghi mọi sự kiện vận hành quan trọng: auth, role/permission, API key, file download/upload, export, tenant lifecycle, metadata/schema và workflow transition (kể cả khi không có comment).
 
-Mỗi thay đổi quan trọng nên ghi:
+Mỗi sự kiện ghi:
 
-- actor
-- entity
-- document id
-- action
-- before snapshot hoặc delta
-- after snapshot nếu cần
+- actor (`changed_by`)
+- entity + document id
+- action (VD: `workflow:approve`, `auth:login`, `file:download`)
+- category (phân loại sự kiện)
+- before/after delta (chỉ ghi field thay đổi)
+- tenant, ip_address, user_agent, request_id (correlation)
 - timestamp
 
-Tối ưu đề xuất:
+Toàn vẹn dữ liệu:
 
-- lưu `delta` ưu tiên hơn lưu full payload khi phù hợp
-- index theo `(entity, doc_id)`
-- phân luồng audit nặng sang queue nếu ảnh hưởng latency
+- **Append-only**: trigger DB (`volt_audit_guard`) chặn mọi `UPDATE`/`DELETE` trực tiếp.
+- **Hash-chain**: mỗi dòng có `prev_hash` + `hash` (SHA-256 tính từ đủ 14 trường). Dòng đầu nối vào genesis trong `sys_audit_chain`. Việc sửa/đánh tráo dữ liệu làm đứt chuỗi → phát hiện qua `volt:audit-verify`.
+- **Retention**: `volt:clean-audit --days=N` dùng hàm `SECURITY DEFINER volt_audit_purge(N)` (duy nhất được phép xóa).
+
+Ghi audit chạy đồng bộ (đảm bảo truy vết đầy đủ); nếu insert thất bại sẽ fallback vào `sys_error_log` (mang cùng `request_id`) và không làm hỏng luồng nghiệp vụ. Sự kiện tenant được ghi vào hub DB (`sys_audit_trail` của DB trung tâm).
 
 ## Queue architecture
 

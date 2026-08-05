@@ -8,6 +8,7 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\RawSql;
 use InvalidArgumentException;
 use Throwable;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\AwesomeBar\Models\AwesomeBarModel;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
@@ -370,6 +371,13 @@ final class EntityBuilderService
 
         $this->db->transComplete();
 
+        $this->auditMetadata('metadata:workflow_save', $entityName, [], [
+            'label'       => $label,
+            'states'      => count($states),
+            'transitions' => count($transitions),
+            'is_active'   => 1,
+        ]);
+
         return $this->loadWorkflow($entityName) ?? [];
     }
 
@@ -460,6 +468,14 @@ final class EntityBuilderService
             $this->metadataCache->put($entity['name'], $compiled);
             service('voltMetadataCompiler')->invalidateEntity($entity['name']);
 
+            $this->auditMetadata('metadata:entity_save', $entity['name'], [], [
+                'module'    => $entity['module'],
+                'label'     => $entity['label'] ?? null,
+                'field_count' => count($fields),
+                'is_submittable' => (bool) ($entity['is_submittable'] ?? false),
+                'migration' => $migration,
+            ]);
+
             return [
                 'entity'    => $entity,
                 'fields'    => $fields,
@@ -495,6 +511,8 @@ final class EntityBuilderService
         if ($entityName === '') {
             throw new InvalidArgumentException('Entity name is required.');
         }
+
+        $this->assertDropAllowedInProduction();
 
         $deletionPlan = $this->buildDeletionPlan($entityName);
         $blockedBy = $this->findIncomingReferences($deletionPlan);
@@ -544,10 +562,41 @@ final class EntityBuilderService
             service('voltMetadataCompiler')->invalidateEntity($name);
         }
 
+        $this->auditMetadata('metadata:entity_delete', $entityName, [], [
+            'deleted'        => array_values(array_map(static fn (array $item): string => (string) $item['name'], $deletionPlan)),
+            'dropped_tables' => array_values(array_unique($droppedTables)),
+        ]);
+
         return [
             'deleted' => array_values(array_map(static fn (array $item): string => (string) $item['name'], $deletionPlan)),
             'dropped_tables' => array_values(array_unique($droppedTables)),
         ];
+    }
+
+    /**
+     * Ghi audit cho các hoạt động metadata/schema.
+     *
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
+     */
+    private function auditMetadata(string $action, string $entity, array $before = [], array $after = []): void
+    {
+        try {
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_METADATA,
+                $action,
+                'entity',
+                $entity,
+                $before,
+                $after,
+            );
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [
+                'entity' => $entity,
+                'action' => $action,
+                'operation' => 'entityBuilderAudit',
+            ], 'entity_builder', 'entity_builder_audit_failed');
+        }
     }
 
     /**
@@ -979,6 +1028,29 @@ final class EntityBuilderService
 
             $this->db->query('DROP TABLE IF EXISTS ' . $tableName);
             $droppedTables[] = $tableName;
+        }
+    }
+
+    /**
+     * Chặn drop entity/database trực tiếp ở production khi chưa bật
+     * schemaSyncAllowDirectDropInProduction.
+     */
+    private function assertDropAllowedInProduction(): void
+    {
+        try {
+            $config = config(Config\Volt::class);
+            $isProduction = ENVIRONMENT === 'production';
+            $allowDirect = (bool) ($config->schemaSyncAllowDirectDropInProduction ?? false);
+
+            if ($isProduction && ! $allowDirect) {
+                throw new InvalidArgumentException(
+                    'Không thể xóa entity/drop bảng trực tiếp ở production. Bật volt.schemaSyncAllowDirectDropInProduction nếu thực sự cần.',
+                );
+            }
+        } catch (InvalidArgumentException $e) {
+            throw $e;
+        } catch (\Throwable) {
+            // Lỗi đọc config không chặn luồng (fail-safe: vẫn cho phép).
         }
     }
 

@@ -21,7 +21,7 @@ Các phần đã có trong code:
 - `MetadataValidator` — validate entity name, field name, field type, module.
 - `VoltModel` — abstract model lõi với permission check, audit trail, system fields, workflow state machine (Draft→Submitted→Cancelled, amend).
 - `PermissionResolver` — role-based permission matrix từ `sys_permission` + Redis cache.
-- `AuditTrailWriter` — ghi delta `{before, after, changes}` vào `sys_audit_trail`.
+- `AuditTrailWriter` — ghi delta `{before, after, changes}` vào `sys_audit_trail` (append-only, hash-chain, categories, `request_id` correlation; fallback `sys_error_log`).
 - `ErrorLogService` — ghi lỗi runtime vào `sys_error_log` để phục vụ truy vết vận hành.
 - `AuthService` + 4 Filters (`auth`, `guest`, `apiauth`, `admin`) — login/logout/setup/admin/API token.
 - `EntityBuilderService` + `EntityBuilderController` — tạo module, entity, sync schema, sinh artifact.
@@ -97,7 +97,7 @@ Migration nền tảng + migration bổ sung hiện đang tạo 10 bảng lõi:
 4. `sys_user`
 5. `sys_permission`
 6. `sys_sequence`
-7. `sys_audit_trail`
+7. `sys_audit_trail` (nhật ký operations; append-only + hash-chain + `sys_audit_chain`)
 8. `sys_queue_job`
 9. `sys_module`
 10. `sys_error_log`

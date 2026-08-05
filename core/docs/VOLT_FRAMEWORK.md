@@ -98,7 +98,8 @@ Namespace: `Volt\Core` → `core/` (registered in `app/Config/Autoload.php`)
 | `sys_user` | Người dùng |
 | `sys_permission` | Ma trận quyền động |
 | `sys_sequence` | Bộ đếm sinh mã tự động |
-| `sys_audit_trail` | Nhật ký thay đổi |
+| `sys_audit_trail` | Nhật ký thay đổi (append-only, hash-chain) |
+| `sys_audit_chain` | Singleton giữ `last_hash`/`last_id` của chuỗi hash audit |
 | `sys_queue_job` | Hàng đợi tác vụ nền |
 | `sys_module` | Danh mục module runtime |
 | `sys_page` | Custom page metadata (HTML/CSS/JS, roles, route) |
@@ -339,6 +340,8 @@ planEntity(entityName, opts)
 syncEntity = planEntity + applyPlan (nếu !dry_run)
 ```
 
+**Production guard:** trong môi trường production (`isProductionEnv()`), các operation phá hủy (`drop_column`, `drop_index`, `drop_constraint`) bị **chặn** trừ khi `volt.schemaSyncAllowDirectDropInProduction = true` (config `app/Config/Volt.php`, env `volt.schemaSyncAllowDirectDropInProduction`) — plan sẽ báo lỗi thay vì generate drop op. `EntityBuilderService::deleteEntity()` cũng gọi `assertDropAllowedInProduction()`: ở production, delete entity mà không bật cờ này → ném `InvalidArgumentException` (an toàn mặc định).
+
 ### 5.2 VoltMetadataCompiler
 
 **File:** `core/Engine/VoltMetadataCompiler.php`
@@ -424,11 +427,11 @@ $model->assertDocumentEditable($id);    // Throw nếu doc không editable ở s
 $model->assertWorkflowTransition($id, $action);  // Throw nếu action không hợp lệ từ state hiện tại
 ```
 
-Khi truyền `$comment`, workflow engine tự động ghi vào `sys_audit_trail` với action `workflow:submit`, `workflow:approve`, `workflow:cancel`, hoặc `workflow:amend`. Nếu không có comment, audit trail không được ghi.
+Mọi workflow transition đều được ghi vào `sys_audit_trail` với action `workflow:submit`, `workflow:approve`, `workflow:cancel`, hoặc `workflow:amend` — kể cả khi không có comment. Comment (nếu có) chỉ nằm trong `delta.after.comment`.
 
 ### 6.5 Audit trail format
 
-Mỗi workflow transition có comment được ghi vào `sys_audit_trail` với cấu trúc:
+Mỗi workflow transition được ghi vào `sys_audit_trail` với cấu trúc:
 
 | Column | Giá trị |
 |--------|---------|
@@ -451,6 +454,14 @@ Mỗi entity có `is_submittable = true` được sinh thêm 4 API routes:
 | POST | `/{module}/api/{entity}/amend/{id}` | `VoltResourceController::restAmend` |
 
 Các endpoint đều nhận JSON body tùy chọn với field `comment` (string).
+
+**Activity (audit history của một record):**
+
+| Method | Route | Controller |
+|--------|-------|------------|
+| GET | `/{module}/api/{entity}/activity/{id}` | `VoltResourceController::activity` |
+
+Trả về `{status, entity, doc_id, items[], total}` — mỗi `item` gồm action, category, changed_by, changed_at, tenant, request_id và `delta` (before/after/changes). Dùng cho tab **Activity** ở chân màn hình Edit của record.
 
 ### 6.7 Cấu hình Entity Builder
 
@@ -520,6 +531,10 @@ Mọi bảng entity có cột `deleted_at TIMESTAMP NULL` (do `SchemaSync.baseCo
 - Query Builder không tự filter `deleted_at` → đã thêm filter thủ công tại: `QueryParser::applySoftDeleteFilter()` (REST list), `VoltResourceController::applyDeletedFilter()` (`data()` + `linkOptions()`), `WorkspaceController::applyDeletedFilter()` (count/list).
 - API: `POST api/{entity}/restore/{id}`, `POST api/{entity}/delete/{id}?purge=1`.
 - Lưu ý: CI4 không filter `deleted_at` khi `update()` — update bản ghi đã xóa mềm vẫn thành công.
+
+**Workflow-protected fields (7.1b):**
+
+Trong `update()`, `VoltModel` gọi `stripWorkflowProtectedFields()` để **loại bỏ** `workflow_state` và `docstatus` khỏi payload trước khi update — user không thể tự ý sửa state workflow qua REST save; state chỉ thay đổi qua transition hợp lệ của `WorkflowService`. Đây là guard bổ sung (defense-in-depth) bên cạnh permission check.
 
 **Child table handling:**
 
@@ -627,6 +642,25 @@ File storage: `writable/uploads/YYYY/MM/{uuid}.{ext}`
 MIME validation: images, PDF, Office docs, text, CSV, zip, JSON, XML (configurable via `ALLOWED_MIME_TYPES`).
 Max file size: 10MB (`MAX_FILE_SIZE`).
 
+**Authorization:** mọi method (`upload`, `download`, `delete`, `listByEntity`) đều yêu cầu authenticated user (`currentUser()`), không còn method nào public. File attachment validation dựa trên field catalog (chống attach vào field không tồn tại).
+
+### 8.3 HealthController
+
+**File:** `core/System/Controllers/HealthController.php`
+
+| Method | Route | Mô tả |
+|--------|-------|-------|
+| `index` | `GET /health` | Liveness: trả `{status: "ok"}` |
+| `ping` | `GET /api/ping` | Liveness API (JSON) |
+| `check` | `GET /api/health` | Readiness: kiểm tra DB + Redis + disk |
+| `detail` | `GET /api/health/detail` | Readiness chi tiết JSON |
+
+- **DB check**: query `SELECT 1` (hub DB).
+- **Redis check**: `service('cache')->get/set/delete` key test (cache handler mặc định Redis).
+- **Disk check**: `disk_free_space(writable)` — cảnh báo nếu dưới `diskWarningThreshold` (mặc định 20%), nguy hiểm nếu dưới 5%.
+- Kết quả: `{"status": "ok"|"degraded"|"fail", "checks": {db, redis, disk}, "disk_free_mb": ...}`.
+- Các route health được **except khỏi rate limit toàn cục** (kèm trong alias `ratelimit` config).
+
 ---
 
 ## 9. Auth & Security
@@ -664,6 +698,30 @@ Key methods:
 | `apiauth` | `core/Auth/Filters/ApiAuthFilter.php` | Bearer token auth cho API |
 | `admin` | `core/Auth/Filters/AdminFilter.php` | Yêu cầu admin role |
 | `guest` | `core/Auth/Filters/GuestFilter.php` | Chỉ guest mới được truy cập |
+| `ratelimit` | `core/Security/Filters/RateLimitFilter.php` | Rate limit toàn cục theo IP (default 300 req / 60s) — global before filter, except `health/ping/api/health/api/ping/api/health/detail` |
+| `platform` | `core/Auth/Filters/PlatformFilter.php` | Yêu cầu platform developer (admin hoặc role `platform_developer`) — JSON-aware 401/403 |
+| `correlation` | `core/Auth/Filters/CorrelationFilter.php` | Sinh/nạp `request_id` (X-Request-ID) cho toàn bộ request |
+
+#### Rate limiting toàn cục
+
+`RateLimitFilter` chạy ở `$globals['before']` (đăng ký alias `ratelimit` trong `app/Config/Filters.php`), dùng CI4 `Throttler` (token bucket, Redis-backed):
+
+- Mặc định **300 request / 60s / IP**; cấu hình qua `app/Config/Volt.php` → `rateLimitGlobalAttempts` / `rateLimitGlobalWindowSeconds` (env: `volt.rateLimitGlobalAttempts`, ...).
+- Key: `volt_rl_{IP}_{METHOD}`. Khi vượt ngưỡng trả **HTTP 429** kèm header `Retry-After`; JSON-aware (payload JSON cho request `api/*` hoặc `Accept: application/json`).
+- Login throttle riêng của AuthService (5 attempts → 15 min lock) **giữ nguyên**, không bị ảnh hưởng.
+
+#### HTTPS/Cookie/CSRF hardening
+
+- `app/Config/Cookie.php`: `secure` mặc định **true** (an toàn mặc định), override qua env `cookie.secure=false` cho dev HTTP local.
+- `app/Config/Security.php`: `tokenRandomize = true` (CSRF token đổi mỗi request).
+- `app/Config/Session.php`: `regenerateDestroy = true` (xóa session cũ khi regenerate).
+- `app/Config/App.php`: `forceGlobalSecureRequests` đọc từ env `app.forceGlobalSecureRequests`; production nên set `true` (kèm filter `forcehttps`). Dev local set `false`.
+- Mẫu `.env.production.example` kèm sẵn để copy sang `.env` khi deploy.
+
+#### 9.2.1 Debug & stack trace
+
+- `app/Config/Exceptions.php`: `sensitiveDataInTrace` che các key nhạy cảm (password, token, authorization, db_password, X-CSRF-TOKEN, client_secret, ...) khỏi trace.
+- `core/System/Handlers/VoltMaskingExceptionHandler.php`: extends `CodeIgniter\Debug\ExceptionHandler`, vá lỗi framework khi `maskSensitiveData()` truy cập frame trace thiếu `args` (tránh crash khi render 404/500). Được dùng làm handler nội bộ trong `Exceptions::handler()`.
 
 ### 9.3 UserEntity
 
@@ -676,6 +734,7 @@ Key methods:
 | `isAdmin()` | Kiểm tra admin role |
 | `isActive()` | Kiểm tra active status |
 | `hasRole(role)` | Kiểm tra có role cụ thể không |
+| `isPlatformDeveloper()` | `true` nếu admin hoặc có role `platform_developer` (role system, seed qua migration `2026-08-06-000001_AddPlatformDeveloperRole`) |
 
 ### 9.4 User Management
 
@@ -690,20 +749,58 @@ Routes trong `app/Config/Routes.php` — group `/desk/users` với filter `admin
 
 **File:** `core/Audit/AuditTrailWriter.php`
 **Table:** `sys_audit_trail`
+**Chain:** `sys_audit_chain`
+**Service alias:** `voltAuditTrailWriter`
+
+Audit trail là nhật ký vận hành (Operations) của mọi sự kiện quan trọng: auth, role/permission, API key, file, export, tenant lifecycle, metadata/schema và workflow transition. Chi tiết taxonomy đầy đủ ở `core/docs/audit.md`.
 
 Chức năng:
-- Ghi delta khi dữ liệu thay đổi
-- Tự động diff `before` vs `after` → chỉ ghi các field thay đổi
-- Tự động resolve actor name
+- Ghi đồng bộ vào `sys_audit_trail`. Khi **`volt.strictAudit = true`** (cấu hình mặc định trong `app/Config/Volt.php`, env `volt.strictAudit`): insert thất bại → ném `RuntimeException` (**fail-closed** — audit là bắt buộc, không fallback im lặng); ngoại lệ không phải `DataException` gốc sẽ được rethrow để bảo toàn thông tin. Ngược lại (không strict) → fallback vào `sys_error_log` (không throw để không làm hỏng luồng nghiệp vụ).
+- **Append-only**: trigger DB chặn mọi `UPDATE`/`DELETE` trực tiếp (chỉ `volt_audit_purge()` — hàm `SECURITY DEFINER` — được phép xóa theo retention).
+- **Hash-chain chống giả mạo**: mỗi dòng mang `prev_hash` + `hash` (SHA-256, do trigger tính). Dòng đầu nối vào genesis trong `sys_audit_chain`. Tính toàn vẹn được kiểm tra bằng command `volt:audit-verify`.
+- Tự động diff `before` vs `after` → chỉ ghi các field thay đổi.
+- Tự động resolve `changed_by`, `tenant`, `ip_address`, `user_agent`, `request_id` qua `core/Audit/RequestContext.php`. `request_id` được sinh/tái sử dụng từ header `X-Request-ID` bởi `core/Auth/Filters/CorrelationFilter.php` để truy vết hành vi end-to-end (khớp với `sys_error_log.request_id`).
+
+**Signature:**
+```php
+write(
+    string $category,      // CAT_DATA | CAT_AUTH | CAT_ROLE | CAT_PERMISSION | CAT_API | CAT_FILE | CAT_EXPORT | CAT_TENANT | CAT_METADATA | CAT_WORKFLOW | CAT_SYSTEM
+    string $action,        // VD: 'workflow:submit', 'auth:login', 'file:download'
+    string $entity = '',   // tên entity/đối tượng, VD: 'employee', 'sys_role', 'page_desk'
+    string $docId = '',    // id tài liệu/record
+    array $before = [],
+    array $after = [],
+    ?string $changedBy = null,
+    array $context = [],   // operation, status, tenant, ip_address, user_agent, request_id
+    ?BaseConnection $db = null, // chỉ định connection (VD: hub DB cho sự kiện tenant)
+): bool
+```
 
 **Usage:**
 ```php
 $writer = service('voltAuditTrailWriter');
-$writer->write('Employee', 'E-2024-00001', 'create', [], $newData);
-$writer->write('Employee', 'E-2024-00001', 'update', $before, $after);
+$ok = $writer->write(
+    AuditTrailWriter::CAT_DATA,
+    'create',
+    'employee',
+    'E-2024-00001',
+    [],
+    $newData,
+);
+$ok = $writer->write(
+    AuditTrailWriter::CAT_WORKFLOW,
+    'workflow:approve',
+    'employee',
+    'E-2024-00001',
+    $before,
+    $after,
+    $actorName,
+);
 ```
 
-**audit_payload format:**
+**Categories (`category` column):** `data`, `auth`, `role`, `permission`, `api`, `file`, `export`, `tenant`, `metadata`, `workflow`, `system`.
+
+**audit_payload format (cột `delta`):**
 ```json
 {
   "before": {...},
@@ -712,6 +809,16 @@ $writer->write('Employee', 'E-2024-00001', 'update', $before, $after);
     "fieldname": {"before": "old", "after": "new"}
   }
 }
+```
+
+**Retention:** mặc định 730 ngày; xóa qua `volt:clean-audit --days=N` (dùng `volt_audit_purge(N)`).
+
+**Verify integrity:**
+```bash
+php spark volt:audit-verify            # hash/chain 100% khớp → VERIFIED
+php spark volt:audit-verify --genesis <hash>   # ép kiểm tra anchor đầu
+php spark volt:clean-audit --dry-run   # xem số dòng sắp purge mà không xóa
+php spark volt:clean-audit --days 730  # purge theo retention
 ```
 
 ### 10.2 ErrorLogService
@@ -723,8 +830,23 @@ Chức năng:
 - Ghi lỗi runtime vào DB (bên cạnh CI4 logger)
 - `write(level, message, context, channel?)` — lỗi đã chuẩn hóa
 - `logException(Throwable, context?, channel?, code?)` — khi đang cầm exception
+- Mỗi dòng lỗi mang `request_id` (khớp `sys_audit_trail.request_id`) để đối chiếu lỗi với luồng nghiệp vụ đã ghi audit.
+- Sau khi ghi thành công, gọi `AlertService::dispatchAlert()` để push cảnh báo ra webhook (nếu lỗi đạt ngưỡng cấu hình).
 
 Service alias: `voltErrorLog`
+
+### 10.3 AlertService
+
+**File:** `core/System/Services/AlertService.php`
+**Service alias:** `voltAlert`
+
+Cảnh báo vận hành đẩy ra webhook (Discord/Slack/... ) khi hệ thống gặp lỗi nghiêm trọng, tách rời khỏi luồng ghi log (fail-open — không làm ảnh hưởng ứng dụng nếu webhook lỗi):
+
+- **Cấu hình** (`app/Config/Volt.php`, env tương ứng): `alertWebhookUrl`, `alertWebhookSecret` (HMAC-SHA256), `alertMinLevel` (mặc định `error`).
+- **Thang mức** `LEVEL_ORDER`: `debug < info < notice < warning < error < critical < alert < emergency` — chỉ dispatch khi mức lỗi >= `alertMinLevel`.
+- **Signature**: header `X-Volt-Signature = sha256(hmac(secret, payload))`, timestamp + `X-Volt-Timestamp` để tránh replay.
+- **Fire-and-forget**: gửi qua curl timeout 3s, không block request.
+- Hàm tĩnh `dispatchAlert(level, message, context)` cho phép gọi độc lập từ bất kỳ đâu.
 
 ---
 
@@ -857,6 +979,34 @@ php spark volt:register-entities
 ```
 
 Chỉ dùng cho lần đầu deploy hoặc import entity từ JSON đã compiled. Bỏ qua entity đã tồn tại.
+
+### volt:backup
+
+Backup & restore database bằng `pg_dump` (binary format `-Fc`, nén `-Z5`):
+
+```bash
+php spark volt:backup                 # Backup hub DB (volt_enterprise)
+php spark volt:backup <tenant>        # Backup tenant DB (volt_<tenant>)
+php spark volt:backup --verify        # Backup + restore thử vào DB tạm để xác thực
+php spark volt:backup --prune         # Backup + xóa file cũ theo retention
+```
+
+- File backup: `writable/backups/{db}_{YYYYMMDD_HHMMSS}.dump`.
+- `--verify`: restore vào DB tạm `db_restoretest_<ts>` (với `--clean --if-exists --no-owner --no-privileges`), kiểm tra thành công rồi drop DB tạm.
+- `--prune`: giữ tối đa `backupRetentionDays` (mặc định 30 ngày) file backup.
+- Implementation: `core/System/Services/BackupService.php`, command `core/Commands/VoltBackup.php`.
+
+### volt:purge-tenants
+
+Xóa hẳn (hard-delete) tenant đã soft-delete quá thời gian grace:
+
+```bash
+php spark volt:purge-tenants                  # Dry-run: liệt kê tenant đủ điều kiện purge
+php spark volt:purge-tenants --force          # Thực hiện purge thật
+php spark volt:purge-tenants --force --name=<tenant>  # Chỉ purge 1 tenant cụ thể
+```
+
+Với mỗi tenant: **backup DB trước** (vào `writable/backups/`) → `DROP DATABASE ... WITH (FORCE)` → hard-delete record. Bỏ qua nếu backup fail.
 
 ---
 
@@ -1024,6 +1174,10 @@ File: `app/Config/Routes.php`
 
 | Route | Controller | Filter |
 |-------|------------|--------|
+| `/health` | HealthController::index | — |
+| `/api/health` | HealthController::check | — |
+| `/api/health/detail` | HealthController::detail | — |
+| `/api/ping` | HealthController::ping | — |
 | `/api/awesome-bar/search` | AwesomeBarController | auth |
 | `/api/file/upload` | FileController::upload | auth |
 | `/api/file/download/{uuid}` | FileController::download | auth |
@@ -1035,6 +1189,20 @@ File: `app/Config/Routes.php`
 | `POST /api/workspace/block/reorder` | WorkspaceController::reorderBlocks | auth |
 | `POST /api/workspace/save` | WorkspaceController::save | auth |
 
+### Tenant lifecycle
+
+| Route | Controller | Filter |
+|-------|------------|--------|
+| `/desk/tenants` (GET) | TenantController::index | admin |
+| `/desk/tenants/create` (GET) | TenantController::create | admin |
+| `/desk/tenants/store` (POST) | TenantController::store | admin |
+| `/desk/tenants/edit/{name}` (GET) | TenantController::edit | admin |
+| `/desk/tenants/update/{name}` (POST) | TenantController::update | admin |
+| `/desk/tenants/delete/{name}` (POST) | TenantController::delete → soft-delete | admin |
+| `/desk/tenants/trash` (GET) | TenantController::trash | admin |
+| `/desk/tenants/restore/{name}` (POST) | TenantController::restore | admin |
+| `/desk/tenants/purge/{name}` (POST) | TenantController::purge | admin |
+
 ### Page routes (auto-generated)
 
 Custom pages được đăng ký động qua file `app/Config/PageRoutes.php`, sinh bởi `PageService::regeneratePageRoutes()`. File này được `require` ở cuối `app/Config/Routes.php`.
@@ -1045,7 +1213,7 @@ Route: /{route} → PageController::serve/{route}
 
 Các route reserved không được dùng làm page route: `health`, `ping`, `login`, `logout`, `setup`, `desk`, `api`.
 
-### Page management routes (admin)
+### Page management routes (platform developer)
 
 | Route | Controller | Mô tả |
 |-------|------------|-------|
@@ -1054,6 +1222,8 @@ Các route reserved không được dùng làm page route: `health`, `ping`, `lo
 | `/desk/pages/edit/{name}` | PageController::edit | Sửa page |
 | `POST /api/pages/save` | PageController::save | API lưu page |
 | `POST /api/pages/delete/{name}` | PageController::delete | API xóa page |
+
+Các route trên nằm trong group `platform` (admin hoặc role `platform_developer`).
 
 ### Module routes (auto-generated)
 
@@ -1187,6 +1357,8 @@ Admin UI (/desk/pages) → PageController::save()
 - Specific roles → user phải có ít nhất một role
 - Admin luôn bypass được role check
 
+**Builder/management (B3):** các endpoint desk (`index/create/edit/save/delete`) và API (`save/delete`) được bọc bởi `PlatformFilter` (`platform`) — chỉ admin hoặc user có role `platform_developer` mới quản lý được custom pages. Việc **serve page** (route `/pagename`) vẫn theo `roles` của page như cũ, không bị giới hạn thêm.
+
 ### 19.6 File scaffolding
 
 Khi save, `PageService::scaffoldPageFiles()` tạo 3 files trong `app/Modules/{Module}/Pages/`:
@@ -1271,26 +1443,50 @@ Request → HTTP_HOST = ilsungtech.localhost
 | `/desk/tenants/store` | POST | Lưu tenant + tự động tạo DB + chạy migrations |
 | `/desk/tenants/edit/{name}` | GET | Form sửa tenant |
 | `/desk/tenants/update/{name}` | POST | Cập nhật tenant |
-| `/desk/tenants/delete/{name}` | POST | Xoá DB (`DROP DATABASE ... WITH (FORCE)`) + xoá record |
+| `/desk/tenants/delete/{name}` | POST | **Soft-delete** (không drop DB ngay) |
+| `/desk/tenants/trash` | GET | List tenant đã soft-delete |
+| `/desk/tenants/restore/{name}` | POST | Khôi phục tenant đã soft-delete |
+| `/desk/tenants/purge/{name}` | POST | Purge hẳn (chỉ khi hết grace) |
 
 Controllers: `TenantController` (`core/Tenant/Controllers/`)
 Service: `TenantService` (`core/Tenant/Services/`)
 Model: `TenantModel` (`core/Tenant/Models/` — dùng `hubConnection()`)
 
-### 20.6 CLI commands
+### 20.6 Tenant lifecycle (soft-delete / restore / purge)
+
+Tenant không bị drop DB ngay khi xóa — đi qua **lifecycle an toàn** để tránh mất dữ liệu vô tình:
+
+| Giai đoạn | Hành động | DB |
+|-----------|-----------|----|
+| **Active** | Hoạt động bình thường | còn nguyên |
+| **Trashed (soft-deleted)** | `deleted_at`, `deleted_by` set; bị chặn đăng nhập & resolve domain | **chưa drop** |
+| **Purged** | Sau `tenantDeleteGraceDays` (mặc định 30) → backup + drop DB + hard-delete | bị drop |
+
+- Cột: `deleted_at`, `deleted_by`, `purge_at` (migration `2026-08-06-000002_AddTenantSoftDeleteColumns`).
+- `TenantModel` bật CI4 `useSoftDeletes`; `getTrashed()` = trashed, `getDuePurge()` = trashed quá grace.
+- `TenantService::softDelete()` / `restore()` / `purge()`:
+  - `purge()` bắt buộc **backup DB trước** (`BackupService`), fail → chặn purge; sau đó `DROP DATABASE ... WITH (FORCE)` rồi hard-delete.
+  - `isPurgeDue()` kiểm tra grace đã hết.
+- `currentActor()` lấy từ session để ghi `deleted_by` / audit.
+- Purge tự động qua CLI: `php spark volt:purge-tenants` (cron nên chạy định kỳ).
+- `resolveByDomain()` / `resolveTenantFromDomain()` bỏ qua tenant đã soft-delete → user không thể login vào tenant đã xóa.
+
+### 20.7 CLI commands
 
 | Command | Chức năng |
 |---------|-----------|
 | `php spark volt:tenant-create <name>` | Tạo tenant + DB (manual) |
 | `php spark volt:tenant-migrate <name>` | Chạy migrations trên tenant DB |
+| `php spark volt:backup [tenant] [--verify] [--prune]` | Backup DB (xem mục 12) |
+| `php spark volt:purge-tenants [--force]` | Purge tenant đã trashed quá grace (xem mục 12) |
 
-Files: `core/Commands/TenantCreate.php`, `core/Commands/TenantMigrate.php`
+Files: `core/Commands/TenantCreate.php`, `core/Commands/TenantMigrate.php`, `core/Commands/VoltBackup.php`, `core/Commands/VoltPurgeTenants.php`
 
-### 20.7 Config
+### 20.8 Config
 
 **`app/Config/App.php`**: `__construct()` tự động set `baseURL` từ `$_SERVER['HTTP_HOST']` để `site_url()` sinh đúng host cho mọi tenant domain.
 
-### 20.8 Các file liên quan
+### 20.9 Các file liên quan
 
 - `core/Database/VoltDatabase.php`
 - `core/Tenant/`
@@ -1299,6 +1495,8 @@ Files: `core/Commands/TenantCreate.php`, `core/Commands/TenantMigrate.php`
 - `core/Auth/Filters/PageAuthFilter.php` — redirect về login qua `site_url()`
 - `app/Config/App.php` — dynamic baseURL
 - `core/Database/Migrations/2026-07-27-000002_CreateSysTenantTable.php`
+- `core/Database/Migrations/2026-08-06-000002_AddTenantSoftDeleteColumns.php`
+- `core/System/Services/BackupService.php`
 
 ---
 

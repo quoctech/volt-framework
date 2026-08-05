@@ -6,6 +6,7 @@ namespace Volt\Core\Auth\Controllers;
 
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Models\UserModel;
 use Volt\Core\Role\Models\RoleModel;
 
@@ -78,6 +79,18 @@ class UserController extends Controller
             'user_metadata' => [],
         ]);
 
+        $roles = is_array($selectedRoles) ? array_values($selectedRoles) : [];
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'user:create',
+            'sys_user',
+            $name,
+            [],
+            ['roles' => $roles, 'is_active' => $isActive ? 1 : 0],
+            service('voltAuth')->currentUser()?->name ?? 'system',
+        );
+
         return redirect()->to(site_url('desk/users'));
     }
 
@@ -127,9 +140,10 @@ class UserController extends Controller
         $password = (string) $this->request->getPost('password');
         $isActive = (string) $this->request->getPost('is_active') === '1';
         $selectedRoles = $this->request->getPost('roles');
+        $newRoles = is_array($selectedRoles) ? array_values($selectedRoles) : [];
 
         $payload = [
-            'roles'     => is_array($selectedRoles) ? array_values($selectedRoles) : [],
+            'roles'     => $newRoles,
             'is_active' => $isActive ? 1 : 0,
         ];
 
@@ -138,6 +152,31 @@ class UserController extends Controller
         }
 
         $this->userModel->update($name, $payload);
+
+        $actor = service('voltAuth')->currentUser()?->name ?? 'system';
+        $oldRoles = $this->normalizeRoles($user);
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'user:update',
+            'sys_user',
+            $name,
+            ['roles' => $oldRoles, 'is_active' => (int) $user->is_active],
+            ['roles' => $newRoles, 'is_active' => $isActive ? 1 : 0],
+            $actor,
+        );
+
+        if ($oldRoles !== $newRoles) {
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_ROLE,
+                'user:roles',
+                'sys_user',
+                $name,
+                ['roles' => $oldRoles],
+                ['roles' => $newRoles],
+                $actor,
+            );
+        }
 
         return redirect()->to(site_url('desk/users'));
     }
@@ -152,7 +191,40 @@ class UserController extends Controller
 
         $this->userModel->delete($name);
 
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'user:delete',
+            'sys_user',
+            $name,
+            ['roles' => $this->normalizeRoles($user)],
+            [],
+            service('voltAuth')->currentUser()?->name ?? 'system',
+        );
+
         return redirect()->to(site_url('desk/users'));
+    }
+
+    private function normalizeRoles(mixed $roles): array
+    {
+        if (is_string($roles) && $roles !== '') {
+            $decoded = json_validate($roles) ? json_decode($roles, true) : null;
+
+            if (! is_array($decoded)) {
+                $decoded = @unserialize($roles, ['allowed_classes' => false]);
+            }
+
+            if (! is_array($decoded)) {
+                $decoded = [$roles];
+            }
+
+            $roles = $decoded;
+        }
+
+        if (! is_array($roles)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('strval', $roles), static fn (string $role): bool => $role !== ''));
     }
 
     private function renderView(string $view, array $data = []): string

@@ -64,6 +64,16 @@ class PageController extends Controller
             return $this->fail('Invalid request body.');
         }
 
+        $actor = service('voltAuth')->currentUser();
+
+        // Custom Pages JS chỉ dành cho platform developer; admin thường không được đổi JS.
+        // Giữ nguyên js_content cũ (không cho sửa) thay vì xóa sạch.
+        if (! ($actor?->isPlatformDeveloper() ?? false)) {
+            $originalName = $data['original_name'] ?? null;
+            $existing = $originalName !== null ? $this->pageService->getByName($originalName) : null;
+            $data['js_content'] = $existing['js_content'] ?? '';
+        }
+
         try {
             $data['original_name'] = $data['original_name'] ?? null;
             $page = $this->pageService->save($data);
@@ -111,6 +121,11 @@ class PageController extends Controller
         $cssContent = $page['css_content'] ?? '';
         $jsContent = $page['js_content'] ?? '';
 
+        $volt = config(Config\Volt::class);
+        if (! (bool) ($volt->pagesJsEnabled ?? true)) {
+            $jsContent = '';
+        }
+
         return view('Volt\\Core\\Metadata\\Views\\layouts\\desk', [
             'pageTitle'       => ($page['label'] ?? 'Page') . ' · Volt Desk',
             'currentUserName' => $actor?->name ?? '',
@@ -129,9 +144,11 @@ class PageController extends Controller
         $roles = $this->pageService->getRoles();
 
         $content = view('Volt\\Core\\Metadata\\Views\\pages\\page_form', [
-            'page'    => $page,
-            'modules' => $modules,
-            'roles'   => $roles,
+            'page'                 => $page,
+            'modules'              => $modules,
+            'roles'                => $roles,
+            'isPlatformDeveloper'  => $actor?->isPlatformDeveloper() ?? false,
+            'pagesJsEnabled'       => (bool) (config(Config\Volt::class)->pagesJsEnabled ?? true),
         ]);
 
         $title = $page !== null ? 'Edit Page · Volt Desk' : 'Create Page · Volt Desk';

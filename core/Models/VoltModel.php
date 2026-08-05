@@ -113,6 +113,7 @@ abstract class VoltModel extends Model
         $childData = $this->extractChildData($data);
         $data = $this->stripChildData($data);
         $data = $this->sanitizeParentData($data);
+        $data = $this->stripWorkflowProtectedFields($data);
 
         $result = parent::update($id, $data);
 
@@ -122,6 +123,27 @@ abstract class VoltModel extends Model
         }
 
         return $result;
+    }
+
+    /**
+     * Chặn chỉnh workflow_state/docstatus trực tiếp (phải qua workflow engine).
+     *
+     * @param array<string, mixed>|null $data
+     * @return array<string, mixed>|null
+     */
+    private function stripWorkflowProtectedFields(?array $data): ?array
+    {
+        if ($data === null) {
+            return null;
+        }
+
+        foreach (['workflow_state', 'docstatus'] as $protected) {
+            if (isset($data[$protected]) || array_key_exists($protected, $data)) {
+                unset($data[$protected]);
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -586,19 +608,23 @@ abstract class VoltModel extends Model
 
             $db->table($this->table)->where($this->primaryKey, $id)->update(['amended_from' => $newRecordName]);
 
+            $actorName = (string) (service('voltAuth')->currentUser()?->name ?? 'system');
+            $after = ['workflow_state' => 'Draft'];
+
             if ($comment !== null) {
-                $actorName = (string) (service('voltAuth')->currentUser()?->name ?? 'system');
-                $db->table('sys_audit_trail')->insert([
-                    'entity'     => $this->entityName,
-                    'doc_id'     => $id,
-                    'action'     => 'workflow:amend',
-                    'changed_by' => $actorName,
-                    'delta'      => json_encode([
-                        'before' => ['workflow_state' => $currentState],
-                        'after'  => ['workflow_state' => 'Draft', 'comment' => $comment],
-                    ]),
-                ]);
+                $after['comment'] = $comment;
             }
+
+            // Mọi transition amend đều phải được audit; comment chỉ là dữ liệu tùy chọn.
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_WORKFLOW,
+                'workflow:amend',
+                $this->entityName,
+                $id,
+                ['workflow_state' => $currentState],
+                $after,
+                $actorName,
+            );
 
             $db->transComplete();
 
@@ -914,7 +940,15 @@ abstract class VoltModel extends Model
             $before = [];
         }
 
-        $this->auditTrailWriter()->write($entityName, (string) $id, $action, $before, $after, $this->resolveActorName());
+        $this->auditTrailWriter()->write(
+            AuditTrailWriter::CAT_DATA,
+            $action,
+            $entityName,
+            (string) $id,
+            $before,
+            $after,
+            $this->resolveActorName(),
+        );
     }
 
     /**

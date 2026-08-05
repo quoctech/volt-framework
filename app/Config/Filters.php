@@ -39,6 +39,9 @@ class Filters extends BaseFilters
         'apiauth'       => \Volt\Core\Auth\Filters\ApiAuthFilter::class,
         'admin'         => \Volt\Core\Auth\Filters\AdminFilter::class,
         'throttle'      => \Volt\Core\Auth\Filters\ThrottleFilter::class,
+        'correlation'   => \Volt\Core\Auth\Filters\CorrelationFilter::class,
+        'ratelimit'     => \Volt\Core\Security\Filters\RateLimitFilter::class,
+        'platform'      => \Volt\Core\Auth\Filters\PlatformFilter::class,
     ];
 
     /**
@@ -75,7 +78,9 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            'correlation',
             'cors',
+            'ratelimit' => ['except' => ['health', 'ping', 'api/health', 'api/ping', 'api/health/detail']],
             'csrf' => ['except' => ['api/*', '*/api/*', '*/rest/*']],
             // 'invalidchars',
         ],
@@ -84,7 +89,6 @@ class Filters extends BaseFilters
             // 'secureheaders',
         ],
     ];
-
     /**
      * List of filter aliases that works on a
      * particular HTTP method (GET, POST, etc.).

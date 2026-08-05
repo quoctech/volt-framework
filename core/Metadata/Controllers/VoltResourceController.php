@@ -177,6 +177,82 @@ final class VoltResourceController extends Controller
         ]);
     }
 
+    /**
+     * Activity timeline (audit trail) cho một record cụ thể của entity.
+     *
+     * Trả về lịch sử thay đổi/workflow ghi trong sys_audit_trail theo
+     * (entity, doc_id), mới nhất trước — dùng cho tab "Activity" ở chân
+     * màn hình Entity Detail.
+     */
+    public function activity(string $entityName, string $id): ResponseInterface
+    {
+        $model = $this->resolveModel($entityName);
+        if (! $model->canRead()) {
+            return $this->respondError('Forbidden', 403);
+        }
+
+        // Khớp case-insensitive vì data cũ có thể ghi entity dạng title-case;
+        // functional index (LOWER(entity), doc_id) giữ query dùng được index.
+        $entityLower = strtolower($this->snake($entityName));
+        $limit = min(200, max(1, (int) ($this->request->getGet('limit') ?? 50)));
+
+        $builder = $this->db->table('sys_audit_trail')
+            ->select(['id', 'category', 'action', 'operation', 'status', 'changed_by', 'changed_at', 'tenant', 'request_id', 'delta'])
+            ->where('LOWER(entity)', $entityLower)
+            ->where('doc_id', $id)
+            ->orderBy('changed_at', 'DESC')
+            ->orderBy('id', 'DESC')
+            ->limit($limit);
+
+        $rows = $builder->get()->getResultArray();
+
+        $total = $this->db->table('sys_audit_trail')
+            ->where('LOWER(entity)', $entityLower)
+            ->where('doc_id', $id)
+            ->countAllResults();
+
+        $items = array_map(function (array $row): array {
+            return [
+                'id'         => (int) ($row['id'] ?? 0),
+                'category'   => (string) ($row['category'] ?? 'data'),
+                'action'     => (string) ($row['action'] ?? ''),
+                'operation'  => (string) ($row['operation'] ?? ''),
+                'status'     => (string) ($row['status'] ?? ''),
+                'changed_by' => (string) ($row['changed_by'] ?? ''),
+                'changed_at' => (string) ($row['changed_at'] ?? ''),
+                'tenant'     => (string) ($row['tenant'] ?? ''),
+                'request_id' => (string) ($row['request_id'] ?? ''),
+                'delta'      => $this->decodeDelta($row['delta'] ?? null),
+            ];
+        }, $rows);
+
+        return $this->response->setJSON([
+            'status' => 'ok',
+            'entity' => $entityLower,
+            'doc_id' => $id,
+            'items'  => $items,
+            'total'  => $total,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeDelta(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
     public function linkOptions(string $entityName): ResponseInterface
     {
         $model = $this->resolveModel($entityName);
@@ -706,6 +782,8 @@ final class VoltResourceController extends Controller
             'approveUrl'   => site_url("{$moduleSnake}/api/{$entitySnake}/approve"),
             'cancelUrl'    => site_url("{$moduleSnake}/api/{$entitySnake}/cancel"),
             'amendUrl'     => site_url("{$moduleSnake}/api/{$entitySnake}/amend"),
+            'activityUrlBase' => site_url("{$moduleSnake}/api/{$entitySnake}/activity"),
+            'activityLang' => \Volt\Core\Config\Lang\LangService::load()['activity'] ?? [],
         ];
 
         return $this->renderWithFallback(

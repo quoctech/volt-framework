@@ -7,6 +7,7 @@ namespace Volt\Core\Engine;
 use CodeIgniter\Database\BaseConnection;
 use InvalidArgumentException;
 use RuntimeException;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 
@@ -143,6 +144,12 @@ final class WorkflowEngine
 
         $actorName = (string) (service('voltAuth')->currentUser()?->name ?? 'system');
 
+        $after = ['workflow_state' => $targetState];
+
+        if ($comment !== null) {
+            $after['comment'] = $comment;
+        }
+
         $this->db->transStart();
 
         $this->db->table($tableName)
@@ -153,18 +160,16 @@ final class WorkflowEngine
                 'modified'       => date('Y-m-d H:i:s'),
             ]);
 
-        if ($comment !== null) {
-            $this->db->table('sys_audit_trail')->insert([
-                'entity'     => $entityName,
-                'doc_id'     => $documentName,
-                'action'     => 'workflow:' . $action,
-                'changed_by' => $actorName,
-                'delta'      => json_encode([
-                    'before' => ['workflow_state' => $currentState],
-                    'after'  => ['workflow_state' => $targetState, 'comment' => $comment],
-                ]),
-            ]);
-        }
+        // Mọi transition đều phải được audit; comment chỉ là dữ liệu tùy chọn trong delta.
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_WORKFLOW,
+            'workflow:' . $action,
+            $entityName,
+            $documentName,
+            ['workflow_state' => $currentState],
+            $after,
+            $actorName,
+        );
 
         $this->db->transComplete();
 

@@ -9,6 +9,9 @@ use CodeIgniter\Database\Config as DatabaseConfig;
 use CodeIgniter\Database\MigrationRunner;
 use Config\Database as AppDatabaseConfig;
 use Config\Migrations;
+use Throwable;
+use Volt\Core\Audit\AuditTrailWriter;
+use Volt\Core\Audit\RequestContext;
 
 final class VoltDatabase
 {
@@ -161,6 +164,8 @@ final class VoltDatabase
         if ($exitCode !== 0) {
             throw new \RuntimeException(implode("\n", $output));
         }
+
+        self::auditHubEvent('tenant:db_created', $dbName, ['db_host' => $dbHost, 'db_port' => $dbPort]);
     }
 
     public static function dropTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432): void
@@ -186,6 +191,8 @@ final class VoltDatabase
         if ($exitCode !== 0) {
             throw new \RuntimeException(implode("\n", $output));
         }
+
+        self::auditHubEvent('tenant:db_dropped', $dbName, ['db_host' => $dbHost, 'db_port' => $dbPort]);
     }
 
     public static function migrateTenantDatabase(string $dbName, string $dbHost = 'localhost', int $dbPort = 5432, string $dbUser = 'volt_admin', string $dbPassword = ''): void
@@ -213,6 +220,8 @@ final class VoltDatabase
         $runner = new MigrationRunner(config(Migrations::class), $db);
         $runner->setNamespace('Volt\Core');
         $runner->latest();
+
+        self::auditHubEvent('tenant:db_migrated', $dbName, ['db_host' => $dbHost, 'db_port' => $dbPort]);
     }
 
     private static function defaultGroup(): string
@@ -232,6 +241,34 @@ final class VoltDatabase
             'username' => $conn['username'] ?? 'volt_admin',
             'password' => $conn['password'] ?? '',
         ];
+    }
+
+    private static function auditHubEvent(string $action, string $tenantName, array $after = []): void
+    {
+        try {
+            $db = self::hubConnection();
+            $actor = 'system';
+
+            if (function_exists('service')) {
+                try {
+                    $actor = service('voltAuth')->currentUser()?->name ?? 'system';
+                } catch (Throwable) {
+                }
+            }
+
+            (new AuditTrailWriter($db))->write(
+                AuditTrailWriter::CAT_TENANT,
+                $action,
+                'sys_tenant',
+                $tenantName,
+                [],
+                $after,
+                $actor,
+                ['tenant' => $tenantName, 'request_id' => RequestContext::requestId()],
+            );
+        } catch (Throwable) {
+            // Không làm hỏng luồng tạo/xóa DB nếu ghi audit gặp sự cố
+        }
     }
 
     private static function databaseExists(string $dbName, string $dbHost, int $dbPort, array $default): bool

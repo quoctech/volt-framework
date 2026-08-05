@@ -9,6 +9,7 @@ use CodeIgniter\Database\Forge;
 use CodeIgniter\Database\RawSql;
 use Config\Volt as VoltConfig;
 use Throwable;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Database\TableNameResolver;
 use Volt\Core\Database\VoltDatabase;
 use Volt\Core\Validation\MetadataValidator;
@@ -321,6 +322,38 @@ class SchemaSync
     public function applyOperation(array $op): void
     {
         $this->applyOp($op);
+
+        $operation = (string) ($op['operation'] ?? '');
+        $after = [
+            'operation' => $operation,
+            'table'     => (string) ($op['table'] ?? ''),
+            'severity'  => (string) ($op['severity'] ?? 'safe'),
+        ];
+
+        if ($operation === 'rename_table') {
+            $after['old_table'] = (string) ($op['old_table'] ?? '');
+        }
+
+        if (($op['column'] ?? null) !== null) {
+            $after['column'] = (string) $op['column'];
+        }
+
+        try {
+            service('voltAuditTrailWriter')->write(
+                AuditTrailWriter::CAT_SCHEMA,
+                'schema:apply',
+                'entity',
+                (string) ($op['entity'] ?? $this->entityForTable((string) ($op['table'] ?? ''))),
+                [],
+                $after,
+            );
+        } catch (Throwable $throwable) {
+            service('voltErrorLog')->logException($throwable, [
+                'table' => $op['table'] ?? null,
+                'operation' => $operation,
+                'operation_tag' => 'schemaApplyAudit',
+            ], 'schema', 'schema_apply_audit_failed');
+        }
     }
 
     /** Kiểm tra operation có được phép apply với opts cho trước hay không. */
@@ -339,6 +372,13 @@ class SchemaSync
             return true;
         }
 
+        // Production guard: mọi thao tác drop bị chặn trực tiếp ở production
+        // trừ khi admin bật schemaSyncAllowDirectDropInProduction.
+        $isDrop = in_array($op['operation'] ?? '', ['drop_column', 'drop_index', 'drop_constraint'], true);
+        if ($isDrop && $this->isProductionEnv() && ! (bool) $this->voltConfig()->schemaSyncAllowDirectDropInProduction) {
+            return false;
+        }
+
         // Thao tác phá vỡ chỉ apply khi flag tương ứng được bật ở lúc plan.
         return match ($op['operation'] ?? '') {
             'drop_column'     => (bool) ($opts['allow_drop'] ?? $opts['prune'] ?? false),
@@ -352,7 +392,7 @@ class SchemaSync
     /**
      * @param array<string, mixed> $op
      */
-    private function applyOp(array $op): void
+private function applyOp(array $op): void
     {
         $table = (string) $op['table'];
 
@@ -371,6 +411,22 @@ class SchemaSync
             'drop_constraint' => $this->applyDropConstraint($op),
             default           => null,
         };
+    }
+
+    /**
+     * Suy đoán tên entity từ tên bảng vật lý (bỏ tiền tố module).
+     */
+    private function entityForTable(string $table): string
+    {
+        $prefixes = ['tab', 'sys_', 'style_', 'doc_'];
+
+        foreach ($prefixes as $prefix) {
+            if (str_starts_with($table, $prefix)) {
+                return substr($table, strlen($prefix));
+            }
+        }
+
+        return $table;
     }
 
     /**

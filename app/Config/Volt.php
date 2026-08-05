@@ -38,4 +38,37 @@ class Volt extends BaseConfig
 
     /** Env được coi là production (yêu cầu approval). Rỗng = tự nhận biết từ CI_ENVIRONMENT. */
     public string $schemaSyncProductionEnvs = 'production';
+
+    /** Rate limiting toàn cục theo IP: số request tối đa trong cửa sổ (mỗi IP). */
+    public int $rateLimitGlobalAttempts = 300;
+
+    /** Rate limiting toàn cục: cửa sổ thời gian (giây). */
+    public int $rateLimitGlobalWindowSeconds = 60;
+
+    /** Grace period (ngày) trước khi tenant DB bị purge thật sau khi xóa. */
+    public int $tenantDeleteGraceDays = 7;
+
+    /** Thư mục lưu backup (mặc định WRITEPATH/backups). */
+    public string $backupDir = '';
+
+    /** Số ngày giữ backup trước khi prune tự động. */
+    public int $backupRetentionDays = 30;
+
+    /** Webhook URL nhận error alert. Rỗng = tắt alert. */
+    public string $alertWebhookUrl = '';
+
+    /** Secret HMAC ký payload gửi webhook. Rỗng = không ký. */
+    public string $alertWebhookSecret = '';
+
+    /** Level tối thiểu để trigger alert (emergency, alert, critical, error, warning...). */
+    public string $alertMinLevel = 'error';
+
+    /** Cho phép drop bảng trực tiếp ở production qua Entity Builder/CLI sync. */
+    public bool $schemaSyncAllowDirectDropInProduction = false;
+
+    /** Bật Custom Pages JS (nếu tắt, js_content bị bỏ qua khi render/save). */
+    public bool $pagesJsEnabled = true;
+
+    /** Chế độ audit fail-closed: nếu ghi audit thất bại sẽ throw (không âm thầm bỏ qua). */
+    public bool $strictAudit = true;
 }

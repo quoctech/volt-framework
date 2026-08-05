@@ -16,6 +16,20 @@ class Cookie extends BaseConfig
      */
     public string $prefix = '';
 
+    private const DEFAULT_SECURE = true;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $secure = env('cookie.secure');
+        if ($secure !== null && $secure === false || $secure === 'false' || $secure === '0') {
+            $this->secure = false;
+        } else {
+            $this->secure = self::DEFAULT_SECURE;
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Cookie Expires Timestamp
@@ -54,7 +68,7 @@ class Cookie extends BaseConfig
      *
      * Cookie will only be set if a secure HTTPS connection exists.
      */
-    public bool $secure = false;
+    public bool $secure = true;
 
     /**
      * --------------------------------------------------------------------------

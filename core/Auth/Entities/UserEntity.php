@@ -25,6 +25,15 @@ class UserEntity extends Entity
         return $this->hasRole('admin');
     }
 
+    /**
+     * Quyền nền tảng: được sửa cấu hình hệ thống như Custom Pages JS.
+     * Chỉ user có role platform_developer hoặc admin.
+     */
+    public function isPlatformDeveloper(): bool
+    {
+        return $this->isAdmin() || $this->hasRole('platform_developer');
+    }
+
     public function isActive(): bool
     {
         if (! property_exists($this, 'is_active') || $this->is_active === null) {

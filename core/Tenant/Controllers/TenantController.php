@@ -89,6 +89,15 @@ class TenantController extends Controller
                 $tenant['db_password'],
             );
         } catch (\Throwable $e) {
+            try {
+                VoltDatabase::dropTenantDatabase(
+                    $tenant['db_name'],
+                    $tenant['db_host'],
+                    (int) $tenant['db_port'],
+                );
+            } catch (\Throwable) {
+            }
+
             $this->tenantService->delete($tenant['name']);
 
             return $this->renderView('Volt\\Core\\Tenant\\Views\\tenant_form', [
@@ -178,28 +187,64 @@ class TenantController extends Controller
         }
 
         try {
-            VoltDatabase::dropTenantDatabase(
-                $tenant['db_name'],
-                $tenant['db_host'],
-                (int) $tenant['db_port'],
-            );
+            $this->tenantService->softDelete($name);
         } catch (\Throwable $e) {
-            session()->setFlashdata('auth_error', 'Không thể xoá database: ' . $e->getMessage());
+            session()->setFlashdata('auth_error', 'Không thể xoá tenant: ' . $e->getMessage());
 
             return redirect()->to(site_url('desk/tenants'));
         }
 
         $currentTenant = session()->get(VoltDatabase::TENANT_SESSION_KEY);
 
-        $this->tenantService->delete($name);
-
         if ($currentTenant === $name) {
             session()->remove([VoltDatabase::TENANT_SESSION_KEY]);
         }
 
-        session()->setFlashdata('auth_success', 'Tenant "' . $tenant['label'] . '" và database "' . $tenant['db_name'] . '" đã được xoá.');
+        $graceDays = config(\Config\Volt::class)->tenantDeleteGraceDays;
+
+        session()->setFlashdata('auth_success', 'Tenant "' . $tenant['label'] . '" đã được chuyển vào thùng rác. Database sẽ bị xóa sau ' . $graceDays . ' ngày.');
 
         return redirect()->to(site_url('desk/tenants'));
+    }
+
+    public function trash()
+    {
+        $tenants = $this->tenantService->getTrashed();
+
+        return $this->renderView('Volt\\Core\\Tenant\\Views\\tenant_trash', [
+            'pageTitle'  => 'Tenant Trash · Volt Desk',
+            'deskActive' => 'tenants',
+            'tenants'    => $tenants,
+        ]);
+    }
+
+    public function restore(string $name)
+    {
+        try {
+            $this->tenantService->restore($name);
+            session()->setFlashdata('auth_success', 'Tenant "' . $name . '" đã được khôi phục.');
+        } catch (\Throwable $e) {
+            session()->setFlashdata('auth_error', $e->getMessage());
+        }
+
+        return redirect()->to(site_url('desk/tenants/trash'));
+    }
+
+    public function purge(string $name)
+    {
+        try {
+            $backup = $this->tenantService->purge($name, (bool) $this->request->getPost('force'));
+            session()->setFlashdata(
+                'auth_success',
+                $backup !== ''
+                    ? 'Tenant "' . $name . '" đã bị xóa vĩnh viễn. Backup: ' . $backup
+                    : 'Tenant "' . $name . '" đã bị xóa vĩnh viễn.',
+            );
+        } catch (\Throwable $e) {
+            session()->setFlashdata('auth_error', $e->getMessage());
+        }
+
+        return redirect()->to(site_url('desk/tenants/trash'));
     }
 
     private function renderView(string $view, array $data = []): string

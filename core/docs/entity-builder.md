@@ -88,9 +88,12 @@ Core sẽ scaffold sẵn CRUD cho từng entity:
 - `Edit` để sửa record hiện có.
 - `Delete` để xóa record.
 
+Mỗi record khi mở ở màn hình **Edit** (Entity Detail) sẽ hiển thị tab **Activity** ở phía dưới — lịch sử tạo/sửa/xử lý workflow của record đó, lấy từ `sys_audit_trail` qua endpoint `GET {module}/api/{entity}/activity/{id}` (controller `VoltResourceController::activity`). Mỗi dòng activity hiện: action (created/updated/deleted/workflow:action), actor, thời gian tương đối, comment (nếu có), các field thay đổi và `request_id` để truy vết.
+
 Khi xóa hẳn một entity từ Entity Builder, core sẽ:
 
 - chặn xóa nếu entity còn bị entity khác tham chiếu
+- **production guard**: ở môi trường production, việc drop entity bị chặn (`InvalidArgumentException`) trừ khi bật `volt.schemaSyncAllowDirectDropInProduction = true` trong `app/Config/Volt.php` (env `volt.schemaSyncAllowDirectDropInProduction`) — an toàn mặc định
 - cascade xóa child table tách riêng (`Table` + `:separate`) thuộc entity đó
 - drop bảng vật lý `tab_*` tương ứng
 - xóa metadata trong `sys_entity`, `sys_entity_field`, `sys_entity_custom`

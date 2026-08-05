@@ -6,6 +6,7 @@ namespace Volt\Core\Role\Controllers;
 
 use CodeIgniter\Controller;
 use Config\Services;
+use Volt\Core\Audit\AuditTrailWriter;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Role\Models\RoleModel;
 use Volt\Core\Role\Models\RolePermissionModel;
@@ -74,6 +75,16 @@ class RoleController extends Controller
             'owner'       => $actor instanceof UserEntity ? $actor->name : 'system',
         ]);
 
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'role:create',
+            'sys_role',
+            $name,
+            [],
+            ['label' => $label, 'description' => $description],
+            $actor instanceof UserEntity ? $actor->name : 'system',
+        );
+
         return redirect()->to(site_url('desk/roles'));
     }
 
@@ -122,6 +133,18 @@ class RoleController extends Controller
             'description' => $description !== '' ? $description : null,
         ]);
 
+        $actor = service('voltAuth')->currentUser();
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'role:update',
+            'sys_role',
+            $name,
+            ['label' => (string) $role->label, 'description' => (string) $role->description],
+            ['label' => $label, 'description' => $description],
+            $actor instanceof UserEntity ? $actor->name : 'system',
+        );
+
         return redirect()->to(site_url('desk/roles'));
     }
 
@@ -136,6 +159,18 @@ class RoleController extends Controller
         if ((bool) $role->is_system) {
             return redirect()->to(site_url('desk/roles'));
         }
+
+        $actor = service('voltAuth')->currentUser();
+
+        service('voltAuditTrailWriter')->write(
+            AuditTrailWriter::CAT_ROLE,
+            'role:delete',
+            'sys_role',
+            $name,
+            ['label' => (string) $role->label],
+            [],
+            $actor instanceof UserEntity ? $actor->name : 'system',
+        );
 
         $this->permissionModel->deletePermissionsForRole($name);
         $this->roleModel->delete($name);

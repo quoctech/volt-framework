@@ -11,6 +11,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\I18n\Time;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Volt\Core\Audit\RequestContext;
 use Volt\Core\Auth\Entities\UserEntity;
 use Volt\Core\Auth\Services\AuthService;
 use Volt\Core\Database\VoltDatabase;
@@ -57,6 +58,7 @@ final class ErrorLogService
             'ip_address' => $this->resolveIpAddress(),
             'user_agent' => $this->resolveUserAgent(),
             'actor' => $this->resolveActor(),
+            'request_id' => RequestContext::requestId(),
         ];
 
         try {
@@ -70,6 +72,10 @@ final class ErrorLogService
 
             return false;
         }
+
+        $this->dispatchAlert($level, $message, $payload);
+
+        return true;
     }
 
     /**
@@ -103,6 +109,28 @@ final class ErrorLogService
     }
 
     /**
+     * @param array<string, mixed> $payload
+     */
+    private function dispatchAlert(string $level, string $message, array $payload): void
+    {
+        try {
+            service('voltAlert')->send(
+                $level,
+                'Volt error [' . strtoupper($level) . ']: ' . mb_substr($message, 0, 120),
+                $message,
+                [
+                    'code'       => $payload['code'] ?? null,
+                    'channel'    => $payload['channel'] ?? null,
+                    'request_id' => $payload['request_id'] ?? RequestContext::requestId(),
+                    'uri'        => $payload['request_uri'] ?? null,
+                ],
+            );
+        } catch (Throwable) {
+            // Alert webhook lỗi không được phép làm hỏng luồng ghi log.
+        }
+    }
+
+    /**
      * @param array<string, mixed> $filters
      * @return array{
      *   rows:list<array<string, mixed>>,
@@ -121,7 +149,7 @@ final class ErrorLogService
         $query = mb_trim((string) ($filters['q'] ?? ''));
 
         $builder = $this->db->table(self::TABLE)
-            ->select('id, level, channel, code, message, context, file, line, trace, request_uri, request_method, ip_address, user_agent, actor, created_at')
+            ->select('id, level, channel, code, message, context, file, line, trace, request_uri, request_method, ip_address, user_agent, actor, request_id, created_at')
             ->orderBy('created_at', 'DESC')
             ->orderBy('id', 'DESC');
 
@@ -217,6 +245,7 @@ final class ErrorLogService
             'ip_address' => (string) ($row['ip_address'] ?? ''),
             'user_agent' => (string) ($row['user_agent'] ?? ''),
             'actor' => (string) ($row['actor'] ?? ''),
+            'request_id' => (string) ($row['request_id'] ?? ''),
             'created_at' => (string) ($row['created_at'] ?? ''),
         ];
     }

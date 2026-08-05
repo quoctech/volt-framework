@@ -15,6 +15,9 @@ $c = $lang['common'] ?? [];
             </div>
         </div>
         <div class="claro-table-toolbar__right">
+            <a href="<?= site_url('desk/tenants/trash') ?>" class="claro-button">
+                <?= esc($t['trash'] ?? 'Trash') ?>
+            </a>
             <a href="<?= site_url('desk/tenants/create') ?>" class="claro-button claro-button--primary">
                 + <?= esc($t['add_tenant'] ?? 'Add tenant') ?>
             </a>

@@ -206,6 +206,13 @@ class App extends BaseConfig
     {
         parent::__construct();
 
+        $forceSecure = env('app.forceGlobalSecureRequests');
+        if ($forceSecure !== null && $forceSecure !== false && $forceSecure !== 'false') {
+            $this->forceGlobalSecureRequests = true;
+        } else {
+            $this->forceGlobalSecureRequests = false;
+        }
+
         if (PHP_SAPI !== 'cli' && isset($_SERVER['HTTP_HOST'])) {
             $scheme = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $this->baseURL = "{$scheme}://{$_SERVER['HTTP_HOST']}/";

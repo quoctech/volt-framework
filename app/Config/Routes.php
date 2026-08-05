@@ -7,6 +7,7 @@ $routes->get('health', '\Volt\Core\System\Controllers\HealthController::index');
 $routes->get('ping', '\Volt\Core\System\Controllers\HealthController::index');
 $routes->get('api/health', '\Volt\Core\System\Controllers\HealthController::index');
 $routes->get('api/ping', '\Volt\Core\System\Controllers\HealthController::index');
+$routes->get('api/health/detail', '\Volt\Core\System\Controllers\HealthController::detail');
 
 $routes->group('', ['namespace' => 'Volt\Core\Auth\Controllers'], static function (RouteCollection $routes): void {
     $routes->get('login', 'AuthController::login', ['filter' => 'guest']);
@@ -83,6 +84,9 @@ $routes->group('desk/tenants', ['namespace' => 'Volt\Core\Tenant\Controllers', '
     $routes->get('edit/(:segment)', 'TenantController::edit/$1');
     $routes->post('update/(:segment)', 'TenantController::update/$1');
     $routes->post('delete/(:segment)', 'TenantController::delete/$1');
+    $routes->get('trash', 'TenantController::trash');
+    $routes->post('restore/(:segment)', 'TenantController::restore/$1');
+    $routes->post('purge/(:segment)', 'TenantController::purge/$1');
 });
 
 $routes->group('desk', ['namespace' => 'Volt\Core\System\Controllers', 'filter' => 'admin'], static function (RouteCollection $routes): void {
